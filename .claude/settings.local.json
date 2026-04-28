@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); maps=d.get\\('maps',[]\\); [print\\(m['name']+':', [a['name'] for a in m.get\\('actions',[]\\)]\\) for m in maps]\")"
+    ]
+  }
+}
