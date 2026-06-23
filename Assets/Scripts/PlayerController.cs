@@ -5,11 +5,11 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] Transform cameraHolder;
-    [SerializeField] float moveSpeed = 5f;
-    [SerializeField] float sprintSpeed = 9f;
-    [SerializeField] float jumpHeight = 1.5f;
-    [SerializeField] float gravity = -20f;
-    [SerializeField] float lookSensitivity = 0.15f;
+    [SerializeField] float moveSpeed = 1f;
+    [SerializeField] float sprintSpeed = 3f;
+    [SerializeField] float jumpHeight = 2.5f;
+    [SerializeField] float gravity = -12f;
+    [SerializeField] float lookSensitivity = 0.1f;
     [SerializeField] float maxPitch = 80f;
 
     CharacterController _cc;

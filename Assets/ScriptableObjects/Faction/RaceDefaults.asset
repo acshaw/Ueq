@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f255ffc0cb5f3f24d93abb734cab07aa, type: 3}
+  m_Name: RaceDefaults
+  m_EditorClassIdentifier: Assembly-CSharp::RaceDefaultsTable
+  Defaults:
+  - Race: Human
+    Faction: {fileID: 11400000, guid: da73cbbd996222146b0904536be1e807, type: 2}
+    Score: 0
+  - Race: Troll
+    Faction: {fileID: 11400000, guid: da73cbbd996222146b0904536be1e807, type: 2}
+    Score: -5000
+  - Race: Dwarf
+    Faction: {fileID: 11400000, guid: da73cbbd996222146b0904536be1e807, type: 2}
+    Score: 500
+  - Race: Human
+    Faction: {fileID: 11400000, guid: 3dc530c71bbd5554fabb7249fe2b1aa2, type: 2}
+    Score: -1000
+  - Race: Troll
+    Faction: {fileID: 11400000, guid: 3dc530c71bbd5554fabb7249fe2b1aa2, type: 2}
+    Score: -10000
+  - Race: Dwarf
+    Faction: {fileID: 11400000, guid: 3dc530c71bbd5554fabb7249fe2b1aa2, type: 2}
+    Score: -10000

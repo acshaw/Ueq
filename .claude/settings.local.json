@@ -2,7 +2,48 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep *)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); maps=d.get\\('maps',[]\\); [print\\(m['name']+':', [a['name'] for a in m.get\\('actions',[]\\)]\\) for m in maps]\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); maps=d.get\\('maps',[]\\); [print\\(m['name']+':', [a['name'] for a in m.get\\('actions',[]\\)]\\) for m in maps]\")",
+      "Skill(update-config)",
+      "PowerShell(Set-Location 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq'; $today = Get-Date -Format 'yyyy-MM-dd'; $content = if \\(Test-Path 'CLAUDE.md'\\) { Get-Content 'CLAUDE.md' -Raw } else { '' }; if \\($content -match [regex]::Escape\\($today\\)\\) { @{continue=$true} | ConvertTo-Json -Compress } else { $msg = 'Before stopping: please update the Last Session section in CLAUDE.md \\(date: ' + $today + '\\) with a one-line summary of what we worked on this session. Also update Open Items if anything changed.'; @{continue=$false; stopReason=$msg} | ConvertTo-Json -Compress })",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\Assets\\\\Scripts\\\\Editor\" -Recurse -Filter \"*.cs\")",
+      "Bash(Select-Object FullName)",
+      "Bash(grep -E \"\\\\.\\(cs|txt\\)$\")",
+      "Bash(xargs sed *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\Assets\\\\Scripts\\\\Combat\\\\CombatStats.cs\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\Assets\\\\Scripts\\\\Combat\\\\CombatStats.cs.meta\" -ErrorAction SilentlyContinue -Force)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Read(//c/c/Users/acsha/source/Ueq/**)",
+      "WebSearch",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(docker info *)",
+      "Bash(sed -n '/platformData:/,/userData:/p' Npgsql.6.0.11/lib/netstandard2.1/Npgsql.dll.meta)",
+      "Bash(sed -n '/platformData:/,/userData:/p' System.Text.Json.6.0.10/lib/netstandard2.0/System.Text.Json.dll.meta)",
+      "Bash(awk '{print $5\"\\\\t\"$NF}')",
+      "Bash(rmdir \"Assets/ScriptableObjects/Combat\")",
+      "Bash(rm -f \"Assets/ScriptableObjects/Combat.meta\")",
+      "Bash(ls -A \"Assets/ScriptableObjects/\")",
+      "Bash(git mv *)",
+      "Bash(xargs -n1 basename)",
+      "Bash(grep -rn \"character:\\\\\" + _characterId\\\\|character:\\\\\\\\\\\\\" \\\\+ _characterId\" Assets/Scripts/Server/Database/CharacterPersistence.cs)",
+      "Bash(awk '{print $2}')",
+      "Bash(gh repo *)",
+      "Bash(git add *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$today = Get-Date -Format 'yyyy-MM-dd'; $content = if (Test-Path 'CLAUDE.md') { Get-Content 'CLAUDE.md' -Raw } else { '' }; if ($content -match [regex]::Escape($today)) { @{continue=$true} | ConvertTo-Json -Compress } else { $msg = 'Before stopping: please update the Last Session section in CLAUDE.md (date: ' + $today + ') with a one-line summary of what we worked on this session. Also update Open Items if anything changed.'; @{continue=$false; stopReason=$msg} | ConvertTo-Json -Compress }",
+            "shell": "powershell",
+            "statusMessage": "Checking if CLAUDE.md is up to date..."
+          }
+        ]
+      }
     ]
   }
 }

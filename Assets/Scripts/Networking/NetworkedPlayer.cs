@@ -1,49 +1,86 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-// Movement runs on both local client (smooth camera) and server (authority for other clients).
-// The server's position is what NetworkTransform broadcasts to remote players.
-// On a pure client (not host) we disable NetworkTransform receiving so local CharacterController
-// isn't overwritten by server snapshots.
-[RequireComponent(typeof(CharacterController))]
-[RequireComponent(typeof(Health))]
 public class NetworkedPlayer : NetworkBehaviour
 {
     [Header("References")]
-    [SerializeField] Transform cameraHolder;
+    [SerializeField] Transform  cameraHolder;
+    [SerializeField] GameObject playerCorpsePrefab;
 
     [Header("Movement")]
-    [SerializeField] float moveSpeed = 5f;
-    [SerializeField] float sprintSpeed = 9f;
-    [SerializeField] float jumpHeight = 1.5f;
-    [SerializeField] float gravity = -20f;
+    [SerializeField] float moveSpeed = 1f;
+    [SerializeField] float sprintSpeed = 3f;
+    [SerializeField] float jumpHeight = 5f;
+    [SerializeField] float gravity = -12f;
 
     [Header("Look")]
     [SerializeField] float lookSensitivity = 0.15f;
     [SerializeField] float maxPitch = 80f;
 
     CharacterController _cc;
+    Camera _cam;
     float _pitch;
     float _yaw;
     float _verticalVelocity;
 
-    // Input state written by local client, read by ApplyMovement on both client and server
+    Vector3 _bindPoint;
+
     Vector2 _moveInput;
     bool _sprint;
     bool _jumpQueued;
+    bool _isLooking; // true while RMB held
+    bool _rmbIsLoot; // RMB press was consumed by loot — suppress look mode for that press
+
+    Targetable      _currentTarget;
+    NetworkIdentity _serverTarget;
+
+    public event System.Action<Targetable> OnTargetChanged;
+
+    Vector3 _lastChatPos;
+    const float ChatPosUpdateThreshold = 5f;
+
+    // Readable by server-side components (e.g. PlayerAutoAttack)
+    public NetworkIdentity ServerTarget => _serverTarget;
+
+    // Client-side access for HotbarUI to pass target into CmdCastAbility
+    public NetworkIdentity CurrentTargetIdentity =>
+        _currentTarget != null ? _currentTarget.GetComponentInParent<NetworkIdentity>() : null;
 
     void Awake() => _cc = GetComponent<CharacterController>();
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    public override void OnStartServer()
+    {
+        // Nameplate label is set from the character's name by CharacterPersistence (1.5) — no hardcoded
+        // "Player" here, or it would clobber a freshly-created character's name (component order).
+        _lastChatPos = transform.position;
+        _bindPoint   = transform.position;
+        ChatManager.Instance?.RegisterPlayer(connectionToClient, transform.position);
+        var health = GetComponent<Health>();
+        health.OnDied -= HandlePlayerDeath; // ensure exactly one subscription even if OnStartServer fires twice
+        health.OnDied += HandlePlayerDeath;
+    }
+
+    public override void OnStopServer()
+    {
+        GetComponent<Health>().OnDied -= HandlePlayerDeath;
+        ChatManager.Instance?.UnregisterPlayer(connectionToClient);
+    }
+
     public override void OnStartLocalPlayer()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        SetCameraActive(true);
+        LocalPlayer.Set(this); // 1.7 — single binding seam the HUD subscribes to
 
-        // Pure client: stop NetworkTransform from overwriting our locally-predicted position.
-        // The host keeps it enabled so the server's position still broadcasts to other clients.
+        _cam = GetComponentInChildren<Camera>(true);
+        if (_cam) _cam.gameObject.SetActive(true);
+
+        // Cursor free by default — RMB to look
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
         if (!isServer)
         {
             foreach (var b in GetComponents<Behaviour>())
@@ -62,6 +99,12 @@ public class NetworkedPlayer : NetworkBehaviour
         if (!isLocalPlayer) SetCameraActive(false);
     }
 
+    public override void OnStopClient()
+    {
+        // Local player went away (camp / disconnect / host restart) — drop the HUD binding (1.7).
+        if (LocalPlayer.Current == this) LocalPlayer.Clear();
+    }
+
     void SetCameraActive(bool active)
     {
         var cam = GetComponentInChildren<Camera>(true);
@@ -74,41 +117,137 @@ public class NetworkedPlayer : NetworkBehaviour
     {
         if (isLocalPlayer)
         {
+            if (_currentTarget != null && !_currentTarget)
+            {
+                _currentTarget = null;
+                OnTargetChanged?.Invoke(null);
+                CmdSetTarget(null);
+            }
+
             CollectInput();
             ApplyLook();
-            bool jumpThisFrame = _jumpQueued; // capture before ApplyMovement consumes it
+            bool jumpThisFrame = _jumpQueued;
             ApplyMovement();
             CmdSendInput(_moveInput, _yaw, _sprint, jumpThisFrame);
         }
         else if (isServer)
         {
-            // Remote player on server: driven entirely by received Commands
             ApplyMovement();
         }
     }
 
-    // ── Input (local client only) ─────────────────────────────────────────────
+    // ── Input ─────────────────────────────────────────────────────────────────
 
     void CollectInput()
     {
         var kb = Keyboard.current;
         var mouse = Mouse.current;
-        if (kb == null) return;
+        if (kb == null || mouse == null) return;
 
-        if (mouse != null)
+        bool chatOpen = ChatUI.IsOpen;
+        bool lmbHeld  = mouse.leftButton.isPressed;
+        bool rmbHeld  = mouse.rightButton.isPressed;
+        bool bothHeld = lmbHeld && rmbHeld;
+
+        // ── RMB press — loot raycast takes priority over look mode ───────────
+        if (mouse.rightButton.wasPressedThisFrame && _cam != null && !chatOpen)
+        {
+            Ray ray = _cam.ScreenPointToRay(mouse.position.ReadValue());
+            if (Physics.Raycast(ray, out RaycastHit rmbHit, 100f))
+            {
+                var hitCorpse = rmbHit.collider.GetComponentInParent<Corpse>();
+                if (hitCorpse != null && hitCorpse.IsActive)
+                {
+                    _rmbIsLoot = true;
+                    LootUI.Open(hitCorpse);
+                }
+                else
+                {
+                    var hitPlayerCorpse = rmbHit.collider.GetComponentInParent<PlayerCorpse>();
+                    if (hitPlayerCorpse != null && hitPlayerCorpse.IsActive && hitPlayerCorpse.Owner == netIdentity)
+                    {
+                        _rmbIsLoot = true;
+                        LootUI.Open(hitPlayerCorpse);
+                    }
+                }
+            }
+        }
+        if (mouse.rightButton.wasReleasedThisFrame)
+            _rmbIsLoot = false;
+
+        // ── Cursor / look mode (RMB) — cursor hidden whenever RMB is held ────
+        _isLooking       = rmbHeld && !_rmbIsLoot;
+        Cursor.lockState = _isLooking ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible   = !_isLooking;
+
+        // ── Mouse look (RMB held only) — runs even with chat open ────────────
+        if (_isLooking)
         {
             Vector2 delta = mouse.delta.ReadValue();
             _yaw   += delta.x * lookSensitivity;
             _pitch  = Mathf.Clamp(_pitch - delta.y * lookSensitivity, -maxPitch, maxPitch);
         }
 
+        // ── Both mouse buttons = move forward (mouse-driven, chat-safe) ──────
+        if (chatOpen)
+        {
+            _moveInput = bothHeld ? Vector2.up : Vector2.zero;
+            _sprint    = false;
+            if (!_isLooking && !bothHeld && mouse.leftButton.wasPressedThisFrame)
+                TryTarget();
+            return;
+        }
+
+        // ── Targeting (LMB, cursor free, not both-held) ───────────────────────
+        if (!_isLooking && !bothHeld && mouse.leftButton.wasPressedThisFrame && !IsPointerOverUI())
+            TryTarget();
+
+        // ── Movement keys ─────────────────────────────────────────────────────
         _moveInput = new Vector2(
             (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f),
             (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f)
         );
+
+        // Both mouse buttons contribute forward on top of keyboard
+        if (bothHeld) _moveInput.y = Mathf.Max(_moveInput.y, 1f);
+
         _sprint = kb.leftShiftKey.isPressed;
         if (kb.spaceKey.wasPressedThisFrame) _jumpQueued = true;
     }
+
+    // ── Targeting ─────────────────────────────────────────────────────────────
+
+    void TryTarget()
+    {
+        if (_cam == null) return;
+
+        Ray ray = _cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Targetable hit = Physics.Raycast(ray, out RaycastHit info, 100f)
+            ? info.collider.GetComponentInParent<Targetable>()
+            : null;
+
+        if (hit == _currentTarget) return; // no change
+
+        _currentTarget?.SetHighlight(false);
+        _currentTarget = hit;
+        _currentTarget?.SetHighlight(true);
+
+        OnTargetChanged?.Invoke(_currentTarget);
+
+        var ni = hit != null ? hit.GetComponentInParent<NetworkIdentity>() : null;
+        CmdSetTarget(ni);
+
+        if (hit != null)
+            hit.GetComponentInParent<NpcEventDispatcher>()?.DispatchTargeted(netIdentity);
+    }
+
+    static bool IsPointerOverUI()
+    {
+        var es = EventSystem.current;
+        return es != null && es.IsPointerOverGameObject();
+    }
+
+    // ── Look ──────────────────────────────────────────────────────────────────
 
     void ApplyLook()
     {
@@ -116,7 +255,7 @@ public class NetworkedPlayer : NetworkBehaviour
         if (cameraHolder) cameraHolder.localEulerAngles = new Vector3(_pitch, 0f, 0f);
     }
 
-    // ── Movement (runs on local client AND server) ────────────────────────────
+    // ── Movement ──────────────────────────────────────────────────────────────
 
     void ApplyMovement()
     {
@@ -125,7 +264,7 @@ public class NetworkedPlayer : NetworkBehaviour
         if (_jumpQueued && _cc.isGrounded)
             _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
-        _jumpQueued = false; // always consume — prevents sticky jump if not grounded when flag arrives
+        _jumpQueued = false;
 
         _verticalVelocity += gravity * Time.deltaTime;
 
@@ -136,7 +275,7 @@ public class NetworkedPlayer : NetworkBehaviour
         _cc.Move((move * speed + Vector3.up * _verticalVelocity) * Time.deltaTime);
     }
 
-    // ── Server: receive input ─────────────────────────────────────────────────
+    // ── Server ────────────────────────────────────────────────────────────────
 
     [Command]
     void CmdSendInput(Vector2 move, float yaw, bool sprint, bool jump)
@@ -144,18 +283,305 @@ public class NetworkedPlayer : NetworkBehaviour
         _moveInput = move;
         _yaw       = yaw;
         _sprint    = sprint;
-        if (jump && !isLocalPlayer) _jumpQueued = true; // host already processed jump locally
-
-        // Keep server transform orientation in sync so movement direction is correct
+        if (jump && !isLocalPlayer) _jumpQueued = true;
         transform.eulerAngles = new Vector3(0f, _yaw, 0f);
+
+        if (ChatManager.Instance != null &&
+            Vector3.Distance(transform.position, _lastChatPos) > ChatPosUpdateThreshold)
+        {
+            ChatManager.Instance.UpdatePosition(connectionToClient, transform.position);
+            _lastChatPos = transform.position;
+        }
     }
 
-    // ── Combat stubs ──────────────────────────────────────────────────────────
+    [Command]
+    public void CmdSendChat(ChatChannel channel, string target, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var msg = new ChatMessage(channel, gameObject.name, text);
+
+        if (channel == ChatChannel.Whisper)
+        {
+            var targetConn = ChatManager.Instance?.FindConnectionByName(target);
+            if (targetConn != null)
+            {
+                ChatManager.Instance.SendDirect(msg, targetConn);
+                ChatManager.Instance.SendDirect(
+                    new ChatMessage(ChatChannel.Whisper, $"To {target}", text), connectionToClient);
+            }
+            else
+            {
+                ChatManager.Instance?.SendDirect(
+                    new ChatMessage(ChatChannel.System, "System", $"Player '{target}' not found."),
+                    connectionToClient);
+            }
+            return;
+        }
+
+        ChatManager.Instance?.SendArea(msg, transform.position);
+
+        // NPCs hear /say — dispatch to all conversations within their own hearing ranges
+        if (channel == ChatChannel.Say)
+        {
+            foreach (var conv in FindObjectsByType<NpcConversation>())
+                conv.HearMessage(netIdentity, text);
+        }
+    }
 
     [Command]
-    public void CmdAttack(NetworkIdentity target)
+    void CmdSetTarget(NetworkIdentity target) => _serverTarget = target;
+
+    // ── Death handling ────────────────────────────────────────────────────────
+
+    [Server]
+    void HandlePlayerDeath(NetworkIdentity attacker)
     {
-        // TODO: validate range, line-of-sight, cooldown
-        // target.GetComponent<Health>()?.TakeDamage(attackDamage, netIdentity);
+        var health = GetComponent<Health>();
+        if (health.IsImmune) return;
+        health.SetImmunity(10f);
+
+        var inv = GetComponent<PlayerInventory>();
+        var exp = GetComponent<PlayerExperience>();
+
+        var items = new System.Collections.Generic.List<InventorySlot>();
+        for (int i = 0; i < PlayerInventory.SlotCount; i++)
+        {
+            var slot = inv.Slots[i];
+            if (!slot.IsEmpty) items.Add(slot);
+        }
+        int copper = inv.TotalCopperValue;
+        int xpLoss = exp?.DeathXpLoss() ?? 0;
+
+        if (playerCorpsePrefab != null)
+        {
+            var corpseObj = Instantiate(playerCorpsePrefab, transform.position, Quaternion.identity);
+            corpseObj.GetComponent<PlayerCorpse>().Prepare(netIdentity, items, copper, xpLoss, gameObject.name);
+            NetworkServer.Spawn(corpseObj);
+        }
+
+        inv.ClearAll();
+
+        if (xpLoss > 0)
+        {
+            exp?.RemoveXp(xpLoss);
+            SendSystemMsg($"You have lost {xpLoss} experience.");
+        }
+
+        SendSystemMsg("You have died.");
+        health.ResetToFull();
+
+        // Move server-side transform immediately so mobs can't re-aggro and re-kill
+        // the player at the death location before client input repositions them.
+        var cc = GetComponent<CharacterController>();
+        cc.enabled = false;
+        transform.position = _bindPoint;
+        cc.enabled = true;
+
+        TargetRpcRespawn(connectionToClient, _bindPoint);
+    }
+
+    [TargetRpc]
+    void TargetRpcRespawn(NetworkConnectionToClient target, Vector3 position)
+    {
+        var cc = GetComponent<CharacterController>();
+        cc.enabled = false;
+        transform.position = position;
+        cc.enabled = true;
+    }
+
+    // Call from spells/abilities to update the player's bind point
+    [Server]
+    public void SetBindPoint(Vector3 position) => _bindPoint = position;
+
+    // ── Persistence (1.3) ───────────────────────────────────────────────────────
+
+    public Vector3 BindPoint => _bindPoint;
+    public float   Yaw       => transform.eulerAngles.y;
+
+    /// <summary>Restore position/yaw + bind point from a loaded snapshot. Uses the same CC-safe
+    /// teleport pattern as respawn so the CharacterController doesn't fight the move, and snaps the
+    /// owning client too.</summary>
+    [Server]
+    public void LoadState(Vector3 position, float yaw, Vector3 bindPoint)
+    {
+        _bindPoint = bindPoint;
+        var cc = GetComponent<CharacterController>();
+        cc.enabled = false;
+        transform.position = position;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        cc.enabled = true;
+        TargetRpcRespawn(connectionToClient, position);
+    }
+
+    // ── Loot commands ─────────────────────────────────────────────────────────
+
+    const float LootRange = 6f;
+
+    [Command]
+    public void CmdTakeLootSlot(NetworkIdentity corpseId, int slotIndex)
+    {
+        var inv = GetComponent<PlayerInventory>();
+        if (TryGetMobCorpse(corpseId, out var mob))
+        {
+            var slot = mob.PeekSlot(slotIndex);
+            if (slot.IsEmpty) return;
+            if (inv.AddItem(slot.itemId, slot.quantity)) mob.RemoveSlot(slotIndex);
+            else SendSystemMsg("Inventory is full.");
+            return;
+        }
+        if (TryGetPlayerCorpse(corpseId, out var pc))
+        {
+            var slot = pc.PeekSlot(slotIndex);
+            if (slot.IsEmpty) return;
+            if (inv.AddItem(slot.itemId, slot.quantity)) pc.RemoveSlot(slotIndex);
+            else SendSystemMsg("Inventory is full.");
+        }
+    }
+
+    [Command]
+    public void CmdTakeLootCopper(NetworkIdentity corpseId)
+    {
+        if (TryGetMobCorpse(corpseId, out var mob))
+        {
+            int c = mob.TakeCopper();
+            if (c > 0) GetComponent<PlayerInventory>().AddCurrency(c);
+            return;
+        }
+        if (TryGetPlayerCorpse(corpseId, out var pc))
+        {
+            int c = pc.TakeCopper();
+            if (c > 0) GetComponent<PlayerInventory>().AddCurrency(c);
+        }
+    }
+
+    [Command]
+    public void CmdTakeLootAll(NetworkIdentity corpseId)
+    {
+        var inv = GetComponent<PlayerInventory>();
+        if (TryGetMobCorpse(corpseId, out var mob))  { mob.TakeAll(inv); return; }
+        if (TryGetPlayerCorpse(corpseId, out var pc)) { pc.TakeAll(inv); }
+    }
+
+    bool TryGetMobCorpse(NetworkIdentity id, out Corpse corpse)
+    {
+        corpse = id?.GetComponent<Corpse>();
+        if (corpse == null || !corpse.IsActive) { corpse = null; return false; }
+        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; return false; }
+        return true;
+    }
+
+    bool TryGetPlayerCorpse(NetworkIdentity id, out PlayerCorpse corpse)
+    {
+        corpse = id?.GetComponent<PlayerCorpse>();
+        if (corpse == null || !corpse.IsActive)      { corpse = null; return false; }
+        if (corpse.Owner != netIdentity)              { corpse = null; return false; }
+        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; return false; }
+        return true;
+    }
+
+    void SendSystemMsg(string text) =>
+        ChatManager.Instance?.SendDirect(
+            new ChatMessage(ChatChannel.System, "System", text), connectionToClient);
+
+    // ── Ability commands ──────────────────────────────────────────────────────
+
+    [Command]
+    public void CmdCastAbility(int hotbarSlot, NetworkIdentity target)
+        => GetComponent<PlayerAbilities>().TryCast(hotbarSlot, target);
+
+    [Command]
+    public void CmdSetHotbarSlot(int slot, string abilityId)
+        => GetComponent<PlayerAbilities>().SetHotbarSlot(slot, abilityId);
+
+    // ── Equipment commands ────────────────────────────────────────────────────
+
+    [Command]
+    public void CmdEquipItem(int inventorySlotIndex)
+    {
+        var inv   = GetComponent<PlayerInventory>();
+        var equip = GetComponent<PlayerEquipment>();
+        var slot  = inv.Slots[inventorySlotIndex];
+        if (slot.IsEmpty) return;
+        var def = ItemRegistry.Instance?.Get(slot.itemId);
+        if (def == null || !def.isEquippable) return;
+        if (equip.TryEquip(def.equipSlot, slot.itemId, inv))
+            SendSystemMsg($"You equip {def.displayName}.");
+        else
+            SendSystemMsg("Cannot equip that item.");
+    }
+
+    [Command]
+    public void CmdUnequipItem(int equipSlotIndex)
+    {
+        var inv    = GetComponent<PlayerInventory>();
+        var equip  = GetComponent<PlayerEquipment>();
+        var slot   = (EquipSlot)equipSlotIndex;
+        string itemId = equip.GetItemId(slot);
+        var def    = ItemRegistry.Instance?.Get(itemId);
+        string label = def != null ? def.displayName : itemId;
+        if (equip.TryUnequip(slot, inv))
+            SendSystemMsg($"You unequip {label}.");
+        else
+            SendSystemMsg("Cannot unequip that item.");
+    }
+
+    // ── Vendor commands ───────────────────────────────────────────────────────
+
+    [Command]
+    public void CmdBuyItem(NetworkIdentity vendorNetId, string itemId)
+    {
+        var vendor = vendorNetId?.GetComponent<VendorApplicator>();
+        if (vendor == null || !vendor.HasItem(itemId)) return;
+        var def = ItemRegistry.Instance?.Get(itemId);
+        if (def == null) return;
+        var inv = GetComponent<PlayerInventory>();
+        if (def.buyPrice > 0 && !inv.SpendCurrency(def.buyPrice))
+        { SendSystemMsg("You cannot afford that."); return; }
+        if (!inv.AddItem(itemId))
+        {
+            if (def.buyPrice > 0) inv.AddCurrency(def.buyPrice);
+            SendSystemMsg("Your inventory is full.");
+            return;
+        }
+        SendSystemMsg($"You buy {def.displayName} for {CurrencyUtil.Format(def.buyPrice)}.");
+    }
+
+    [Command]
+    public void CmdSellItem(NetworkIdentity vendorNetId, int inventorySlotIndex)
+    {
+        var vendor = vendorNetId?.GetComponent<VendorApplicator>();
+        if (vendor == null) return;
+        var inv = GetComponent<PlayerInventory>();
+        if ((uint)inventorySlotIndex >= (uint)inv.Slots.Count) return;
+        var slot = inv.Slots[inventorySlotIndex];
+        if (slot.IsEmpty) return;
+        var def = ItemRegistry.Instance?.Get(slot.itemId);
+        if (def == null || def.sellPrice <= 0) { SendSystemMsg("That item has no value."); return; }
+        inv.RemoveItem(slot.itemId, 1);
+        inv.AddCurrency(def.sellPrice);
+        SendSystemMsg($"You sell {def.displayName} for {CurrencyUtil.Format(def.sellPrice)}.");
+    }
+
+    // ── Inventory commands ────────────────────────────────────────────────────
+
+    [Command]
+    public void CmdMoveInventorySlot(int fromIndex, int toIndex)
+        => GetComponent<PlayerInventory>().MoveSlot(fromIndex, toIndex);
+
+    [Command]
+    public void CmdDropInventoryItem(int slotIndex)
+    {
+        var inv  = GetComponent<PlayerInventory>();
+        var slot = inv.Slots[slotIndex];
+        if (slot.IsEmpty) return;
+
+        var def   = ItemRegistry.Instance?.Get(slot.itemId);
+        string name = def != null ? def.displayName : slot.itemId;
+        inv.DropItem(slotIndex);
+
+        ChatManager.Instance?.SendDirect(
+            new ChatMessage(ChatChannel.System, "System", $"You drop {name}."),
+            connectionToClient);
     }
 }

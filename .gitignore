@@ -21,3 +21,19 @@ MemoryCaptures/
 # OS
 .DS_Store
 Thumbs.db
+
+# Database / secrets (local only — see .env.example / db.config.example.json)
+.env
+db.config.json
+
+# NuGetForUnity restored packages (restored from Assets/packages.config)
+/Assets/Packages/
+/Assets/Packages.meta
+
+# Unity crash-recovery scratch (kept locally, not versioned)
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
+# Stray debug screenshots dumped into the scripts folder (kept locally, not versioned)
+/Assets/Scripts/*.jpg
+/Assets/Scripts/*.jpg.meta

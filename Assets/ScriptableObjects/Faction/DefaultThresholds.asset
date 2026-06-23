@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a9126f1692dff14da598bba7eadb12c, type: 3}
+  m_Name: DefaultThresholds
+  m_EditorClassIdentifier: Assembly-CSharp::FactionThresholdTable
+  Thresholds:
+  - Name: KOS
+    MinScore: -10000
+  - Name: Threatening
+    MinScore: -750
+  - Name: Dubious
+    MinScore: -500
+  - Name: Apprehensive
+    MinScore: -100
+  - Name: Indifferent
+    MinScore: 0
+  - Name: Amiable
+    MinScore: 100
+  - Name: Kindly
+    MinScore: 500
+  - Name: Warmly
+    MinScore: 750
+  - Name: Ally
+    MinScore: 1100

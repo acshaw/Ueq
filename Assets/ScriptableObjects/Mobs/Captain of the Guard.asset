@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2cf11d0c12318146b2fe3cb57161d6e, type: 3}
+  m_Name: Captain of the Guard
+  m_EditorClassIdentifier: Assembly-CSharp::MobDefinition
+  displayName: Captain of the Guard
+  prefab: {fileID: 2281856003525045576, guid: 8ca3b97205777664cacb54f99780346a, type: 3}
+  maxHealth: 10
+  attackDamage: 1
+  attackInterval: 2
+  attackRange: 2
+  movementType: 0
+  moveSpeed: 3.5
+  wanderRadius: 10
+  wanderPauseMin: 2
+  wanderPauseMax: 6
+  perceptionRadius: 20
+  baseAggroThreat: 1
+  faction: {fileID: 11400000, guid: da73cbbd996222146b0904536be1e807, type: 2}
+  aggroMaxStanding: Threatening
+  warningMaxStanding: Apprehensive
+  conversationKeywordSet: {fileID: 11400000, guid: d0533a1b7b304d745ae731d1a96204ef, type: 2}
+  lootTable: {fileID: 0}

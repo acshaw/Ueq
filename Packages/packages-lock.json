@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.github-glitchenzo.nugetforunity": {
+      "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "acc1c7bc9ea34c33b830e40316fca52553878d29"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.11",
       "depth": 0,
@@ -86,6 +93,15 @@
         "com.unity.modules.uielements": "1.0.0"
       }
     },
+    "com.unity.multiplayer.playmode": {
+      "version": "2.0.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.2"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",
       "depth": 3,
@@ -133,14 +149,14 @@
     },
     "com.unity.searcher": {
       "version": "4.9.4",
-      "depth": 2,
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.shadergraph": {
       "version": "17.4.0",
-      "depth": 1,
+      "depth": 0,
       "source": "builtin",
       "dependencies": {
         "com.unity.render-pipelines.core": "17.4.0",
