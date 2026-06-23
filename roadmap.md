@@ -73,7 +73,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > **now**, before building content/systems on that assumption, so the M3 zone integration is informed
 > and the starting zone (3.1) is built as a proper zone from day one.
 
-- [ ] **2.0 — Zone architecture spike (throwaway).** ([devplan](docs/devplans/2.0-zone-architecture-spike.md) — 🟢 approved 2026-06-22) Sandbox proof of Mirror additive-scenes + per-scene interest: two zones on one server, P1/P2 isolated, one A→B transition with relative placement. Output = go/no-go + a scoped list of which M1 systems need zone-awareness (the input to the M3 zone-integration item). Isolated/throwaway — modifies no shipping system. M2 content work can proceed in parallel.
+- [x] **2.0 — Zone architecture spike (throwaway).** ([devplan](docs/devplans/2.0-zone-architecture-spike.md) — ✅ **GO**, 2026-06-22) Sandbox proof of Mirror additive-scenes + per-scene interest: two zones on one server, P1/P2 isolated, one A→B transition with relative placement. Output = go/no-go + a scoped list of which M1 systems need zone-awareness (the input to the M3 zone-integration item). Isolated/throwaway — modifies no shipping system. M2 content work can proceed in parallel.
 
 ## M2 — DB-Backed Content & Web Editors  *(cross-cutting; foundation shared with M1)*
 
