@@ -81,7 +81,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > Path: hybrid by design — ScriptableObjects keep working until each type's DB path + web editor lands, then that type's `Resources/` load is retired. Migrate one content type at a time; nothing is thrown away.
 > Sequencing within the milestone: **rails first (2.1), then items as the reference vertical (2.2), then replicate** type by type. Pure-data types are easy; types with asset/prefab/effect bindings reuse the 2.1 convention.
 
-- [ ] **2.1 — Content platform foundation (the rails).** ([devplan](docs/devplans/2.1-content-platform-foundation.md)) Three pieces, no content migrated yet:
+- [x] **2.1 — Content platform foundation (the rails).** ✅ Done 2026-06-24 ([devplan](docs/devplans/2.1-content-platform-foundation.md)). Verified end-to-end: row authored in Angular → .NET API → Postgres → Unity `ContentLoader` logged it at host start. `/api` (ASP.NET Core controllers + EF Core mapping-only, no EF Migrations — SQL runner stays sole schema authority), `/web` (Angular 21 standalone editor), `0008_content_ping.sql`, `ContentLoader`/`ContentPingRepository` seam wired into `OnStartServer`, `AssetResolver` (Addressables behind a swap seam, `com.unity.addressables` 2.6.0). Three pieces, no real content migrated yet:
   - **(a) Web stack** *(decided 2026-06-20)* — **Angular SPA + a deliberately lightweight C# (.NET) API + Postgres.** Angular chosen for the user's deep familiarity and because the complex authoring types (quest wizards, ability-effect editors) need real custom UI a generated panel can't give. The API is the minimum needed to feed Angular (Angular can't touch Postgres directly); kept thin. **No auth for now** — trusted users only; revisit when hosted/remote. The C# API may later share a model/enum library with Unity to kill type-drift. *Still open for the devplan:* where the shared content DB lives (see below), API shape/endpoints, hosting.
   - **(b) Unity DB-content loader** — a generic "load-all-into-registry on `OnStartServer`" pattern that the existing registries (`ItemRegistry`, `AbilityRegistry`, …) adopt, swapping the source behind their current lookup-by-id API.
   - **(c) Asset-binding convention** — define the string-id/path scheme for prefabs/icons/meshes/anims and the Resources/Addressables resolver, so content rows can reference Unity assets without storing them.
@@ -133,6 +133,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 
 Implemented items and their devplans are listed here as we go (newest first).
 
+- **2.1 — Content platform foundation (the rails)** — ✅ 2026-06-24 — [devplan](docs/devplans/2.1-content-platform-foundation.md)
 - **1.6.1 — Camp & session polish** — ✅ 2026-06-22 — [devplan](docs/devplans/1.6.1-camp-session-polish.md)
 - **1.7 — UI architecture refactor** — ✅ 2026-06-21 — [devplan](docs/devplans/1.7-ui-architecture-refactor.md)
 - **1.6 — Save policy + multi-character** — ✅ 2026-06-21 — [devplan](docs/devplans/1.6-save-policy-multichar.md)

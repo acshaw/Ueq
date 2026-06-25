@@ -16,6 +16,7 @@ public class GameNetworkManager : NetworkManager
         try
         {
             Database.InitializeServer();
+            ContentLoader.LoadAll(); // 2.1 — load DB-backed content into registries before the world goes live
             PersistenceService.Create();
             GetComponent<CharacterSelectController>()?.OnServerStarted(); // 1.5 select/create handlers
             InvokeRepeating(nameof(AutosaveTick), AutosaveSeconds, AutosaveSeconds); // 1.6 autosave (O3)

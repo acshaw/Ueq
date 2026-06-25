@@ -26,6 +26,15 @@ Thumbs.db
 .env
 db.config.json
 
+# Content web stack (M2.1 — Angular SPA + .NET API monorepo)
+/api/bin/
+/api/obj/
+# api/appsettings.Development.json holds the local DB password (parity with db.config.json)
+/api/appsettings.Development.json
+/web/node_modules/
+/web/dist/
+/web/.angular/
+
 # NuGetForUnity restored packages (restored from Assets/packages.config)
 /Assets/Packages/
 /Assets/Packages.meta

@@ -1,0 +1,6 @@
+@Ueq.ContentApi_HostAddress = http://localhost:5144
+
+GET {{Ueq.ContentApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

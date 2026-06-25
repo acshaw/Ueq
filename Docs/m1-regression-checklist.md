@@ -5,17 +5,17 @@ persistence, accounts, character flow, and the entire UI layer, so this sweeps t
 end. Run it after a clean recompile; use **Multiplayer Play Mode (MPPM)** for the multi-client cases.
 
 **Setup before starting:**
-- [ ] Postgres up (`docker compose up -d`); `Tools/Database/Run Migrations` → "no pending" (0001–0007 applied).
-- [ ] Clean recompile, no console errors/warnings (watch for duplicate EventSystem, missing refs).
-- [ ] `UI.unity` exists + in Build Settings; gameplay scene has `UIManager`, no stale HUD canvases.
-- [ ] (Optional) `Tools/Database/Create Account` a couple of test accounts, or use register in-client.
+- [x] Postgres up (`docker compose up -d`); `Tools/Database/Run Migrations` → "no pending" (0001–0007 applied).
+- [x] Clean recompile, no console errors/warnings (watch for duplicate EventSystem, missing refs).
+- [x] `UI.unity` exists + in Build Settings; gameplay scene has `UIManager`, no stale HUD canvases.
+- [x] (Optional) `Tools/Database/Create Account` a couple of test accounts, or use register in-client.
 
 ---
 
 ## 1. Database & migrations (1.1/1.2)
-- [ ] Host start logs `[DB] Connected…` + schema up to date; `PersistenceService started`.
-- [ ] Stop host logs `PersistenceService stopped (queue flushed)`.
-- [ ] DB-down path: `docker compose stop` → host start aborts with the loud error (don't run without DB).
+- [x] Host start logs `[DB] Connected…` + schema up to date; `PersistenceService started`.
+- [x] Stop host logs `PersistenceService stopped (queue flushed)`.
+- [x] DB-down path: `docker compose stop` → host start aborts with the loud error (don't run without DB).
 
 ## 2. Accounts & login (1.4) — MPPM
 - [ ] Host as **dev** → auto-login works.
