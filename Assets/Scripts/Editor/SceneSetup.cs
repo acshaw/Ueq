@@ -188,6 +188,8 @@ public static class SceneSetup
             typeof(MobKillReward),
             typeof(CombatLog),
             typeof(Enemy),
+            typeof(NpcConversation),   // keyword listener (drives vendor "wares")
+            typeof(VendorApplicator),  // inert unless the mob's definition sets a vendorId
         });
 
         PrefabUtility.SaveAsPrefabAsset(prefabRoot, PrefabPath);

@@ -94,6 +94,28 @@ public class GameNetworkManager : NetworkManager
         Debug.Log("[Client] Connected to server.");
     }
 
+    // Register/unregister the content catalog handler on the client (2.2 — DB-backed content reaches
+    // clients over Mirror, never via the DB directly).
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        NetworkClient.RegisterHandler<ContentCatalog.ItemCatalogMessage>(ContentCatalog.ApplyItems);
+    }
+
+    public override void OnStopClient()
+    {
+        NetworkClient.UnregisterHandler<ContentCatalog.ItemCatalogMessage>();
+        base.OnStopClient();
+    }
+
+    // Push the content catalog to a client as it becomes ready, before its player spawns so inventory/
+    // tooltips have item data to read. Host receives it too but ContentCatalog.ApplyItems no-ops there.
+    public override void OnServerReady(NetworkConnectionToClient conn)
+    {
+        conn.Send(ContentCatalog.BuildItems());
+        base.OnServerReady(conn);
+    }
+
     // Called on server when a new player is added. The authenticated account rides on the
     // connection (set by AccountAuthenticator) — this is the identity seam 1.3/1.5 consume to
     // resolve the character. For 1.4 we just confirm it's present.

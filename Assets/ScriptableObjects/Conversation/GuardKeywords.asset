@@ -68,3 +68,12 @@ MonoBehaviour:
     RequiredFaction: {fileID: 0}
     RequiredStanding: 
     UnlocksKeywords: []
+  - Keyword: wares
+    Mode: 0
+    IsConversationOpener: 0
+    EndsConversation: 1
+    RequiresUnlock: 0
+    Response: What would you like?
+    RequiredFaction: {fileID: 0}
+    RequiredStanding: 
+    UnlocksKeywords: []

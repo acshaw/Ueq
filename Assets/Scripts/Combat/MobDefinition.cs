@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum MovementType { Stationary, Wander }
@@ -28,20 +29,42 @@ public class MobDefinition : ScriptableObject
     public int   baseAggroThreat  = 1;
 
     [Header("Faction")]
+    // M2.5: DB mobs reference a faction by id (resolved via FactionRegistry once factions land at 2.6);
+    // the SO ref is set at runtime when resolvable. Until then `faction` stays null (no faction behavior).
+    public string            factionId = "";
     public FactionDefinition faction;
     public string aggroMaxStanding   = "Threatening";
     public string warningMaxStanding = "Apprehensive";
 
     [Header("Conversation")]
-    public ConversationKeywordSet conversationKeywordSet;
+    // M2.4: conversation sets live in the DB. `conversationSetId` references a conversation_sets row
+    // (resolved at runtime via ConversationRegistry).
+    public string                 conversationSetId = "";
 
     [Header("Loot")]
+    // M2.5: DB mobs reference a loot table by id (resolved once loot tables land at 2.7); SO ref set
+    // at runtime when resolvable. Until then `lootTable` stays null (no drops).
+    public string    lootTableId = "";
     public LootTable lootTable;
 
     [Header("Rewards")]
     public int xpReward     = 0;
 
+    // M2.7.1: faction standing changes applied to the killing player on death. delta < 0 worsens,
+    // > 0 improves. `faction` is resolved from `factionId` at build (via FactionRegistry); a hit with an
+    // unresolved faction or delta == 0 is skipped. Authored per mob (kill consequence, not loot).
+    [System.Serializable]
+    public struct FactionHit
+    {
+        public string            factionId;
+        public FactionDefinition faction;
+        public int               delta;
+    }
+    public List<FactionHit> factionHits = new();
+
     [Header("Vendor")]
-    public VendorInventory vendorInventory;
+    // M2.3: vendors live in the DB. `vendorId` references a vendor_inventories row (resolved at runtime
+    // via VendorRegistry).
+    public string          vendorId = "";
     public string          vendorOpenKeyword = "wares";
 }

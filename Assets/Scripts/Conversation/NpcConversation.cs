@@ -23,7 +23,11 @@ public class NpcConversation : NetworkBehaviour
     NpcEventDispatcher _dispatcher;
     MobApplicator      _mob;
 
-    ConversationKeywordSet EffectiveKeywordSet => _mob?.Definition?.conversationKeywordSet ?? keywordSet;
+    // M2.4: prefer the DB-backed set (resolved by id from ConversationRegistry); fall back to the
+    // serialized field for any non-mob/not-yet-migrated NPC.
+    ConversationKeywordSet EffectiveKeywordSet =>
+        ConversationRegistry.Get(_mob?.Definition?.conversationSetId)
+        ?? keywordSet;
 
     void Awake()
     {
@@ -131,13 +135,31 @@ public class NpcConversation : NetworkBehaviour
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    static bool _warnedUnresolvedFaction;
+
     bool MeetsFactionRequirement(NetworkIdentity player, ConversationKeyword kw)
     {
-        if (kw.RequiredFaction == null || kw.RequiredFaction.ThresholdTable == null) return true;
+        // Resolve the gate's faction: legacy SO ref, else by id (M2.4) via FactionRegistry.
+        var faction = kw.RequiredFaction;
+        if (faction == null && !string.IsNullOrEmpty(kw.RequiredFactionId))
+            faction = FactionRegistry.Get(kw.RequiredFactionId);
+
+        if (faction == null)
+        {
+            // An id gate that can't resolve yet (factions arrive in DB at 2.6) → treat as ungated.
+            if (!string.IsNullOrEmpty(kw.RequiredFactionId) && !_warnedUnresolvedFaction)
+            {
+                _warnedUnresolvedFaction = true;
+                Debug.LogWarning($"[NpcConversation] faction gate '{kw.RequiredFactionId}' unresolved " +
+                                 "(factions migrate to DB at 2.6) — treating as ungated for now.");
+            }
+            return true;
+        }
+        if (faction.ThresholdTable == null) return true;
 
         var scores  = player.GetComponent<PlayerFactionScores>();
-        int score   = scores != null ? scores.GetEffectiveScore(kw.RequiredFaction) : 0;
-        var table   = kw.RequiredFaction.ThresholdTable;
+        int score   = scores != null ? scores.GetEffectiveScore(faction) : 0;
+        var table   = faction.ThresholdTable;
         int playerIdx   = table.IndexOf(table.Evaluate(score).Name);
         int requiredIdx = table.IndexOf(kw.RequiredStanding);
 

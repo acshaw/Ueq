@@ -1,39 +1,34 @@
 using Mirror;
 using UnityEngine;
 
-// Add to any NPC prefab that can be a vendor. Config is driven by the MobDefinition
-// via MobApplicator — set vendorInventory and vendorOpenKeyword there, not here.
+// Add to any NPC prefab that can be a vendor. Config is driven by the MobDefinition via MobApplicator —
+// set vendorId (a vendor_inventories row, M2.3) and vendorOpenKeyword there, not here. The stock list
+// lives in the DB (VendorRegistry, server-only); it is pushed to the player's client on shop-open.
 public class VendorApplicator : NetworkBehaviour, IOnConversationKeyword, IOnConversationEnd
 {
-    VendorInventory _vendorInventory;
-    string          _openKeyword = "wares";
-
-    [SyncVar] string _vendorId;
+    string _vendorId = "";
+    string _openKeyword = "wares";
 
     public override void OnStartServer()
     {
         var mob = GetComponent<MobApplicator>();
         if (mob?.Definition != null)
         {
-            _vendorInventory = mob.Definition.vendorInventory;
-            _openKeyword     = mob.Definition.vendorOpenKeyword;
+            _vendorId    = mob.Definition.vendorId;
+            _openKeyword = mob.Definition.vendorOpenKeyword;
         }
-        _vendorId = _vendorInventory != null ? _vendorInventory.name : "";
     }
 
-    public bool HasItem(string itemId)
-    {
-        if (_vendorInventory == null) return false;
-        foreach (var e in _vendorInventory.Entries)
-            if (e.item != null && e.item.itemId == itemId) return true;
-        return false;
-    }
+    /// <summary>Server-side check that this vendor sells the item (used by CmdBuyItem).</summary>
+    public bool HasItem(string itemId) => VendorRegistry.Sells(_vendorId, itemId);
 
     void IOnConversationKeyword.OnConversationKeyword(NetworkIdentity player, string keyword)
     {
         if (!string.Equals(keyword, _openKeyword, System.StringComparison.OrdinalIgnoreCase)) return;
         var conn = player?.GetComponent<NetworkedPlayer>()?.connectionToClient;
-        if (conn != null) TargetRpcOpenShop(conn);
+        if (conn != null)
+            // Push the stock list to the client on open (DC3) — clients have no DB access.
+            TargetRpcOpenShop(conn, VendorRegistry.GetItemIds(_vendorId).ToArray());
     }
 
     void IOnConversationEnd.OnConversationEnd(NetworkIdentity player)
@@ -43,8 +38,8 @@ public class VendorApplicator : NetworkBehaviour, IOnConversationKeyword, IOnCon
     }
 
     [TargetRpc]
-    void TargetRpcOpenShop(NetworkConnection conn)
-        => VendorUI.Instance?.Open(netIdentity, _vendorId);
+    void TargetRpcOpenShop(NetworkConnection conn, string[] itemIds)
+        => VendorUI.Instance?.Open(netIdentity, itemIds);
 
     [TargetRpc]
     void TargetRpcCloseShop(NetworkConnection conn)

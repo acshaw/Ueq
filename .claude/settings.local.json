@@ -60,7 +60,15 @@
       "Bash(rm -f src/app/app.html src/app/app.css)",
       "Bash(npx ng *)",
       "Bash(git check-ignore *)",
-      "WebFetch(domain:packages.unity.com)"
+      "WebFetch(domain:packages.unity.com)",
+      "Bash(UEQ_DB_CONNSTRING='Host=localhost;Port=5432;Database=ueq;Username=ueq;Password=ueq_dev_password' ASPNETCORE_URLS=http://localhost:5099 dotnet /c/Users/acsha/AppData/Local/Temp/claude/C--Users-acsha-source-Ueq/2c57f628-da8f-4b09-b806-899f83b3d20e/scratchpad/apibuild/Ueq.ContentApi.dll)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(curl -s -X POST http://localhost:5099/api/items -H 'Content-Type: application/json' -d '{\"itemId\":\"iron_sword\",\"displayName\":\"Iron Sword\",\"description\":\"A basic sword\",\"maxStackSize\":1,\"isEquippable\":true,\"equipSlot\":11,\"weaponBaseDamage\":15,\"weaponDelay\":2.5,\"weaponRange\":3,\"weaponCategory\":0,\"bonusStr\":2,\"buyPrice\":100,\"sellPrice\":40,\"iconAddress\":\"icon_iron_sword\"}')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' -X POST http://localhost:5099/api/items -H 'Content-Type: application/json' -d '{\"itemId\":\"iron_sword\",\"displayName\":\"dup\"}')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' -X POST http://localhost:5099/api/items -H 'Content-Type: application/json' -d '{\"displayName\":\"no id\"}')",
+      "Bash(curl -s http://localhost:5099/api/items)",
+      "Bash(curl -s -X PUT http://localhost:5099/api/items/iron_sword -H 'Content-Type: application/json' -d '{\"displayName\":\"Iron Sword +1\",\"weaponBaseDamage\":18,\"bonusStr\":3,\"buyPrice\":120,\"sellPrice\":48,\"maxStackSize\":1,\"isEquippable\":true,\"equipSlot\":11}')",
+      "Bash(grep -rn \"case \\\\\"/\\\\|StartsWith\\(\\\\\"/\\\\|chat command\\\\|/setfaction\\\\|/faction\" Assets/Scripts --include=*.cs)"
     ]
   },
   "hooks": {

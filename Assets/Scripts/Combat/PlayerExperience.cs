@@ -18,12 +18,19 @@ public class PlayerExperience : NetworkBehaviour
     public ClassDefinition CurrentClass => _currentClass;
     public RaceDefinition  CurrentRace  => _currentRace;
 
-    // ── XP table (loaded from Resources/XpTable.asset) ───────────────────────
+    // ── XP table (M2.7: DB table installed at host start; else Resources, else DefaultValues) ──
 
     static XpTableDefinition _tableCache;
     static XpTableDefinition Table
         => _tableCache != null ? _tableCache
                                : (_tableCache = Resources.Load<XpTableDefinition>("XpTable"));
+
+    /// <summary>Install the DB-loaded XP curve (M2.7). Called by ContentLoader before play; overrides the
+    /// Resources fallback. Null is ignored so the Resources/default fallback stays in effect.</summary>
+    public static void SetTable(XpTableDefinition table)
+    {
+        if (table != null) _tableCache = table;
+    }
 
     public static int MaxLevel => Table != null ? Table.Count : XpTableDefinition.DefaultValues.Length;
 

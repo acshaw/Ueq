@@ -3,14 +3,18 @@ using UnityEngine;
 
 public class PlayerFactionScores : NetworkBehaviour
 {
-    [SerializeField] RaceDefaultsTable raceDefaults;
+    [SerializeField] RaceDefaultsTable raceDefaults;   // headless/no-DB fallback only (M2.6 loads from DB)
     [SerializeField] string defaultRace = "Human";
 
     [SyncVar] public string ActualRace = "Human";
     [SyncVar] public string ApparentRace = "Human";
 
-    // faction name → earned score; synced so clients can read standings for UI
+    // faction id (FactionDefinition.Key) → earned score; synced so clients can read standings for UI.
+    // Re-keyed from faction name to faction id in M2.6 (DF2).
     readonly SyncDictionary<string, int> _scores = new();
+
+    // Prefer DB-loaded race defaults (M2.6); fall back to the serialized SO when the registry is empty.
+    RaceDefaultsTable EffectiveRaceDefaults => FactionRegistry.RaceDefaults ?? raceDefaults;
 
     // Fires on server when a score changes
     public event System.Action<FactionDefinition, int, int> OnScoreChanged; // (faction, old, new)
@@ -23,23 +27,25 @@ public class PlayerFactionScores : NetworkBehaviour
         ActualRace   = race;
         ApparentRace = race;
         _scores.Clear(); // re-seeding (e.g. character creation picks a different race) starts clean
-        if (raceDefaults == null) return;
-        foreach (var entry in raceDefaults.Defaults)
-            if (entry.Race == race)
-                _scores[entry.Faction.FactionName] = entry.Score;
+        var rd = EffectiveRaceDefaults;
+        if (rd == null) return;
+        foreach (var entry in rd.Defaults)
+            if (entry.Race == race && entry.Faction != null)
+                _scores[entry.Faction.Key] = entry.Score;
     }
 
     // Raw earned score regardless of illusion
     public int GetScore(FactionDefinition faction)
     {
-        return _scores.TryGetValue(faction.FactionName, out int score) ? score : 0;
+        return _scores.TryGetValue(faction.Key, out int score) ? score : 0;
     }
 
     // Score used for NPC evaluation — substitutes race default when illusioned
     public int GetEffectiveScore(FactionDefinition faction)
     {
-        if (ApparentRace != ActualRace && raceDefaults != null)
-            return raceDefaults.GetDefault(ApparentRace, faction);
+        var rd = EffectiveRaceDefaults;
+        if (ApparentRace != ActualRace && rd != null)
+            return rd.GetDefault(ApparentRace, faction);
         return GetScore(faction);
     }
 
@@ -48,7 +54,7 @@ public class PlayerFactionScores : NetworkBehaviour
     {
         int old  = GetScore(faction);
         int next = old + delta;
-        _scores[faction.FactionName] = next;
+        _scores[faction.Key] = next;
         OnScoreChanged?.Invoke(faction, old, next);
     }
 

@@ -1,12 +1,17 @@
 using System.Collections;
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class SpawnPoint : MonoBehaviour
 {
-    [SerializeField] SpawnTable spawnTable;
-    [SerializeField] SpawnTimer timerOverride;   // overrides spawnTable.defaultTimer
+    [Tooltip("M2.7.2: spawn from a DB-backed spawn table (weighted entries + group size + timer), " +
+             "resolved from SpawnTableRegistry. Highest precedence — the web-authored camp path.")]
+    [SerializeField] string     spawnTableId = "";
+    [Tooltip("M2.5: spawn a single DB-backed mob by its id (resolved from MobRegistry). Used when no " +
+             "spawnTableId is set — for unique/named NPCs (e.g. a Merchant).")]
+    [SerializeField] string     mobId = "";
     [SerializeField] float      activationRadius = 50f;
 
     [Header("Placement")]
@@ -20,7 +25,8 @@ public class SpawnPoint : MonoBehaviour
 
     bool            _active;
     bool            _respawnPending;
-    NetworkIdentity _live;
+    readonly List<NetworkIdentity> _live = new();   // M2.7.2: a group can have multiple live mobs
+    SpawnTimer      _respawnTimer;                   // resolved at spawn, used for the respawn delay
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -35,6 +41,8 @@ public class SpawnPoint : MonoBehaviour
     {
         if (!NetworkServer.active) return;
 
+        _live.RemoveAll(x => x == null);   // prune any mob destroyed without firing OnDied
+
         bool hasPlayer = false;
         var cols = Physics.OverlapSphere(transform.position, activationRadius);
         foreach (var col in cols)
@@ -44,7 +52,7 @@ public class SpawnPoint : MonoBehaviour
 
         _active = hasPlayer;
 
-        if (_active && _live == null && !_respawnPending)
+        if (_active && _live.Count == 0 && !_respawnPending)
             DoSpawn();
     }
 
@@ -52,24 +60,57 @@ public class SpawnPoint : MonoBehaviour
 
     void DoSpawn()
     {
-        var entry = spawnTable?.Roll();
-        if (entry?.mob?.prefab == null)
+        // Precedence (M2.7.2): DB spawn table (weighted/timed/grouped) → single DB mob by id.
+        MobDefinition def;
+        int           groupSize;
+
+        var table = SpawnTableRegistry.Get(spawnTableId);
+        if (table != null)
         {
-            Debug.LogWarning($"[SpawnPoint] {name}: no valid entry to spawn.", this);
+            var entry = table.Roll();
+            def           = entry?.mob;
+            groupSize     = Mathf.Max(1, entry?.groupSize ?? 1);
+            _respawnTimer = table.defaultTimer;
+        }
+        else if (!string.IsNullOrEmpty(mobId))
+        {
+            def           = MobRegistry.Get(mobId);
+            groupSize     = 1;
+            _respawnTimer = null;
+        }
+        else
+        {
+            Debug.LogWarning($"[SpawnPoint] {name}: nothing configured to spawn " +
+                             "(set spawnTableId or mobId).", this);
             return;
         }
 
-        var go = Instantiate(entry.mob.prefab, ResolveSpawnPosition(), transform.rotation);
-        go.GetComponent<MobApplicator>()?.SetDefinition(entry.mob);
+        if (def?.prefab == null)
+        {
+            Debug.LogWarning($"[SpawnPoint] {name}: no valid mob to spawn " +
+                             $"(spawnTableId='{spawnTableId}', mobId='{mobId}', prefab missing/unregistered).", this);
+            return;
+        }
+
+        bool jitter = groupSize > 1;
+        for (int i = 0; i < groupSize; i++)
+            SpawnOne(def, jitter);
+    }
+
+    void SpawnOne(MobDefinition def, bool jitter)
+    {
+        var go = Instantiate(def.prefab, ResolveSpawnPosition(jitter), transform.rotation);
+        go.GetComponent<MobApplicator>()?.SetDefinition(def);
         NetworkServer.Spawn(go);
 
-        _live = go.GetComponent<NetworkIdentity>();
+        var id = go.GetComponent<NetworkIdentity>();
+        _live.Add(id);
 
         var health = go.GetComponent<Health>();
         if (health != null)
         {
             System.Action<NetworkIdentity> handler = null;
-            handler = _ => { health.OnDied -= handler; OnMobDied(); };
+            handler = _ => { health.OnDied -= handler; OnMemberDied(id); };
             health.OnDied += handler;
         }
     }
@@ -77,9 +118,15 @@ public class SpawnPoint : MonoBehaviour
     // Resolve where the mob actually appears: drop straight down onto the terrain
     // surface below the spawn point, then snap onto the navmesh so the NavMeshAgent is
     // valid and sits at hill height (requires the navmesh to be baked over the hills).
-    Vector3 ResolveSpawnPosition()
+    Vector3 ResolveSpawnPosition(bool jitter = false)
     {
         Vector3 pos = transform.position;
+        // Spread group members so they don't spawn perfectly stacked.
+        if (jitter)
+        {
+            var off = Random.insideUnitCircle * 2.5f;
+            pos += new Vector3(off.x, 0f, off.y);
+        }
         if (!snapToGround) return pos;
 
         // 1) Find the terrain surface directly below this XZ.
@@ -94,9 +141,10 @@ public class SpawnPoint : MonoBehaviour
         return pos;
     }
 
-    void OnMobDied()
+    void OnMemberDied(NetworkIdentity id)
     {
-        _live = null;
+        _live.Remove(id);
+        if (_live.Count > 0) return;   // wait for the rest of the group to die
 
         if (_active)
             StartCoroutine(RespawnAfterDelay());
@@ -106,11 +154,10 @@ public class SpawnPoint : MonoBehaviour
     IEnumerator RespawnAfterDelay()
     {
         _respawnPending = true;
-        var timer = timerOverride ?? spawnTable?.defaultTimer;
-        float delay = timer != null ? timer.Roll() : 300f;
+        float delay = _respawnTimer != null ? _respawnTimer.Roll() : 300f;
         yield return new WaitForSeconds(delay);
         _respawnPending = false;
-        if (_active) DoSpawn();
+        if (_active && _live.Count == 0) DoSpawn();
     }
 
     // ── Editor gizmo ──────────────────────────────────────────────────────────

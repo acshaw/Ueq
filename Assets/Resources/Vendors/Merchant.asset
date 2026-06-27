@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3cc569b18b14424caab15b1a4cc32f8, type: 3}
-  m_Name: New Vendor Inventory
+  m_Name: Merchant
   m_EditorClassIdentifier: Assembly-CSharp::VendorInventory
   Entries:
   - item: {fileID: 11400000, guid: 3c130c7cb75fc874595675478555d311, type: 2}

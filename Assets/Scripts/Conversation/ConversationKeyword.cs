@@ -17,8 +17,10 @@ public class ConversationKeyword
     [TextArea(1, 4)]
     public string Response; // supports <name> <race> <class> <gender>
 
-    [Tooltip("Null = no faction gate")]
+    [Tooltip("Null = no faction gate (legacy SO ref; DB-backed sets use RequiredFactionId instead)")]
     public FactionDefinition RequiredFaction;
+    [Tooltip("M2.4: faction gate by id (resolved via FactionRegistry; live once factions are in DB at 2.6)")]
+    public string RequiredFactionId;
     [Tooltip("Minimum standing name required (e.g. Indifferent). Empty = any standing.")]
     public string RequiredStanding;
 

@@ -6,7 +6,7 @@ public class SpawnTableEntry
 {
     public MobDefinition mob;
     public int           weight    = 1;
-    public int           groupSize = 1; // reserved — group spawning not yet implemented
+    public int           groupSize = 1; // mobs spawned per activation (implemented M2.7.2)
 }
 
 [CreateAssetMenu(menuName = "Ueq/Spawn Table")]

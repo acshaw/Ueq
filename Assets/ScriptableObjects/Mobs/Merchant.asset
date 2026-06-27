@@ -32,3 +32,5 @@ MonoBehaviour:
   conversationKeywordSet: {fileID: 0}
   lootTable: {fileID: 0}
   xpReward: 0
+  vendorInventory: {fileID: 11400000, guid: ed317a7b8f4471e438ea7f99eae72916, type: 2}
+  vendorOpenKeyword: wares

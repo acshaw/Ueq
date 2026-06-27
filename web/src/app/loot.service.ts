@@ -1,0 +1,31 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+/** Mirrors the API's LootTableDto (M2.7) — a loot table with its three weighted child lists. */
+export interface LootItem { itemId: string; weight: number; }
+export interface LootDropCount { count: number; weight: number; }
+export interface LootCoinTier { minCopper: number; maxCopper: number; weight: number; }
+
+export interface LootTable {
+  lootTableId: string;
+  displayName: string;
+  items: LootItem[];
+  dropCounts: LootDropCount[];
+  coinTiers: LootCoinTier[];
+}
+
+export function emptyLootTable(): LootTable {
+  return { lootTableId: '', displayName: '', items: [], dropCounts: [], coinTiers: [] };
+}
+
+@Injectable({ providedIn: 'root' })
+export class LootService {
+  private readonly base = 'http://localhost:5144/api/loot-tables';
+  private readonly http = inject(HttpClient);
+
+  getAll(): Observable<LootTable[]> { return this.http.get<LootTable[]>(this.base); }
+  create(t: LootTable): Observable<LootTable> { return this.http.post<LootTable>(this.base, t); }
+  update(t: LootTable): Observable<LootTable> { return this.http.put<LootTable>(`${this.base}/${t.lootTableId}`, t); }
+  delete(lootTableId: string): Observable<void> { return this.http.delete<void>(`${this.base}/${lootTableId}`); }
+}

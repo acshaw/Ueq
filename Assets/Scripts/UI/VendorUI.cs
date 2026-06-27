@@ -14,7 +14,7 @@ public class VendorUI : MonoBehaviour
     public static VendorUI Instance { get; private set; }
 
     NetworkIdentity _vendor;
-    VendorInventory _vendorInv;
+    string[]        _stockItemIds = System.Array.Empty<string>();
     PlayerInventory _inventory;
     NetworkedPlayer _player;
     bool            _showBuy = true;
@@ -71,11 +71,13 @@ public class VendorUI : MonoBehaviour
         if (panel.activeSelf && !_showBuy) PopulateContent();
     }
 
-    public void Open(NetworkIdentity vendor, string vendorId)
+    // Stock ids are pushed by the server on open (M2.3 — clients have no DB access); item display
+    // details still resolve through the client's ItemRegistry (2.2 catalog).
+    public void Open(NetworkIdentity vendor, string[] stockItemIds)
     {
-        _vendor    = vendor;
-        _vendorInv = Resources.Load<VendorInventory>($"Vendors/{vendorId}");
-        _showBuy   = true;
+        _vendor       = vendor;
+        _stockItemIds = stockItemIds ?? System.Array.Empty<string>();
+        _showBuy      = true;
         SetTabStyle();
         PopulateContent();
         RefreshCurrency();
@@ -104,12 +106,12 @@ public class VendorUI : MonoBehaviour
 
     void PopulateBuy()
     {
-        if (_vendorInv == null || _vendorInv.Entries.Count == 0)
+        if (_stockItemIds.Length == 0)
         { AddInfoRow("This vendor has no wares."); return; }
-        foreach (var e in _vendorInv.Entries)
+        foreach (var itemId in _stockItemIds)
         {
-            if (e.item == null) continue;
-            AddBuyRow(e.item);
+            var def = ItemRegistry.Instance?.Get(itemId);
+            if (def != null) AddBuyRow(def);
         }
         if (content.childCount == 0) AddInfoRow("This vendor has no wares.");
     }

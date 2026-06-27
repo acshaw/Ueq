@@ -139,7 +139,7 @@ public sealed class CharacterRepository : IRepository
         {
             if (string.IsNullOrEmpty(kv.Key)) continue;
             using var cmd = new NpgsqlCommand(
-                "INSERT INTO character_faction_scores (character_id, faction_name, score) " +
+                "INSERT INTO character_faction_scores (character_id, faction_id, score) " +
                 "VALUES (@cid, @faction, @score)", conn, tx);
             cmd.Parameters.AddWithValue("cid", characterId);
             cmd.Parameters.AddWithValue("faction", kv.Key);
@@ -256,7 +256,7 @@ public sealed class CharacterRepository : IRepository
     {
         var d = new Dictionary<string, int>();
         using var cmd = new NpgsqlCommand(
-            "SELECT faction_name, score FROM character_faction_scores WHERE character_id = @cid", conn, tx);
+            "SELECT faction_id, score FROM character_faction_scores WHERE character_id = @cid", conn, tx);
         cmd.Parameters.AddWithValue("cid", characterId);
         using var r = cmd.ExecuteReader();
         while (r.Read())

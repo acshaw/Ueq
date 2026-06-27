@@ -102,8 +102,8 @@ public class MobEditorWindow : EditorWindow
         DrawSection("Faction",   "faction", "aggroMaxStanding", "warningMaxStanding");
         DrawSection("Loot",      "lootTable");
         DrawSection("Rewards",   "xpReward");
-        DrawSection("Vendor",    "vendorInventory", "vendorOpenKeyword");
-        DrawConversationSection();
+        DrawSection("Vendor",       "vendorId", "vendorOpenKeyword");
+        DrawSection("Conversation", "conversationSetId");
 
         EditorGUILayout.EndScrollView();
 
@@ -155,47 +155,6 @@ public class MobEditorWindow : EditorWindow
             EditorGUILayout.PropertyField(_so.FindProperty("wanderPauseMin"));
             EditorGUILayout.PropertyField(_so.FindProperty("wanderPauseMax"));
         }
-
-        EditorGUI.indentLevel--;
-        GUILayout.Space(4);
-    }
-
-    void DrawConversationSection()
-    {
-        SectionHeader("Conversation");
-        EditorGUI.indentLevel++;
-
-        var prop = _so.FindProperty("conversationKeywordSet");
-        if (prop != null) EditorGUILayout.PropertyField(prop);
-
-        EditorGUILayout.BeginHorizontal();
-        GUILayout.Space(EditorGUI.indentLevel * 15);
-
-        var kwSet = _selected.conversationKeywordSet;
-        using (new EditorGUI.DisabledScope(kwSet == null))
-        {
-            if (GUILayout.Button("Open in Conversation Editor"))
-                ConversationEditorWindow.OpenWith(kwSet);
-        }
-
-        if (GUILayout.Button("New & Assign", GUILayout.Width(100)))
-        {
-            var set  = CreateInstance<ConversationKeywordSet>();
-            const string dir = "Assets/ScriptableObjects/Conversations";
-            if (!AssetDatabase.IsValidFolder("Assets/ScriptableObjects"))
-                AssetDatabase.CreateFolder("Assets", "ScriptableObjects");
-            if (!AssetDatabase.IsValidFolder(dir))
-                AssetDatabase.CreateFolder("Assets/ScriptableObjects", "Conversations");
-            var path = AssetDatabase.GenerateUniqueAssetPath($"{dir}/{_selected.displayName}.asset");
-            AssetDatabase.CreateAsset(set, path);
-            AssetDatabase.SaveAssets();
-            prop.objectReferenceValue = set;
-            _so.ApplyModifiedProperties();
-            EditorUtility.SetDirty(_selected);
-            ConversationEditorWindow.OpenWith(set);
-        }
-
-        EditorGUILayout.EndHorizontal();
 
         EditorGUI.indentLevel--;
         GUILayout.Space(4);

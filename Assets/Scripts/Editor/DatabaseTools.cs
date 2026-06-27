@@ -45,6 +45,25 @@ public static class DatabaseTools
         }
     }
 
+    [MenuItem("Tools/Database/Seed Database")]
+    public static void SeedDatabase()
+    {
+        try
+        {
+            using var conn = Database.OpenConnection();
+            DatabaseSeeder.Seed(conn);
+            Debug.Log("[DB] Seed complete (idempotent — existing rows left intact).");
+            EditorUtility.DisplayDialog("Database",
+                "Seed complete.\n\nReference content (items, mobs, vendors, conversations, dev account) " +
+                "inserted where missing. Existing rows were left intact.", "OK");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[DB] Seed Database failed: {e.Message}\n{e}");
+            EditorUtility.DisplayDialog("Database", $"FAILED\n\n{e.Message}", "OK");
+        }
+    }
+
     [MenuItem("Tools/Database/DAL Self-Test")]
     public static void DalSelfTest()
     {
