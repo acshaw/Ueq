@@ -1,6 +1,11 @@
-# M1 Regression Checklist  *(run after 3.0 — zone-aware state)*
+# M1 Regression Checklist  *(zone-aware; pre-deployment gate)*
 
-Broad verification pass over everything M1 touched (1.1–1.7 + 1.6.1) before starting M2. M1 rewired
+> **When to run (decided 2026-07-04):** this is a **pre-first-deployment gate**, not a per-milestone
+> blocker. 2.x + 3.0 already re-exercised most of it, so it's not run right now — but it's kept **current
+> as systems change** and run in full before the first real deployment. Interim bar between now and then =
+> the **light smoke**: boot → login → create → fight → camp → relog.
+
+Broad verification pass over everything M1 touched (1.1–1.7 + 1.6.1). M1 rewired
 persistence, accounts, character flow, and the entire UI layer; **3.0 then reworked persistence, spawn,
 chat, player-spawn, and UI-across-scenes to be zone-aware**, which is exactly why this full sweep is
 scheduled to run *after* 3.0 — it validates the post-rework state once instead of twice. Run it after a

@@ -68,7 +68,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   - **Centralized local-player resolution** — one place resolves "the local player" and raises a `localPlayerReady`/`changed` event; panels subscribe instead of each doing `FindObjectsByType<NetworkedPlayer>` / `NetworkClient.localPlayer`. Permanently retires the per-panel bind-once fragility (the host-restart bug patched in 1.3 was a symptom).
   - **View vs. controller split** per panel; **author UI as prefabs** instead of the ~900 lines of procedural `Create*UI()` in `SceneSetup.cs`.
   - Covers the ~10 current canvases (Chat, HUD, Inventory, Equipment, Vendor, Loot, Hotbar, Login, target/player frames) + the 1.5 character-select screen.
-  - *Note (revised 2026-06-22):* the **full M1 regression now runs after the M3 zone integration** (which reworks spawn/chat/persistence/player-spawn to be zone-aware), so it validates the post-rework state once instead of twice. A **light M1 smoke** (boot → login → create → fight → camp → relog) covers the gap in the meantime. The full checklist is drafted at `docs/m1-regression-checklist.md`.
+  - *Note (revised 2026-07-04):* the **full M1 regression is DEFERRED to pre-first-deployment**, not run per-milestone. 2.x (every content vertical migrated + re-tested) and 3.0 (which reworked spawn/chat/persistence/player-spawn/UI and was hammered across Stages A/B/C) have already re-covered most of what it checks, so a dedicated pass now is largely redundant. The **light M1 smoke** (boot → login → create → fight → camp → relog) is the interim bar; the full zone-aware checklist at `docs/m1-regression-checklist.md` is kept **current as systems change** and run as a gate before the first real deployment.
 
 ## Zone architecture spike  *(runs before 2.1 — de-risks the M3 zone model early)*
 
@@ -109,11 +109,11 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 ## M3 — World & Content  *(depends on M1 + M2)*
 
 > Goal: a real place to play, built with the tools above.
-> Sequencing (revised 2026-06-22): the **zone framework comes first (3.0)** so the starting zone is
-> built as a proper zone from day one (not retrofitted), and the **full M1 regression runs right after
-> 3.0** (since the zone integration is what reworks the M1 systems the regression covers).
+> Sequencing (revised 2026-07-04): the **zone framework comes first (3.0)** so the starting zone is
+> built as a proper zone from day one (not retrofitted). The **full M1 regression is deferred to
+> pre-first-deployment** (2.x + 3.0 already re-covered most of it); light smoke is the interim bar.
 
-- [x] **3.0 — Zone integration.** ✅ Code-complete + Stages A/B/C all verified in-editor (2026-07-04). The real, production version of the 2.0 spike: made the world zone-aware — additive zone scenes, per-scene interest, player→zone assignment, transitions with relative placement, persisted zone id, and zone-aware spawn/chat/AI/regen. Scoped by the 2.0 findings. Two latent bugs found + fixed en route (see 3.0.1: mob NetworkTransform, thornwood navmesh persistence). **Remaining formal gate: run the full zone-aware M1 regression (`docs/m1-regression-checklist.md`).**
+- [x] **3.0 — Zone integration.** ✅ Code-complete + Stages A/B/C all verified in-editor (2026-07-04). The real, production version of the 2.0 spike: made the world zone-aware — additive zone scenes, per-scene interest, player→zone assignment, transitions with relative placement, persisted zone id, and zone-aware spawn/chat/AI/regen. Scoped by the 2.0 findings. Two latent bugs found + fixed en route (see 3.0.1: mob NetworkTransform, thornwood navmesh persistence). *(The full zone-aware M1 regression is deferred to pre-first-deployment, not a blocker here — see the M3 sequencing note above.)*
 - [ ] **3.0.1 — Zone-integration bug follow-ups.** Bugs/gaps surfaced during 3.0 verification (see the Stage B log in `docs/devplans/3.0-zone-integration.md`). Not zone-specific; parked here because that's where they were found. Items:
   - **Remote player rotation not visible** — `Player.prefab` `NetworkTransformReliable` has `syncRotation: 0`, so observers see remote players facing their spawn orientation. Fix: sync yaw to observers (cheap path: a yaw `SyncVar` applied to the mesh, preserving the client-side instant-camera feel; avoid full rotation sync). *Real gameplay gap — schedule a fix.*
   - **MPPM keyboard focus (testing quirk, no fix)** — only the OS-focused Game view receives WASD (new Input System reads global keyboard); mouse routes per-window. Documented so it isn't re-diagnosed as a bug.
@@ -122,21 +122,32 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   - **Mob NetworkTransform missing (✅ FIXED + VERIFIED 2026-07-04)** — the Enemy prefab had **no NetworkTransform**, so server-side mob movement (EnemyAI/NavMeshAgent) never synced to remote clients; on non-host clients mobs looked frozen at spawn while the server AI chased/attacked (attacks read "out of range" because the server measured to the mob's real, moved position). Masked for months by host-only testing. Fix: `SceneSetup` now adds a server-authoritative `NetworkTransformReliable` (position-only, `coordinateSpace = World`) to the Enemy prefab in both build + patch paths; `EnemyAI.Awake` disables the NavMeshAgent so it only drives the transform on the server. Verified: mobs sync + are killable on remote clients in both zones.
   - **ZoneSetup scripted navmesh bake doesn't persist (✅ FIXED + VERIFIED 2026-07-04)** — zone mobs spawned off-navmesh and couldn't wander/path because the scripted `NavMeshSurface.BuildNavMesh()` didn't save the NavMeshData asset (and re-running the tool wiped any manual bake). Fix: `ZoneSetup.BakeAndPersistNavMesh` (now generalized across all built zones in 3.0.2) saves the baked NavMeshData to `Assets/Scenes/Zones/<scene>_navmesh.asset` and keeps the surface pointed at it so it reloads with the scene. Verified: thornwood + grukmar mobs wander. (Note: the earlier "creslins froze when thornwood baked" ping-pong was NOT a navmesh conflict — it was the missing-NetworkTransform bug above; the offset zone navmeshes coexist fine.)
 - [x] **3.0.2 — Zone authoring tooling + 3-zone MVP scaffold.** ✅ Verified in-editor 2026-07-04. Devplan `docs/devplans/3.0.2-zone-authoring.md`. Delivered: drag-in `ZonePortal`/`ZoneWaypoint` prefabs with Scene-view labels, generalized `BuildFlatZone` + `Tools/Zones/New Zone…` workflow (flat ground + persisted navmesh + default entry + catalog/build-settings registration), intra-zone portal support (`ServerMovePlayer`), and the **3 MVP zones as flat scaffolds** (Creslin's Field ↔ Thornwood ↔ Grukmar's Deep, linear graph, ~280u each). Decoration deferred to 3.1.
-- [ ] **3.1 — Zone content pass.** Decorate + populate the 3.0.2 scaffolds: hand-placed Synty dressing, mobs/spawns, named NPCs, points of interest — built within the 3.0 framework using the 3.0.2 tooling.
+- [ ] **3.1 — New-player onboarding vertical.** First polished vertical slice: a new player registers → logs in → creates a character (2 races × 3 classes) → enters a starting location, through a styled, transition-driven client shell (fades, not snaps). The character-identity hooks here feed quests later. **Combat/ability depth is intentionally minimal (1 signature ability per class) — real depth lands in M4 (combat refinement, then a level 1→2 polish round).** Two tracks (A = client UX, B = character identity) converge at character select + spawn. Each sub-item gets its own devplan.
+  - [ ] **3.1.1 — Client screen-flow shell + transitions** *(foundation; everything below plugs in)*. A screen/state manager (Title → Register/Login → Character Select → In-World) with **fade transitions**; delivers the uGUI conversion of login/select deferred in 1.7.
+  - [ ] **3.1.2 — Title / start page.** Entry screen (Play / Quit; Settings later).
+  - [ ] **3.1.3 — Register + Login screens.** Styled uGUI on the shell (replaces the IMGUI `LoginUI`).
+  - [ ] **3.1.4 — Race models + animation (Human, Elf).** Synty models on Humanoid rigs so locomotion + existing ability anims retarget; wire race → in-world model + char-select preview. *(User imports the Synty pack for the elf.)*
+  - [ ] **3.1.5 — Class setup (Warrior, Wizard, Cleric).** Configure stats/HP/mana + **1 signature ability each** (Warrior Kick exists; Wizard nuke; Cleric heal) — just enough to feel distinct. Depth deferred to M4.
+  - [ ] **3.1.6 — Character select/create redesign.** Rearranged + styled, with a **live 3D character preview** reflecting race/class.
+  - [ ] **3.1.7 — Camp / logout polish.** Smooth fade back to select/title (no snap), tidy session teardown.
+  - [ ] **3.1.8 — Light starting-location polish.** Just enough Synty dressing around the Creslin's Field spawn that the entry point looks intentional (full multi-zone decoration is 3.6).
 - [ ] **3.2 — Quest rewards via keywords.** `IOnConversationKeyword` action granting XP/items/faction, faction-gated, no quest UI. *(Consumes quest definitions authored in 2.3.)*
 - [ ] **3.3 — NPC item-giving.** Trade item to NPC via keyword; server validates, removes, fires script event.
 - [ ] **3.4 — Real aggro / threat.** Replace placeholder: faction-driven perception + social aggro + threat decay.
 - [ ] **3.5 — Second zone (content).** A real second zone built on the 3.0 framework (the transition architecture now lives in 3.0); proves the framework with actual content + defines what state crosses zone boundaries in practice.
+- [ ] **3.6 — Zone content & decoration pass.** (Was the original 3.1.) Decorate + populate the 3.0.2 scaffolds across all zones: hand-placed Synty dressing, mobs/spawns, named NPCs, points of interest — using the 3.0.2 tooling.
 
 ## M4 — Gameplay Depth
 
 > Goal: make the loop genuinely fun.
 
-- [ ] **4.1 — Player grouping.** Parties (≤6), shared XP, group health frames, friendly-fire rules.
-- [ ] **4.2 — Group threat/aggro tuning.**
-- [ ] **4.3 — More abilities per class.**
-- [ ] **4.4 — Goals / win-lose conditions.**
-- [ ] **4.5 — Balance pass** against real play data.
+- [ ] **4.1 — Combat refinement.** *(User-flagged as the next depth effort after the 3.1 onboarding vertical.)* Tighten the combat model and flesh out the 3.1 classes beyond their single signature ability — hit/avoidance/damage feel, ability kits, cooldown/resource tuning.
+- [ ] **4.2 — Level 1→2 polish round.** A focused vertical polishing the earliest gameplay progression (level 1 → 2) end to end: abilities, combat feel, feedback, pacing — the payoff of the combat refinement on the real starting experience.
+- [ ] **4.3 — Player grouping.** Parties (≤6), shared XP, group health frames, friendly-fire rules.
+- [ ] **4.4 — Group threat/aggro tuning.**
+- [ ] **4.5 — More abilities per class.** *(Largely folded into 4.1/4.2; keep for the broader spellbook fill-out.)*
+- [ ] **4.6 — Goals / win-lose conditions.**
+- [ ] **4.7 — Balance pass** against real play data.
 
 ## M5 — Deploy & Scale  *(AWS)*
 

@@ -30,5 +30,9 @@ public class UIManager : MonoBehaviour
         var ui = SceneManager.GetSceneByName(UISceneName);
         if (!ui.isLoaded)
             SceneManager.LoadSceneAsync(UISceneName, LoadSceneMode.Additive);
+
+        // 3.1.1 — the client screen-flow shell (Title → Login/Register → Character Select → In-World with
+        // fade transitions). Replaces the IMGUI LoginUI / CharacterSelectUI (disabled at runtime).
+        UIScreenManager.EnsureExists();
     }
 }

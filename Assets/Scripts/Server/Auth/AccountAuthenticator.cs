@@ -69,6 +69,10 @@ public class AccountAuthenticator : NetworkAuthenticator
     /// <summary>Last server error/result text — the login UI reads this to show feedback.</summary>
     public static string LastClientMessage { get; private set; } = "";
 
+    /// <summary>Clear the stored feedback text at the start of a new login/register attempt so a stale
+    /// message (e.g. a prior "Success") can't linger on the login panel.</summary>
+    public static void ClearClientMessage() => LastClientMessage = "";
+
     void Awake() => Instance = this;
 
     [RuntimeInitializeOnLoadMethod] // fast playmode without domain reload
@@ -156,12 +160,19 @@ public class AccountAuthenticator : NetworkAuthenticator
             return;
         }
 
-        // Enforce single login per account (decision O4 — reject the newcomer).
-        if (_onlineByAccount.ContainsKey(outcome.AccountId))
+        // Enforce single login per account (decision O4 — reject the newcomer). Self-heal against a stale
+        // entry whose connection already dropped (a disconnect that didn't clean up), so a genuine re-login
+        // isn't wrongly blocked as "already online".
+        if (_onlineByAccount.TryGetValue(outcome.AccountId, out var existing))
         {
-            SendResponse(conn, AuthCode.AlreadyOnline, "That account is already online.");
-            DelayedReject(conn);
-            return;
+            bool stillOnline = existing != null && NetworkServer.connections.ContainsValue(existing);
+            if (stillOnline)
+            {
+                SendResponse(conn, AuthCode.AlreadyOnline, "That account is already online.");
+                DelayedReject(conn);
+                return;
+            }
+            _onlineByAccount.Remove(outcome.AccountId); // previous session is gone — reclaim it
         }
 
         _onlineByAccount[outcome.AccountId] = conn;
@@ -226,16 +237,18 @@ public class AccountAuthenticator : NetworkAuthenticator
 
     void OnAuthResponse(AuthResponseMessage msg)
     {
-        LastClientMessage = msg.message;
         if (msg.code == (byte)AuthCode.Success)
         {
+            LastClientMessage = ""; // nothing to show — we're headed in-world
             ClientAccept();
         }
         else
         {
+            LastClientMessage = msg.message;
             Debug.LogWarning($"[Auth] Login rejected: {msg.message}");
-            // StopHost covers both host-client and remote-client cases.
-            NetworkManager.singleton.StopHost();
+            // Don't tear the client down here — the server owns the rejection and disconnects us shortly
+            // (DelayedReject → ServerReject). Calling StopHost/StopClient synchronously from inside this
+            // message handler corrupted the client so the *next* StartClient couldn't authenticate.
         }
     }
 }
