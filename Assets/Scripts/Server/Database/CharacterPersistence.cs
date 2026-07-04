@@ -122,6 +122,9 @@ public class CharacterPersistence : NetworkBehaviour
         _health?.ResetToFull();
         if (_mana != null) _mana.SetCurrent(_mana.Max);
         _player?.SetBindPoint(transform.position); // bind at the spawn point; keep current position
+        // M3.0 Stage C: a new character spawns at the Mirror start position, which lives in the base
+        // (starter) zone. Record it so the first save round-trips the correct zone id.
+        if (ZoneManager.Instance != null) _player?.SetZone(ZoneManager.Instance.StarterZoneId);
 
         _loaded = true;
         Debug.Log($"[Persist] Created character '{name}' ({raceName} {className}) for account #{_accountId}.");
@@ -172,7 +175,22 @@ public class CharacterPersistence : NetworkBehaviour
         else                      _health?.SetCurrent(s.CurrentHealth);
         _mana?.SetCurrent(s.CurrentMana);
 
-        _player?.LoadState(new Vector3(s.PosX, s.PosY, s.PosZ), s.Yaw, new Vector3(s.BindX, s.BindY, s.BindZ));
+        // M3.0 Stage C: place the player into their persisted zone at their saved position. When ZoneManager
+        // is active it owns scene assignment + the client's additive scene load + the warp, so we set the
+        // bind point separately and route placement through it. Zones-disabled path keeps the single-scene
+        // LoadState (sets bind + teleports).
+        var pos  = new Vector3(s.PosX, s.PosY, s.PosZ);
+        var bind = new Vector3(s.BindX, s.BindY, s.BindZ);
+        _player?.SetZone(s.ZoneId);
+        if (ZoneManager.Instance != null && connectionToClient != null)
+        {
+            _player?.SetBindPoint(bind);
+            ZoneManager.Instance.ServerPlaceInZone(connectionToClient, s.ZoneId, pos, s.Yaw);
+        }
+        else
+        {
+            _player?.LoadState(pos, s.Yaw, bind);
+        }
         ApplyName(s.Name);
 
         Debug.Log($"[Persist] Loaded character for account #{_accountId} (level {_exp?.Level}).");
@@ -238,6 +256,8 @@ public class CharacterPersistence : NetworkBehaviour
         s.PosX = pos.x;  s.PosY = pos.y;  s.PosZ = pos.z;
         s.Yaw  = _player != null ? _player.Yaw : transform.eulerAngles.y;
         s.BindX = bind.x; s.BindY = bind.y; s.BindZ = bind.z;
+
+        if (_player != null) s.ZoneId = _player.CurrentZoneId;
 
         return s;
     }

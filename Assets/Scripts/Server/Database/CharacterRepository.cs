@@ -42,6 +42,7 @@ public sealed class CharacterRepository : IRepository
             " current_health = @hp, current_mana = @mp, " +
             " pos_x = @px, pos_y = @py, pos_z = @pz, yaw = @yaw, " +
             " bind_x = @bx, bind_y = @by, bind_z = @bz, " +
+            " zone_id = @zone, " +
             " actual_race = @actual, apparent_race = @apparent, updated_at = now() " +
             "WHERE character_id = @cid", conn, tx);
 
@@ -63,6 +64,7 @@ public sealed class CharacterRepository : IRepository
         cmd.Parameters.AddWithValue("bx", s.BindX);
         cmd.Parameters.AddWithValue("by", s.BindY);
         cmd.Parameters.AddWithValue("bz", s.BindZ);
+        cmd.Parameters.AddWithValue("zone", s.ZoneId ?? ZoneCatalog.DefaultStarterZoneId);
         cmd.Parameters.AddWithValue("actual", s.ActualRace ?? "");
         cmd.Parameters.AddWithValue("apparent", s.ApparentRace ?? "");
         cmd.ExecuteNonQuery();
@@ -177,7 +179,7 @@ public sealed class CharacterRepository : IRepository
         using (var cmd = new NpgsqlCommand(
             "SELECT character_id, account_id, name, race_name, class_name, total_xp, copper, silver, gold, platinum, " +
             "current_health, current_mana, pos_x, pos_y, pos_z, yaw, bind_x, bind_y, bind_z, " +
-            "actual_race, apparent_race FROM characters WHERE character_id = @cid", conn, tx))
+            "actual_race, apparent_race, zone_id FROM characters WHERE character_id = @cid", conn, tx))
         {
             cmd.Parameters.AddWithValue("cid", characterId);
             using var r = cmd.ExecuteReader();
@@ -206,6 +208,7 @@ public sealed class CharacterRepository : IRepository
                 BindZ         = r.GetFloat(18),
                 ActualRace    = r.GetString(19),
                 ApparentRace  = r.GetString(20),
+                ZoneId        = r.GetString(21),
             };
         }
 

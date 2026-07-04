@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/UI.unity
     guid: 4330e67e174d850478d8c3a75fb6169d
+  - enabled: 1
+    path: Assets/Scenes/Zones/thornwood.unity
+    guid: 2dd0a33623a7b1b4091410c6d6ac5c59
+  - enabled: 1
+    path: Assets/Scenes/Zones/grukmars_deep.unity
+    guid: fff9c9171636e154782bb8a9088ae5ac
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 7ee9c1ca670ddff49b22d300035e133b, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

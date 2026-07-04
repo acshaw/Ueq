@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 public class SpawnPoint : MonoBehaviour
 {
@@ -100,6 +101,14 @@ public class SpawnPoint : MonoBehaviour
     void SpawnOne(MobDefinition def, bool jitter)
     {
         var go = Instantiate(def.prefab, ResolveSpawnPosition(jitter), transform.rotation);
+
+        // M3.0 Stage C: this spawn point belongs to a zone scene; keep its mobs in that scene so
+        // SceneInterestManagement partitions them to that zone. Instantiate defaults to the active
+        // scene (the base zone), so a spawn point in a non-base zone would otherwise leak mobs into
+        // the base zone. Must happen before NetworkServer.Spawn (observers are computed on spawn).
+        if (gameObject.scene.IsValid() && go.scene != gameObject.scene)
+            SceneManager.MoveGameObjectToScene(go, gameObject.scene);
+
         go.GetComponent<MobApplicator>()?.SetDefinition(def);
         NetworkServer.Spawn(go);
 

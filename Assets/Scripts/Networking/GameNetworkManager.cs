@@ -17,6 +17,7 @@ public class GameNetworkManager : NetworkManager
         {
             Database.InitializeServer();
             ContentLoader.LoadAll(); // 2.1 — load DB-backed content into registries before the world goes live
+            GetComponent<ZoneManager>()?.ServerInitialize(); // 3.0 — additive zones + interest partitioning
             PersistenceService.Create();
             GetComponent<CharacterSelectController>()?.OnServerStarted(); // 1.5 select/create handlers
             InvokeRepeating(nameof(AutosaveTick), AutosaveSeconds, AutosaveSeconds); // 1.6 autosave (O3)
@@ -39,6 +40,7 @@ public class GameNetworkManager : NetworkManager
     {
         CancelInvoke(nameof(AutosaveTick));
         GetComponent<CharacterSelectController>()?.OnServerStopped(); // 1.5 — unregister select handlers
+        GetComponent<ZoneManager>()?.ServerShutdown(); // 3.0 — clear zone state (scenes torn down by Unity)
 
         // Save every connected character FIRST — Mirror destroys player objects during the
         // subsequent NetworkServer.Shutdown, and we must enqueue before FlushAndStop drains.
@@ -100,11 +102,15 @@ public class GameNetworkManager : NetworkManager
     {
         base.OnStartClient();
         NetworkClient.RegisterHandler<ContentCatalog.ItemCatalogMessage>(ContentCatalog.ApplyItems);
+        // 3.0 — chat is delivered via a NetworkMessage (not an RPC) so it survives zone/scene interest
+        // partitioning. Register the client-side receiver.
+        NetworkClient.RegisterHandler<ChatDeliverMessage>(ChatManager.HandleDeliver);
     }
 
     public override void OnStopClient()
     {
         NetworkClient.UnregisterHandler<ContentCatalog.ItemCatalogMessage>();
+        NetworkClient.UnregisterHandler<ChatDeliverMessage>();
         base.OnStopClient();
     }
 

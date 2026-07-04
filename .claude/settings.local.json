@@ -68,7 +68,9 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' -X POST http://localhost:5099/api/items -H 'Content-Type: application/json' -d '{\"displayName\":\"no id\"}')",
       "Bash(curl -s http://localhost:5099/api/items)",
       "Bash(curl -s -X PUT http://localhost:5099/api/items/iron_sword -H 'Content-Type: application/json' -d '{\"displayName\":\"Iron Sword +1\",\"weaponBaseDamage\":18,\"bonusStr\":3,\"buyPrice\":120,\"sellPrice\":48,\"maxStackSize\":1,\"isEquippable\":true,\"equipSlot\":11}')",
-      "Bash(grep -rn \"case \\\\\"/\\\\|StartsWith\\(\\\\\"/\\\\|chat command\\\\|/setfaction\\\\|/faction\" Assets/Scripts --include=*.cs)"
+      "Bash(grep -rn \"case \\\\\"/\\\\|StartsWith\\(\\\\\"/\\\\|chat command\\\\|/setfaction\\\\|/faction\" Assets/Scripts --include=*.cs)",
+      "Bash(grep -v \"//\")",
+      "Bash(awk '/NavMeshAgent/{f=1} f&&/m_Enabled/{print NR\": \"$0; f=0}' Assets/Prefabs/Enemy.prefab)"
     ]
   },
   "hooks": {

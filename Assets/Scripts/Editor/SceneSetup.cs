@@ -192,6 +192,10 @@ public static class SceneSetup
             typeof(VendorApplicator),  // inert unless the mob's definition sets a vendorId
         });
 
+        // Server-authoritative movement sync — without this, mobs move only on the server and look
+        // frozen on remote (non-host) clients. Missing on the original prefab; masked by host-only testing.
+        AddEnemyNetworkTransform(prefabRoot);
+
         PrefabUtility.SaveAsPrefabAsset(prefabRoot, PrefabPath);
         PrefabUtility.UnloadPrefabContents(prefabRoot);
 
@@ -523,6 +527,7 @@ public static class SceneSetup
 
 #if MIRROR
         enemy.AddComponent<NetworkIdentity>();
+        AddEnemyNetworkTransform(enemy);
         enemy.AddComponent<Health>();
         enemy.AddComponent<NpcEventDispatcher>();
         enemy.AddComponent<NpcFaction>();
@@ -535,19 +540,34 @@ public static class SceneSetup
 
         Debug.LogWarning("[SceneSetup] Enemy rebuilt — bake the NavMesh before hitting Play (Window > AI > Navigation > Bake).");
 
-        var conv = enemy.AddComponent<NpcConversation>();
-        var kwSet = AssetDatabase.LoadAssetAtPath<ConversationKeywordSet>("Assets/ScriptableObjects/Conversation/GuardKeywords.asset");
-        if (kwSet != null)
-        {
-            var so = new SerializedObject(conv);
-            so.FindProperty("keywordSet").objectReferenceValue = kwSet;
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-        else
-            Debug.LogWarning("[SceneSetup] GuardKeywords.asset not found — run Tools/Setup Conversation Data to wire it.");
+        // Conversations are DB-authored (M2.4) and resolved at runtime via the mob's
+        // conversationSetId (ConversationRegistry); no SO keyword set is wired here anymore.
+        enemy.AddComponent<NpcConversation>();
 #endif
 
         return enemy;
+    }
+
+    // Mobs move server-side (EnemyAI drives a NavMeshAgent on the server). That movement only reaches
+    // remote clients through a NetworkTransform — without one, non-host clients see the mob frozen at its
+    // spawn while the server AI actually chases/attacks (host-only testing hid this). Server-authoritative
+    // (syncDirection stays ServerToClient), position-only (syncRotation off, matching the player), and
+    // coordinateSpace = World so mobs in offset zone scenes (3.0) sync at their true world position.
+    static void AddEnemyNetworkTransform(GameObject enemy)
+    {
+#if MIRROR
+        var ntType = FindType("Mirror.NetworkTransformReliable") ?? FindType("Mirror.NetworkTransform");
+        if (ntType == null) { Debug.LogError("[SceneSetup] No NetworkTransform type found — check your Mirror version."); return; }
+
+        var nt = enemy.GetComponent(ntType) ?? enemy.AddComponent(ntType);
+
+        var so = new SerializedObject(nt);
+        so.FindProperty("syncPosition").boolValue = true;
+        so.FindProperty("syncRotation").boolValue = false;
+        var cs = so.FindProperty("coordinateSpace");
+        if (cs != null) cs.enumValueIndex = 1; // Mirror.CoordinateSpace.World
+        so.ApplyModifiedPropertiesWithoutUndo();
+#endif
     }
 
     // ── NetworkManager ────────────────────────────────────────────────────────

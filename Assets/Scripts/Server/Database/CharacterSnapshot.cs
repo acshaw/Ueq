@@ -26,6 +26,8 @@ public sealed class CharacterSnapshot
     public float  PosX, PosY, PosZ, Yaw;
     public float  BindX, BindY, BindZ;
 
+    public string ZoneId = ZoneCatalog.DefaultStarterZoneId;  // M3.0 — which zone the character last stood in
+
     public string ActualRace   = "";
     public string ApparentRace = "";
 

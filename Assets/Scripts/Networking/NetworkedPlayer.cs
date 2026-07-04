@@ -2,6 +2,7 @@ using Mirror;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class NetworkedPlayer : NetworkBehaviour
 {
@@ -26,6 +27,7 @@ public class NetworkedPlayer : NetworkBehaviour
     float _verticalVelocity;
 
     Vector3 _bindPoint;
+    string  _zoneId = ZoneCatalog.DefaultStarterZoneId; // M3.0 — server-side current zone
 
     Vector2 _moveInput;
     bool _sprint;
@@ -48,7 +50,16 @@ public class NetworkedPlayer : NetworkBehaviour
     public NetworkIdentity CurrentTargetIdentity =>
         _currentTarget != null ? _currentTarget.GetComponentInParent<NetworkIdentity>() : null;
 
-    void Awake() => _cc = GetComponent<CharacterController>();
+    void Awake()
+    {
+        _cc = GetComponent<CharacterController>();
+
+        // 3.0 — zones are authored at distinct world-space offsets, so the player transform must sync in
+        // world space (the spike's lever for the owner-side offset on cross-scene teleports). For an
+        // unparented player local==world, so this is a no-op in the single-scene case.
+        var nt = GetComponent<NetworkTransformBase>();
+        if (nt != null) nt.coordinateSpace = CoordinateSpace.World;
+    }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -356,6 +367,12 @@ public class NetworkedPlayer : NetworkBehaviour
         if (playerCorpsePrefab != null)
         {
             var corpseObj = Instantiate(playerCorpsePrefab, transform.position, Quaternion.identity);
+
+            // M3.0 Stage C: drop the corpse in the player's zone scene, not the active (base) scene, so it's
+            // observed by players in that zone. Instantiate defaults to the active scene.
+            if (gameObject.scene.IsValid() && corpseObj.scene != gameObject.scene)
+                SceneManager.MoveGameObjectToScene(corpseObj, gameObject.scene);
+
             corpseObj.GetComponent<PlayerCorpse>().Prepare(netIdentity, items, copper, xpLoss, gameObject.name);
             NetworkServer.Spawn(corpseObj);
         }
@@ -371,14 +388,31 @@ public class NetworkedPlayer : NetworkBehaviour
         SendSystemMsg("You have died.");
         health.ResetToFull();
 
-        // Move server-side transform immediately so mobs can't re-aggro and re-kill
-        // the player at the death location before client input repositions them.
-        var cc = GetComponent<CharacterController>();
-        cc.enabled = false;
-        transform.position = _bindPoint;
-        cc.enabled = true;
-
-        TargetRpcRespawn(connectionToClient, _bindPoint);
+        // Respawn (moves the server-side transform immediately so mobs can't re-aggro and re-kill the
+        // player at the death location). M3.0 Stage C: route through ZoneManager so the scene assignment
+        // stays correct across a cross-zone death. Bind points are authored in the starter zone's coords;
+        // a cross-zone bind isn't tracked yet, so a death in a non-starter zone respawns at that zone's
+        // default entry (3.0.1 will add proper per-zone bind points).
+        var zm = ZoneManager.Instance;
+        if (zm != null && connectionToClient != null)
+        {
+            Vector3 respawnPos = _bindPoint;
+            float   respawnYaw = _yaw;
+            if (_zoneId != zm.StarterZoneId)
+            {
+                var entry = zm.EntryTransform(_zoneId, "default");
+                if (entry != null) { respawnPos = entry.position; respawnYaw = entry.eulerAngles.y; }
+            }
+            zm.ServerPlaceInZone(connectionToClient, _zoneId, respawnPos, respawnYaw);
+        }
+        else
+        {
+            var cc = GetComponent<CharacterController>();
+            cc.enabled = false;
+            transform.position = _bindPoint;
+            cc.enabled = true;
+            TargetRpcRespawn(connectionToClient, _bindPoint);
+        }
     }
 
     [TargetRpc]
@@ -393,6 +427,63 @@ public class NetworkedPlayer : NetworkBehaviour
     // Call from spells/abilities to update the player's bind point
     [Server]
     public void SetBindPoint(Vector3 position) => _bindPoint = position;
+
+    // ── Zones (3.0) ─────────────────────────────────────────────────────────────
+
+    /// <summary>Which zone this player currently stands in (server-authoritative). Read by chat/spawn/
+    /// persistence; set by ZoneManager on spawn + transition.</summary>
+    public string CurrentZoneId => _zoneId;
+
+    [Server]
+    public void SetZone(string zoneId)
+    {
+        if (!string.IsNullOrEmpty(zoneId)) _zoneId = zoneId;
+    }
+
+    /// <summary>Server-authoritative teleport used by zone transitions, respawn, and character-select
+    /// spawn. Uses <c>NetworkTransform.ServerTeleport</c> — never a raw position set — so delta
+    /// compression / interpolation don't drift observers (2.0 spike finding). CC toggled so it doesn't
+    /// fight the move.</summary>
+    [Server]
+    public void ServerWarpTo(Vector3 position, float yaw)
+    {
+        _yaw = yaw;
+        _verticalVelocity = 0f; // arrive fresh — don't carry accumulated fall/jump velocity into the warp
+        var rot = Quaternion.Euler(0f, yaw, 0f);
+
+        var cc = GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        transform.SetPositionAndRotation(position, rot);
+        if (cc != null) cc.enabled = true;
+
+        var nt = GetComponent<NetworkTransformBase>();
+        if (nt != null) nt.ServerTeleport(position, rot);
+        else            TargetRpcRespawn(connectionToClient, position);
+    }
+
+    /// <summary>`/unstuck` — pull a stuck/falling player to a safe spot: the current zone's default entry
+    /// (3.0), or the bind point if zones aren't active / the zone has no default entry. Gated out of
+    /// combat so it can't be used as an escape.</summary>
+    [Command]
+    public void CmdUnstuck()
+    {
+        var combat = GetComponent<CombatState>();
+        if (combat != null && combat.InCombat)
+        {
+            SendSystemMsg("You can't use /unstuck while in combat.");
+            return;
+        }
+
+        Vector3 dest = _bindPoint;
+        float   yaw  = _yaw;
+
+        var entry = ZoneManager.Instance?.EntryTransform(_zoneId, "default");
+        if (entry != null) { dest = entry.position; yaw = entry.eulerAngles.y; }
+
+        ServerWarpTo(dest, yaw);
+        ChatManager.Instance?.UpdatePosition(connectionToClient, dest);
+        SendSystemMsg("You feel a tug as you are pulled back to safety.");
+    }
 
     // ── Persistence (1.3) ───────────────────────────────────────────────────────
 

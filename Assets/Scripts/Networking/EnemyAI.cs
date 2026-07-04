@@ -43,6 +43,11 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         _health           = GetComponent<Health>();
         _dispatcher       = GetComponent<NpcEventDispatcher>();
         _movementBehavior = GetComponent<INpcMovementBehavior>();
+
+        // Movement is server-authoritative: the NavMeshAgent drives the transform only on the server,
+        // and a NetworkTransform syncs it to clients. Start the agent disabled so on non-host clients it
+        // never fights the NetworkTransform for control of the transform; OnStartServer re-enables it.
+        if (_agent != null) _agent.enabled = false;
     }
 
     public override void OnStartServer()

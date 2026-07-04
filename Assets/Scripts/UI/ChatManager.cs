@@ -58,19 +58,22 @@ public class ChatManager : NetworkBehaviour
         {
             if (!_connPos.TryGetValue(conn, out var p)) continue;
             if (Vector3.Distance(origin, p) <= radius)
-                TargetDeliver(conn, msg.Channel, msg.SenderName, msg.Text);
+                Deliver(conn, msg);
         }
     }
 
     /// Deliver to one specific connection (whispers, personal rewards, system errors).
     [Server]
     public void SendDirect(ChatMessage msg, NetworkConnectionToClient conn)
-        => TargetDeliver(conn, msg.Channel, msg.SenderName, msg.Text);
+        => Deliver(conn, msg);
 
     /// Deliver to every connected client (server announcements).
     [Server]
     public void SendAll(ChatMessage msg)
-        => RpcDeliver(msg.Channel, msg.SenderName, msg.Text);
+    {
+        foreach (var conn in NetworkServer.connections.Values)
+            Deliver(conn, msg);
+    }
 
     [Server]
     public NetworkConnectionToClient FindConnectionByName(string playerName)
@@ -80,15 +83,23 @@ public class ChatManager : NetworkBehaviour
         return null;
     }
 
-    // ── RPCs ──────────────────────────────────────────────────────────────────
+    // ── Delivery (3.0) ──────────────────────────────────────────────────────────
+    // Delivery goes over conn.Send (a NetworkMessage), NOT a TargetRpc/ClientRpc. Under
+    // SceneInterestManagement a player in another zone is not an observer of this base-scene singleton,
+    // so an RPC issued from it would silently drop for them. conn.Send is independent of object
+    // observation (the same pattern ContentCatalog uses). The client handler is registered by
+    // GameNetworkManager (OnStartClient) → HandleDeliver.
 
-    [TargetRpc]
-    void TargetDeliver(NetworkConnectionToClient conn, ChatChannel channel, string sender, string text)
-        => ChatUI.Receive(new ChatMessage(channel, sender, text));
+    [Server]
+    static void Deliver(NetworkConnectionToClient conn, ChatMessage msg)
+    {
+        if (conn == null) return;
+        conn.Send(new ChatDeliverMessage { channel = msg.Channel, sender = msg.SenderName, text = msg.Text });
+    }
 
-    [ClientRpc]
-    void RpcDeliver(ChatChannel channel, string sender, string text)
-        => ChatUI.Receive(new ChatMessage(channel, sender, text));
+    /// Client-side handler for a delivered chat line (registered by GameNetworkManager).
+    public static void HandleDeliver(ChatDeliverMessage msg)
+        => ChatUI.Receive(new ChatMessage(msg.channel, msg.sender, msg.text));
 
     // ── Spatial grid ──────────────────────────────────────────────────────────
 
@@ -121,4 +132,13 @@ public class ChatManager : NetworkBehaviour
         }
         return results;
     }
+}
+
+/// <summary>3.0 — chat line delivered server→client via <c>conn.Send</c> (observation-independent, so it
+/// survives SceneInterestManagement partitioning). Handled client-side by <c>ChatManager.HandleDeliver</c>.</summary>
+public struct ChatDeliverMessage : NetworkMessage
+{
+    public ChatChannel channel;
+    public string      sender;
+    public string      text;
 }
