@@ -16,6 +16,7 @@ public sealed class CharacterSnapshot
     public long   CharacterId;          // 0 until the row exists; set by Load
     public string Name = "";
 
+    public Gender Gender;       // 3.1.4 — defaults to Male (enum 0), matching migration 0018
     public string RaceName;
     public string ClassName;
 

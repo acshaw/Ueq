@@ -37,7 +37,7 @@ public sealed class CharacterRepository : IRepository
     {
         using var cmd = new NpgsqlCommand(
             "UPDATE characters SET " +
-            " name = @name, race_name = @race, class_name = @class, total_xp = @xp, " +
+            " name = @name, gender = @gender, race_name = @race, class_name = @class, total_xp = @xp, " +
             " copper = @cp, silver = @sp, gold = @gp, platinum = @pp, " +
             " current_health = @hp, current_mana = @mp, " +
             " pos_x = @px, pos_y = @py, pos_z = @pz, yaw = @yaw, " +
@@ -48,6 +48,7 @@ public sealed class CharacterRepository : IRepository
 
         cmd.Parameters.AddWithValue("cid", s.CharacterId);
         cmd.Parameters.AddWithValue("name", s.Name ?? "");
+        cmd.Parameters.AddWithValue("gender", s.Gender.ToString());
         cmd.Parameters.AddWithValue("race", s.RaceName ?? "");
         cmd.Parameters.AddWithValue("class", s.ClassName ?? "");
         cmd.Parameters.AddWithValue("xp", s.TotalXp);
@@ -74,13 +75,14 @@ public sealed class CharacterRepository : IRepository
     /// <summary>Create the identity row for a new character at creation time (decision O2), returning
     /// its generated <c>character_id</c>. Scalars default (level-1); the full state is written by the
     /// first save once the player spawns.</summary>
-    public long CreateIdentity(NpgsqlConnection conn, long accountId, string name, string raceName, string className, NpgsqlTransaction tx = null)
+    public long CreateIdentity(NpgsqlConnection conn, long accountId, string name, string gender, string raceName, string className, NpgsqlTransaction tx = null)
     {
         using var cmd = new NpgsqlCommand(
-            "INSERT INTO characters (account_id, name, race_name, class_name) " +
-            "VALUES (@aid, @name, @race, @class) RETURNING character_id", conn, tx);
+            "INSERT INTO characters (account_id, name, gender, race_name, class_name) " +
+            "VALUES (@aid, @name, @gender, @race, @class) RETURNING character_id", conn, tx);
         cmd.Parameters.AddWithValue("aid", accountId);
         cmd.Parameters.AddWithValue("name", name ?? "");
+        cmd.Parameters.AddWithValue("gender", gender ?? Gender.Male.ToString());
         cmd.Parameters.AddWithValue("race", raceName ?? "");
         cmd.Parameters.AddWithValue("class", className ?? "");
         return (long)cmd.ExecuteScalar();
@@ -179,7 +181,7 @@ public sealed class CharacterRepository : IRepository
         using (var cmd = new NpgsqlCommand(
             "SELECT character_id, account_id, name, race_name, class_name, total_xp, copper, silver, gold, platinum, " +
             "current_health, current_mana, pos_x, pos_y, pos_z, yaw, bind_x, bind_y, bind_z, " +
-            "actual_race, apparent_race, zone_id FROM characters WHERE character_id = @cid", conn, tx))
+            "actual_race, apparent_race, zone_id, gender FROM characters WHERE character_id = @cid", conn, tx))
         {
             cmd.Parameters.AddWithValue("cid", characterId);
             using var r = cmd.ExecuteReader();
@@ -209,6 +211,7 @@ public sealed class CharacterRepository : IRepository
                 ActualRace    = r.GetString(19),
                 ApparentRace  = r.GetString(20),
                 ZoneId        = r.GetString(21),
+                Gender        = ParseGender(r.GetString(22)),
             };
         }
 
@@ -293,6 +296,7 @@ public sealed class CharacterRepository : IRepository
     {
         public long   Id;
         public string Name;
+        public Gender Gender;
         public string Race;
         public string Class;
         public int    TotalXp;
@@ -303,7 +307,7 @@ public sealed class CharacterRepository : IRepository
     {
         var list = new List<CharacterRow>();
         using var cmd = new NpgsqlCommand(
-            "SELECT character_id, name, race_name, class_name, total_xp FROM characters " +
+            "SELECT character_id, name, race_name, class_name, total_xp, gender FROM characters " +
             "WHERE account_id = @aid ORDER BY character_id", conn, tx);
         cmd.Parameters.AddWithValue("aid", accountId);
         using var r = cmd.ExecuteReader();
@@ -311,10 +315,13 @@ public sealed class CharacterRepository : IRepository
             list.Add(new CharacterRow
             {
                 Id = r.GetInt64(0), Name = r.GetString(1), Race = r.GetString(2),
-                Class = r.GetString(3), TotalXp = r.GetInt32(4),
+                Class = r.GetString(3), TotalXp = r.GetInt32(4), Gender = ParseGender(r.GetString(5)),
             });
         return list;
     }
+
+    static Gender ParseGender(string s)
+        => System.Enum.TryParse(s, out Gender g) ? g : Gender.Male;
 
     /// <summary>Case-insensitive name-taken check (the DB unique index is the real guard).</summary>
     public bool NameExists(NpgsqlConnection conn, string nameLower, NpgsqlTransaction tx = null)

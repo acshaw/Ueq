@@ -130,8 +130,29 @@ public static class SceneSetup
             typeof(PlayerRegen),
             typeof(PlayerAbilities),
             typeof(CharacterPersistence),
+            typeof(PlayerModel),
             typeof(NetworkedPlayer),
         });
+
+        // Wire PlayerModel's locomotion controller (3.1.4) so the runtime-built body animates without a
+        // manual assignment. The static Synty child must be DELETED from the prefab by hand — PlayerModel
+        // now instantiates the (gender,race,class) body itself, and a leftover child would double up.
+        var model = prefabRoot.GetComponent<PlayerModel>();
+        if (model != null)
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                "Assets/Animations/PlayerLocomotion.controller");
+            if (controller != null)
+            {
+                var mSO = new SerializedObject(model);
+                mSO.FindProperty("locomotionController").objectReferenceValue = controller;
+                mSO.ApplyModifiedProperties();
+                Debug.Log("[SceneSetup] Wired PlayerLocomotion onto PlayerModel.");
+            }
+            else
+                Debug.LogWarning("[SceneSetup] Assets/Animations/PlayerLocomotion.controller not found — " +
+                                 "run Tools/Build Player Locomotion Controller, then re-patch.");
+        }
 
         // Wire playerCorpsePrefab on NetworkedPlayer
         var np = prefabRoot.GetComponent<NetworkedPlayer>();

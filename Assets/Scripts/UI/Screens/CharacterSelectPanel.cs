@@ -20,7 +20,8 @@ public class CharacterSelectPanel : ScreenPanel
     string _error = "";
 
     CharacterListMessage _list;
-    int _raceIdx, _classIdx;
+    int _genderIdx, _raceIdx, _classIdx;
+    string _pendingName = "";   // survives the per-click form rebuild so the name field isn't wiped
 
     protected override void Build()
     {
@@ -42,7 +43,8 @@ public class CharacterSelectPanel : ScreenPanel
         _confirmDeleteId = 0;
         _error = "";
         _haveList = false;
-        _raceIdx = _classIdx = 0;
+        _genderIdx = _raceIdx = _classIdx = 0;
+        _pendingName = "";
         if (NetworkClient.active) NetworkClient.Send(new CharacterListRequest());
         Rebuild();
     }
@@ -90,6 +92,13 @@ public class CharacterSelectPanel : ScreenPanel
     void Rebuild()
     {
         if (_content == null) return;
+
+        // The form is torn down + rebuilt on every interaction (the flicker + full redesign is 3.1.6).
+        // Preserve the typed name across that teardown so cycling gender/race/class doesn't wipe it, and
+        // null the stale field ref so a later rebuild can't read a destroyed input. BuildCreate restores it.
+        if (_nameField != null) _pendingName = _nameField.text;
+        _nameField = null;
+
         ClearContent();
 
         if (!_haveList)
@@ -121,7 +130,7 @@ public class CharacterSelectPanel : ScreenPanel
         for (int i = 0; i < count; i++)
         {
             var e = _list.entries[i];
-            MenuUI.Text(_content, $"{e.name} — Lvl {e.level} {e.race} {e.cls}", 18, TextAlignmentOptions.Center);
+            MenuUI.Text(_content, $"{e.name} — Lvl {e.level} {e.gender} {e.race} {e.cls}", 18, TextAlignmentOptions.Center);
 
             if (_confirmDeleteId == e.id)
             {
@@ -158,13 +167,30 @@ public class CharacterSelectPanel : ScreenPanel
     {
         MenuUI.Text(_content, "Create a character", 20, TextAlignmentOptions.Center);
         _nameField = MenuUI.Input(_content, "Name", false);
+        if (_nameField != null) _nameField.text = _pendingName;   // restore across the rebuild
 
-        string[] races   = _list.raceOptions  ?? new string[0];
-        string[] classes = _list.classOptions ?? new string[0];
+        // 3.1.4 — gated cascade from the roster: gender → race (for that gender) → class (for that pair).
+        var opts = _list.createOptions ?? new CreateOption[0];
 
-        MenuUI.Button(_content, $"Race:  {Pick(races, _raceIdx)}",
-            () => { _raceIdx = Next(_raceIdx, races.Length); Rebuild(); });
-        MenuUI.Button(_content, $"Class:  {Pick(classes, _classIdx)}",
+        string[] genders = Genders(opts);
+        _genderIdx = Clamp(_genderIdx, genders.Length);
+        string gender = Pick(genders, _genderIdx);
+
+        string[] races = RacesFor(opts, gender);
+        _raceIdx = Clamp(_raceIdx, races.Length);
+        string race = Pick(races, _raceIdx);
+
+        string[] classes = ClassesFor(opts, gender, race);
+        _classIdx = Clamp(_classIdx, classes.Length);
+        string cls = Pick(classes, _classIdx);
+
+        // Changing an earlier pick resets the later ones to a valid default (avoids landing on a stale
+        // out-of-range combination when the available options shrink).
+        MenuUI.Button(_content, $"Gender:  {gender}",
+            () => { _genderIdx = Next(_genderIdx, genders.Length); _raceIdx = 0; _classIdx = 0; Rebuild(); });
+        MenuUI.Button(_content, $"Race:  {race}",
+            () => { _raceIdx = Next(_raceIdx, races.Length); _classIdx = 0; Rebuild(); });
+        MenuUI.Button(_content, $"Class:  {cls}",
             () => { _classIdx = Next(_classIdx, classes.Length); Rebuild(); });
 
         MenuUI.Spacer(_content, 6);
@@ -173,15 +199,43 @@ public class CharacterSelectPanel : ScreenPanel
             _error = "";
             NetworkClient.Send(new CreateCharacterMessage
             {
-                name = _nameField != null ? _nameField.text.Trim() : "",
-                race = Pick(races, _raceIdx),
-                cls  = Pick(classes, _classIdx),
+                name   = _nameField != null ? _nameField.text.Trim() : "",
+                gender = gender,
+                race   = race,
+                cls    = cls,
             });
         });
 
         if (_list.entries != null && _list.entries.Length > 0)
             MenuUI.Button(_content, "Back", () => { _error = ""; _creating = false; Rebuild(); });
     }
+
+    // ── Roster filters (client-side; the server re-validates the tuple on create) ─────────────────
+
+    static string[] Genders(CreateOption[] opts)
+    {
+        var list = new System.Collections.Generic.List<string>();
+        foreach (var o in opts) if (!string.IsNullOrEmpty(o.gender) && !list.Contains(o.gender)) list.Add(o.gender);
+        return list.ToArray();
+    }
+
+    static string[] RacesFor(CreateOption[] opts, string gender)
+    {
+        var list = new System.Collections.Generic.List<string>();
+        foreach (var o in opts)
+            if (o.gender == gender && !string.IsNullOrEmpty(o.race) && !list.Contains(o.race)) list.Add(o.race);
+        return list.ToArray();
+    }
+
+    static string[] ClassesFor(CreateOption[] opts, string gender, string race)
+    {
+        var list = new System.Collections.Generic.List<string>();
+        foreach (var o in opts)
+            if (o.gender == gender && o.race == race && !string.IsNullOrEmpty(o.cls) && !list.Contains(o.cls)) list.Add(o.cls);
+        return list.ToArray();
+    }
+
+    static int Clamp(int idx, int len) => len <= 0 ? 0 : Mathf.Clamp(idx, 0, len - 1);
 
     // Rebuilding: detach immediately (out of the layout) + destroy next frame. Child 0 is the persistent
     // "Character Select" title — keep it; rebuild only the roster/create rows below it.

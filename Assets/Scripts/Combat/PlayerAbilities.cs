@@ -166,7 +166,12 @@ public class PlayerAbilities : NetworkBehaviour
     }
 
     [ClientRpc]
-    void RpcPlayAbilityAnim(string trigger) => _animator?.PlayTrigger(trigger);
+    void RpcPlayAbilityAnim(string trigger)
+    {
+        // Re-resolve if the model child was (re)built after our initial cache (3.1.4 PlayerModel swap).
+        if (_animator == null) _animator = GetComponentInChildren<PlayerAnimator>();
+        _animator?.PlayTrigger(trigger);
+    }
 
     NetworkIdentity ResolveTarget(AbilityDefinition ability, NetworkIdentity target)
         => ability.targetingType == AbilityTargetType.Self ? netIdentity : target;

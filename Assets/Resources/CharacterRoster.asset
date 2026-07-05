@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e467ffd7d8a4f9645af517bca350f4c7, type: 3}
+  m_Name: CharacterRoster
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterRoster
+  entries:
+  - gender: 0
+    race: Human
+    cls: Warrior
+    modelPrefab: {fileID: 180246, guid: 4fd72ede44298284b89704ad0b9dedad, type: 3}
+  - gender: 0
+    race: Human
+    cls: Wizard
+    modelPrefab: {fileID: 1125088666059422, guid: 252a512dd98766344a3e98962ce240d7, type: 3}
+  - gender: 0
+    race: Dwarf
+    cls: Warrior
+    modelPrefab: {fileID: 1820919466449660, guid: 00df519327294ce4da5a577098c3ed4f, type: 3}
+  - gender: 0
+    race: Dwarf
+    cls: Cleric
+    modelPrefab: {fileID: 1820919466449660, guid: 00df519327294ce4da5a577098c3ed4f, type: 3}
+  - gender: 1
+    race: Human
+    cls: Warrior
+    modelPrefab: {fileID: 1559750931334462, guid: 3ca965f160a201a43b9bed2c8721563b, type: 3}
+  - gender: 1
+    race: Human
+    cls: Wizard
+    modelPrefab: {fileID: 1279540086164470, guid: 1ce018254c84fda46ba5da21046e614e, type: 3}
+  - gender: 1
+    race: Human
+    cls: Cleric
+    modelPrefab: {fileID: 1188022232007446, guid: 63c8d29e2141cad4d8cb0b3c8294778e, type: 3}

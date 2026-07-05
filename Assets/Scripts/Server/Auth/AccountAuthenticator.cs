@@ -276,6 +276,7 @@ public sealed class PendingCharacter
 {
     public long   CharacterId; // assigned at creation (1.6, decision O2) so saves key off it
     public string Name;
+    public Gender Gender;      // 3.1.4
     public string Race;
     public string Class;
 }

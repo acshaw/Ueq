@@ -9,6 +9,12 @@ public class PlayerExperience : NetworkBehaviour
     [SyncVar(hook = nameof(OnXpChanged))] int   _totalXp;
     [SyncVar]                             float _xpModifier = 1f;
 
+    // Synced identity for the client body-model builder (3.1.4). Race lives on PlayerFactionScores
+    // (ActualRace); gender + class name are synced here so PlayerModel can resolve the (gender,race,class)
+    // body on every client, and so the <class>/<gender> conversation tokens have a value server-side.
+    [SyncVar] Gender _gender;
+    [SyncVar] string _className = "";
+
     RaceDefinition  _currentRace;
     ClassDefinition _currentClass;
 
@@ -17,6 +23,8 @@ public class PlayerExperience : NetworkBehaviour
     public int             Level        => ComputeLevel(_totalXp, _xpModifier);
     public ClassDefinition CurrentClass => _currentClass;
     public RaceDefinition  CurrentRace  => _currentRace;
+    public Gender          Gender       => _gender;      // synced; read on clients for the model
+    public string          ClassName    => _className;   // synced class name (CurrentClass is server-only)
 
     // ── XP table (M2.7: DB table installed at host start; else Resources, else DefaultValues) ──
 
@@ -78,6 +86,11 @@ public class PlayerExperience : NetworkBehaviour
     [Server]
     public void SetRaceClass(RaceDefinition race, ClassDefinition cls) => ApplyModifier(race, cls);
 
+    /// <summary>Set the character's gender (3.1.4). Chosen at creation / loaded from persistence; synced
+    /// to clients for the body model and read server-side for the &lt;gender&gt; conversation token.</summary>
+    [Server]
+    public void SetGender(Gender gender) => _gender = gender;
+
     // ── Persistence (1.3) ───────────────────────────────────────────────────────
 
     /// <summary>Restore persisted XP + race/class, then recompute everything derived
@@ -93,6 +106,7 @@ public class PlayerExperience : NetworkBehaviour
     {
         _currentRace  = race;
         _currentClass = cls;
+        _className    = cls != null ? cls.className : "";
         float r = race != null ? race.xpModifier : 1f;
         float c = cls  != null ? cls.xpModifier  : 1f;
         _xpModifier = r * c;

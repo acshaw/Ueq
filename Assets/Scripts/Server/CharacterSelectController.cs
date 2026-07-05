@@ -71,17 +71,18 @@ public class CharacterSelectController : MonoBehaviour
             float mod = (race != null ? race.xpModifier : 1f) * (cls != null ? cls.xpModifier : 1f);
             entries[i] = new CharacterListEntry
             {
-                id = row.Id, name = row.Name, race = row.Race, cls = row.Class,
+                id = row.Id, name = row.Name, gender = row.Gender.ToString(), race = row.Race, cls = row.Class,
                 level = PlayerExperience.ComputeLevel(row.TotalXp, mod),
             };
         }
 
         conn.Send(new CharacterListMessage
         {
-            entries      = entries,
-            raceOptions  = RaceClassRegistry.AllRaceNames(),
-            classOptions = RaceClassRegistry.AllClassNames(),
-            maxSlots     = MaxCharacters,
+            entries       = entries,
+            raceOptions   = RaceClassRegistry.AllRaceNames(),   // legacy (retired IMGUI select UI)
+            classOptions  = RaceClassRegistry.AllClassNames(),  // legacy (retired IMGUI select UI)
+            createOptions = CharacterRosterRegistry.AllOptions(), // 3.1.4 — the gated gender→race→class lineup
+            maxSlots      = MaxCharacters,
         });
     }
 
@@ -104,6 +105,16 @@ public class CharacterSelectController : MonoBehaviour
         var cls  = RaceClassRegistry.GetClass(msg.cls);
         if (race == null || cls == null) { Reject(conn, "Invalid race or class."); return; }
 
+        // 3.1.4 — the roster is the availability authority: the chosen gender/race/class must be a legal,
+        // authored combination (gates out e.g. a male-human Cleric or a female Dwarf). Default an
+        // empty/garbled gender to Male so an old/legacy client can't wedge the parse.
+        if (!System.Enum.TryParse(msg.gender, out Gender gender)) gender = Gender.Male;
+        if (!CharacterRosterRegistry.IsValid(gender, race.raceName, cls.className))
+        {
+            Reject(conn, "That gender/race/class combination isn't available.");
+            return;
+        }
+
         string nameLower = name.ToLowerInvariant();
         string raceName  = race.raceName;
         string className = cls.className;
@@ -120,7 +131,7 @@ public class CharacterSelectController : MonoBehaviour
                         return new CreateResult { Error = "All character slots are full." };
                     if (_repo.NameExists(c, nameLower))
                         return new CreateResult { Error = "That name is already taken." };
-                    long id = _repo.CreateIdentity(c, accountId, name, raceName, className);
+                    long id = _repo.CreateIdentity(c, accountId, name, gender.ToString(), raceName, className);
                     return new CreateResult { CharacterId = id };
                 }
                 catch (System.Exception)
@@ -137,7 +148,7 @@ public class CharacterSelectController : MonoBehaviour
                     session.PendingCreation = new PendingCharacter
                     {
                         CharacterId = result.CharacterId,
-                        Name = name, Race = raceName, Class = className,
+                        Name = name, Gender = gender, Race = raceName, Class = className,
                     };
                 SpawnPlayer(conn);
             });

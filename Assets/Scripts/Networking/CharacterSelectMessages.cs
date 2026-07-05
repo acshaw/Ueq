@@ -6,13 +6,24 @@ using Mirror;
 /// <summary>Client → server: send me this account's characters + the creation options.</summary>
 public struct CharacterListRequest : NetworkMessage { }
 
-/// <summary>Server → client: the account's characters and the race/class options for the create form.</summary>
+/// <summary>Server → client: the account's characters and the create-form options.</summary>
 public struct CharacterListMessage : NetworkMessage
 {
     public CharacterListEntry[] entries;
-    public string[]            raceOptions;
-    public string[]            classOptions;
-    public int                 maxSlots;     // character cap (1.6, O1) — Create disabled at the cap
+    public string[]            raceOptions;   // legacy (all races) — kept for the retired IMGUI select UI
+    public string[]            classOptions;  // legacy (all classes) — kept for the retired IMGUI select UI
+    public CreateOption[]      createOptions; // 3.1.4: the gated gender→race→class lineup (authority)
+    public int                 maxSlots;      // character cap (1.6, O1) — Create disabled at the cap
+}
+
+/// <summary>One legal creation tuple (3.1.4). The uGUI create form filters these into the
+/// gender → race → class cascade; the server validates a request against the same roster.
+/// Gender travels as its enum name ("Male"/"Female") to keep the wire struct string-only.</summary>
+public struct CreateOption
+{
+    public string gender;
+    public string race;
+    public string cls;
 }
 
 /// <summary>One row in the character-select list (level is derived server-side before sending).</summary>
@@ -20,6 +31,7 @@ public struct CharacterListEntry
 {
     public long   id;
     public string name;
+    public string gender;
     public string race;
     public string cls;
     public int    level;
@@ -29,6 +41,7 @@ public struct CharacterListEntry
 public struct CreateCharacterMessage : NetworkMessage
 {
     public string name;
+    public string gender;   // 3.1.4 — enum name ("Male"/"Female"); server validates the tuple
     public string race;
     public string cls;
 }

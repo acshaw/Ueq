@@ -73,7 +73,7 @@ public class CharacterPersistence : NetworkBehaviour
             var pc = session.PendingCreation;
             session.PendingCreation = null;       // consume so a later respawn doesn't re-create
             _characterId = pc.CharacterId;
-            InitializeNewCharacter(pc.Name, pc.Race, pc.Class);
+            InitializeNewCharacter(pc.Name, pc.Gender, pc.Race, pc.Class);
             return;
         }
 
@@ -109,7 +109,7 @@ public class CharacterPersistence : NetworkBehaviour
     // creation, 1.6); seed the live components from the chosen race/class/name, keep the Mirror
     // spawn-point position, then save to fill the row with full state.
     [Server]
-    void InitializeNewCharacter(string name, string raceName, string className)
+    void InitializeNewCharacter(string name, Gender gender, string raceName, string className)
     {
         var race = RaceClassRegistry.GetRace(raceName);
         var cls  = RaceClassRegistry.GetClass(className);
@@ -117,6 +117,7 @@ public class CharacterPersistence : NetworkBehaviour
             Debug.LogWarning($"[Persist] New character class '{className}' not found in RaceClassRegistry.");
 
         _exp?.LoadState(0, race, cls);             // base stats, max HP/mana, known abilities + default hotbar
+        _exp?.SetGender(gender);                   // 3.1.4 — synced identity for the body model
         _faction?.Initialize(raceName);            // racial faction defaults for the chosen race
         ApplyName(name);
         _health?.ResetToFull();
@@ -163,6 +164,7 @@ public class CharacterPersistence : NetworkBehaviour
         _characterId = s.CharacterId;
 
         _exp?.LoadState(s.TotalXp, race, cls);
+        _exp?.SetGender(s.Gender);                 // 3.1.4 — synced identity for the body model
         _equip?.LoadState(s.Equipment);
         _faction?.LoadState(s.ActualRace, s.ApparentRace, s.FactionScores);
         _abilities?.LoadHotbar(s.Hotbar);
@@ -226,6 +228,7 @@ public class CharacterPersistence : NetworkBehaviour
         if (_exp != null)
         {
             s.TotalXp   = _exp.TotalXp;
+            s.Gender    = _exp.Gender;
             s.RaceName  = _exp.CurrentRace  != null ? _exp.CurrentRace.raceName   : "";
             s.ClassName = _exp.CurrentClass != null ? _exp.CurrentClass.className : "";
         }

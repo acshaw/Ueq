@@ -100,7 +100,12 @@ public class PlayerAutoAttack : NetworkBehaviour
     }
 
     [ClientRpc]
-    void RpcPlayAttack() => _animator?.PlayAttack();
+    void RpcPlayAttack()
+    {
+        // Re-resolve if the model child was (re)built after our initial cache (3.1.4 PlayerModel swap).
+        if (_animator == null) _animator = GetComponentInChildren<PlayerAnimator>();
+        _animator?.PlayAttack();
+    }
 
     [Command]
     void CmdSetAutoAttack(bool on)

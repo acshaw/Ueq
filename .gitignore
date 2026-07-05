@@ -46,3 +46,10 @@ db.config.json
 # Stray debug screenshots dumped into the scripts folder (kept locally, not versioned)
 /Assets/Scripts/*.jpg
 /Assets/Scripts/*.jpg.meta
+
+# Synty packs under evaluation (gitignore-while-exploring). Un-ignore a pack once it's adopted for a
+# vertical so its used assets get committed. Remove the line to adopt.
+/Assets/Synty/PolygonFantasyRivals/
+/Assets/Synty/PolygonFantasyRivals.meta
+/Assets/Synty/PolygonFantasyCharacters/
+/Assets/Synty/PolygonFantasyCharacters.meta

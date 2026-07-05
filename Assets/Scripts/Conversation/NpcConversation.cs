@@ -178,10 +178,12 @@ public class NpcConversation : NetworkBehaviour
     string SubstituteTokens(string response, NetworkIdentity player)
     {
         var scores = player.GetComponent<PlayerFactionScores>();
+        var exp    = player.GetComponent<PlayerExperience>();
+        string cls = exp != null && !string.IsNullOrEmpty(exp.ClassName) ? exp.ClassName : "adventurer";
         response   = response.Replace("<name>",   player.gameObject.name);
         response   = response.Replace("<race>",   scores?.ActualRace ?? "unknown");
-        response   = response.Replace("<class>",  "adventurer"); // placeholder
-        response   = response.Replace("<gender>", "friend");     // placeholder
+        response   = response.Replace("<class>",  cls);                     // 3.1.4 — real class name
+        response   = response.Replace("<gender>", exp != null ? exp.Gender.ToString() : "friend"); // 3.1.4
         return response;
     }
 
