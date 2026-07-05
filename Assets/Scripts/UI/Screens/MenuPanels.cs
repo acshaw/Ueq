@@ -17,9 +17,10 @@ public class TitlePanel : ScreenPanel
 {
     enum Mode { Menu, Login, Register }
 
-    static readonly Color Accent  = new Color(0.78f, 0.56f, 0.28f, 0.96f);
-    static readonly Color Muted   = new Color(0.12f, 0.14f, 0.20f, 0.85f);
-    static readonly Color Neutral = new Color(0.87f, 0.89f, 0.93f, 0.9f);
+    static readonly Color Accent    = new Color(0.78f, 0.56f, 0.28f, 0.96f); // primary action
+    static readonly Color Muted     = new Color(0.12f, 0.14f, 0.20f, 0.85f); // Quit
+    static readonly Color Secondary = new Color(0.18f, 0.20f, 0.26f, 0.72f); // low-weight form buttons
+    static readonly Color Neutral   = new Color(0.87f, 0.89f, 0.93f, 0.9f);  // status text
 
     RectTransform _col;   // left column; child 0 is the persistent wordmark, the rest is the swappable form
     Mode _mode = Mode.Menu;
@@ -52,6 +53,8 @@ public class TitlePanel : ScreenPanel
         var devLabel = MenuUI.Text(dev, "dev", 13, TextAlignmentOptions.Left);
         devLabel.color = new Color(0.72f, 0.74f, 0.78f, 0.6f);
         var devColor = new Color(0.14f, 0.16f, 0.22f, 0.8f);
+        _address = MenuUI.Input(dev, "Server", false);   // dev-only; player login is username/password (L6)
+        _address.text = "localhost";
         MenuUI.Button(dev, "Host (dev account)", () => Manager.HostAsDev(), devColor, 15, 30);
         MenuUI.Button(dev, "Server Only", () => Manager.StartServerOnly(), devColor, 15, 30);
 
@@ -91,7 +94,7 @@ public class TitlePanel : ScreenPanel
             ch.SetParent(null, false);
             Destroy(ch.gameObject);
         }
-        _address = _username = _password = null;
+        _username = _password = null; // _address is persistent (lives in the dev cluster), not rebuilt per mode
         _fields = null;
         _status = null;
 
@@ -115,31 +118,37 @@ public class TitlePanel : ScreenPanel
 
     void BuildLogin()
     {
-        MenuUI.Spacer(_col, 12);
-        _address = MenuUI.Input(_col, "Server", false);
-        _address.text = "localhost";
+        Heading("Sign In");
         _username = MenuUI.Input(_col, "Username", false);
         _password = MenuUI.Input(_col, "Password", true);
-        MenuUI.Spacer(_col, 6);
-        MenuUI.Button(_col, "Log In", DoLogin, Accent, 22, 48);
-        MenuUI.Button(_col, "Create Account", () => SetMode(Mode.Register), Muted, 20, 42);
-        MenuUI.Button(_col, "Back", () => SetMode(Mode.Menu), Muted, 20, 42);
+        MenuUI.Spacer(_col, 8);
+        MenuUI.Button(_col, "Log In", DoLogin, Accent, 22, 48);                         // primary
+        MenuUI.Button(_col, "Create Account", () => SetMode(Mode.Register), Secondary, 18, 40);
+        MenuUI.Button(_col, "Back", () => SetMode(Mode.Menu), Secondary, 18, 40);
         _status = MenuUI.Text(_col, "", 18, TextAlignmentOptions.Left);
-        _fields = new Selectable[] { _username, _password, _address };
+        _fields = new Selectable[] { _username, _password };
         MenuUI.Focus(_username);
     }
 
     void BuildRegister()
     {
-        MenuUI.Spacer(_col, 12);
+        Heading("Create Account");
         _username = MenuUI.Input(_col, "Username", false);
         _password = MenuUI.Input(_col, "Password", true);
-        MenuUI.Spacer(_col, 6);
-        MenuUI.Button(_col, "Register & Connect", DoRegister, Accent, 22, 48);
-        MenuUI.Button(_col, "Back", () => SetMode(Mode.Login), Muted, 20, 42);
+        MenuUI.Spacer(_col, 8);
+        MenuUI.Button(_col, "Register & Connect", DoRegister, Accent, 22, 48);          // primary
+        MenuUI.Button(_col, "Back", () => SetMode(Mode.Login), Secondary, 18, 40);
         _status = MenuUI.Text(_col, "", 18, TextAlignmentOptions.Left);
         _fields = new Selectable[] { _username, _password };
         MenuUI.Focus(_username);
+    }
+
+    void Heading(string text)
+    {
+        var h = MenuUI.Text(_col, text, 30, TextAlignmentOptions.Left);
+        h.fontStyle = FontStyles.Bold;
+        h.color = new Color(0.96f, 0.93f, 0.86f, 1f);
+        MenuUI.AddSoftShadow(h, new Color(0f, 0f, 0f, 0.8f), new Vector2(0.4f, -0.4f), 0.3f);
     }
 
     // Title (re)appears only on boot or after logout — always present the clean menu. During the login /
@@ -178,13 +187,14 @@ public class TitlePanel : ScreenPanel
     void DoLogin()
     {
         if (NetworkClient.active) return; // already connecting
-        Manager.SetAddress(_address.text);
+        if (_address != null) Manager.SetAddress(_address.text);
         Manager.Connect(_username.text.Trim(), _password.text, register: false);
     }
 
     void DoRegister()
     {
         if (NetworkClient.active) return;
+        if (_address != null) Manager.SetAddress(_address.text);
         Manager.Connect(_username.text.Trim(), _password.text, register: true);
     }
 

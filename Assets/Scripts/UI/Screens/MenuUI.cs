@@ -17,6 +17,8 @@ public static class MenuUI
     public static readonly Color TextColor   = new Color(0.92f, 0.93f, 0.96f, 1f);
     public static readonly Color ErrorColor  = new Color(1f, 0.5f, 0.5f, 1f);
 
+    static Sprite _roundedSprite; // generated once, shared by all fields + buttons (3.1.3)
+
     // A full-screen stretch RectTransform under `parent`.
     public static RectTransform FullScreen(Transform parent, string name)
     {
@@ -149,10 +151,26 @@ public static class MenuUI
         go.transform.SetParent(parent, false);
 
         var img = go.GetComponent<Image>();
-        if (img != null) img.color = FieldColor;
+        if (img != null)
+        {
+            img.color = Color.white;          // white graphic; the field's ColorBlock tints it (incl. focus)
+            img.sprite = RoundedSprite();
+            img.type = Image.Type.Sliced;
+        }
 
         var field = go.GetComponent<TMP_InputField>();
-        if (field.placeholder is TextMeshProUGUI ph) { ph.text = placeholder; ph.color = new Color(0.6f, 0.62f, 0.66f, 1f); }
+        field.targetGraphic = img;
+        field.transition = Selectable.Transition.ColorTint;
+        var cb = field.colors;
+        cb.normalColor      = FieldColor;
+        cb.highlightedColor = Color.Lerp(FieldColor, Color.white, 0.08f);
+        cb.selectedColor    = new Color(0.22f, 0.26f, 0.34f, 1f); // focused — brighter (L5 focus feedback)
+        cb.pressedColor     = Color.Lerp(FieldColor, Color.white, 0.05f);
+        cb.disabledColor    = new Color(0.10f, 0.11f, 0.13f, 0.6f);
+        cb.fadeDuration     = 0.08f;
+        field.colors = cb;
+
+        if (field.placeholder is TextMeshProUGUI ph) { ph.text = placeholder; ph.color = new Color(0.62f, 0.64f, 0.68f, 1f); }
         if (field.textComponent != null) field.textComponent.color = TextColor;
         if (password) field.contentType = TMP_InputField.ContentType.Password;
 
@@ -169,11 +187,13 @@ public static class MenuUI
         var go = new GameObject("Button_" + label, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         var img = go.AddComponent<Image>();
-        img.color = baseColor;
+        img.color = Color.white;            // keep the graphic white; the ColorBlock provides the tint (no double-tint)
+        img.sprite = RoundedSprite();
+        img.type = Image.Type.Sliced;
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
 
-        // Hover / press / focus feedback (T5) — the default Selectable has no states configured.
+        // Hover / press / focus feedback — the default Selectable has no states configured.
         var colors = btn.colors;
         colors.normalColor      = baseColor;
         colors.highlightedColor = Color.Lerp(baseColor, Color.white, 0.14f);
@@ -207,6 +227,33 @@ public static class MenuUI
         var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
         le.preferredHeight = h;
         le.minHeight = h;
+    }
+
+    /// <summary>A white rounded-rect 9-slice sprite (generated once, cached) for fields + buttons so the UI
+    /// has soft corners. Tint via <c>Image.color</c> / a Selectable's state colors (keep the graphic white).</summary>
+    public static Sprite RoundedSprite()
+    {
+        if (_roundedSprite != null) return _roundedSprite;
+        const int size = 32, radius = 8;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // distance out of the rounded corner's straight region → antialiased alpha at the arc
+                float fx = x + 0.5f, fy = y + 0.5f;
+                float dx = fx - Mathf.Clamp(fx, radius, size - radius);
+                float dy = fy - Mathf.Clamp(fy, radius, size - radius);
+                float a = Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        tex.Apply();
+        _roundedSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f,
+            0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius)); // border = radius → 9-slice
+        return _roundedSprite;
     }
 
     // ── Keyboard navigation (forms) ──────────────────────────────────────────────
