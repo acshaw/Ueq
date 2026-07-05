@@ -34,3 +34,6 @@ MonoBehaviour:
   manaGrowthRate: 0.16
   startingAbilities:
   - {fileID: 11400000, guid: 26574282bcbedb04882b2c19c9c92c16, type: 2}
+  weaponPropPrefab: {fileID: 124988, guid: 24438bb8ac649ea46b56ab6b0404db1a, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

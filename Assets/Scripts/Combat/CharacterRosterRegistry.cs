@@ -26,6 +26,9 @@ public static class CharacterRosterRegistry
     /// <summary>Drop the cache so the next lookup reloads (useful after editing the asset in-editor).</summary>
     public static void Invalidate() => _roster = null;
 
+    /// <summary>The shared locomotion controller (3.1.6 preview + in-world bodies), or null if unassigned.</summary>
+    public static RuntimeAnimatorController LocomotionController => Roster != null ? Roster.locomotionController : null;
+
     /// <summary>Distinct genders offered, in enum order.</summary>
     public static Gender[] Genders()
     {

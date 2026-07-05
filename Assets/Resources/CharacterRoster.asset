@@ -36,8 +36,9 @@ MonoBehaviour:
   - gender: 1
     race: Human
     cls: Wizard
-    modelPrefab: {fileID: 1279540086164470, guid: 1ce018254c84fda46ba5da21046e614e, type: 3}
+    modelPrefab: {fileID: 1839772047184272, guid: 38209bb6e051c7d4a9e54ebc68332696, type: 3}
   - gender: 1
     race: Human
     cls: Cleric
     modelPrefab: {fileID: 1188022232007446, guid: 63c8d29e2141cad4d8cb0b3c8294778e, type: 3}
+  locomotionController: {fileID: 9100000, guid: 1f50137d0853cba47932c31914e41051, type: 2}

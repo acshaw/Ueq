@@ -17,13 +17,14 @@ public static class CharacterRosterSetup
     const string RosterPath  = "Assets/Resources/CharacterRoster.asset";
     const string RacesDir    = "Assets/Resources/Races";
     const string ClassesDir  = "Assets/Resources/Classes";
+    const string ControllerPath = "Assets/Animations/PlayerLocomotion.controller";
 
     // Body prefab paths (Synty packs). Dwarf shares one body across both its classes.
     const string MaleWarrior   = "Assets/Synty/PolygonAdventure/Prefabs/Characters/SM_Chr_Warrior_White.prefab";
     const string MaleWizard    = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Male_Wizard_01.prefab";
     const string DwarfBody     = "Assets/Synty/PolygonFantasyRivals/Prefabs/Characters/SM_Chr_BR_Dwarf_01.prefab";
     const string FemaleWarrior = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Gypsy_01.prefab";
-    const string FemaleWizard  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Peasant_01.prefab";
+    const string FemaleWizard  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Witch_01.prefab";
     const string FemaleCleric  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Peasant_02.prefab";
 
     [MenuItem("Tools/Character/Build Character Roster")]
@@ -52,6 +53,13 @@ public static class CharacterRosterSetup
             Entry(Gender.Female, "Human", "Wizard",  FemaleWizard),
             Entry(Gender.Female, "Human", "Cleric",  FemaleCleric),
         };
+
+        // 3.1.6 — the runtime create-form preview resolves the locomotion controller through the roster
+        // (Resources-loadable) since it has no serialized scene ref of its own.
+        roster.locomotionController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
+        if (roster.locomotionController == null)
+            Debug.LogWarning($"[Roster] Locomotion controller not found at {ControllerPath} — the preview " +
+                             "body will T-pose. Run Tools/Build Player Locomotion Controller first.");
 
         EditorUtility.SetDirty(roster);
         AssetDatabase.SaveAssets();

@@ -214,6 +214,48 @@ public static class MenuUI
         return btn;
     }
 
+    /// <summary>A ◀ [value] ▶ selector row (3.1.6, UX1) — replaces cycle-buttons so a pick reads as a range.
+    /// Returns the centre value label; the caller sets its text and refreshes it in place (no form teardown).</summary>
+    public static TextMeshProUGUI ArrowSelector(Transform parent, System.Action onPrev, System.Action onNext)
+    {
+        var row = new GameObject("Selector", typeof(RectTransform));
+        row.transform.SetParent(parent, false);
+        var hlg = row.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 8;
+        hlg.childControlWidth = true;  hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        SetPreferredHeight(row, 44);
+
+        // ASCII glyphs — the TMP default font (LiberationSans SDF) only bakes ASCII into its atlas, so
+        // geometric-shape triangles (◀/▶) render as tofu. "<" / ">" read fine as prev/next.
+        var prev = Button(row.transform, "<", onPrev, ButtonColor, 26, 44);
+        SetPreferredWidth(prev.gameObject, 48);
+
+        var label = Text(row.transform, "", 20, TextAlignmentOptions.Center);
+        var le = label.gameObject.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+        le.flexibleWidth = 1; le.minWidth = 120;
+
+        var next = Button(row.transform, ">", onNext, ButtonColor, 26, 44);
+        SetPreferredWidth(next.gameObject, 48);
+
+        return label;
+    }
+
+    /// <summary>A fixed-size RawImage (3.1.6) — shows the character-preview RenderTexture in the create card.</summary>
+    public static RawImage RawImage(Transform parent, Texture texture, float width, float height)
+    {
+        var go = new GameObject("Preview", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var img = go.AddComponent<RawImage>();
+        img.texture = texture;
+        img.raycastTarget = false;
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredWidth = width;  le.minWidth = width;
+        le.preferredHeight = height; le.minHeight = height;
+        return img;
+    }
+
     // A thin spacer for vertical layout.
     public static void Spacer(Transform parent, float height)
     {
@@ -227,6 +269,13 @@ public static class MenuUI
         var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
         le.preferredHeight = h;
         le.minHeight = h;
+    }
+
+    public static void SetPreferredWidth(GameObject go, float w)
+    {
+        var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
+        le.preferredWidth = w;
+        le.minWidth = w;
     }
 
     /// <summary>A white rounded-rect 9-slice sprite (generated once, cached) for fields + buttons so the UI

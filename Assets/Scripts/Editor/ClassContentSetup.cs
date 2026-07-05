@@ -19,6 +19,12 @@ public static class ClassContentSetup
     const string AbilitiesDir = "Assets/Resources/Abilities";
     const string ClassesDir   = "Assets/Resources/Classes";
 
+    // 3.1.6 (CS6/CS7) — cosmetic class weapon props, attached to the right-hand bone by CharacterModelFactory.
+    // Grip offsets are left at zero here and tuned by eye in the live create-form preview.
+    const string WarriorSword = "Assets/Synty/PolygonAdventure/Prefabs/Weapons/SM_Wep_Sword_01.prefab";
+    const string WizardStaff  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Prop_WizardStaff_01.prefab";
+    const string ClericSceptre = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Prop_Sceptre_01.prefab";
+
     [MenuItem("Tools/Character/Build Class Content")]
     public static void Build()
     {
@@ -46,11 +52,18 @@ public static class ClassContentSetup
         AssignStarting("Cleric", minorHeal);
         EnsureContains("Warrior", kick);
 
+        // 3.1.6 — class weapon props (grip offsets left at zero → tune in the preview). Assigned only if the
+        // class has none yet, so re-running doesn't clobber grip offsets tuned in the Inspector.
+        AssignWeaponProp("Warrior", WarriorSword);
+        AssignWeaponProp("Wizard",  WizardStaff);
+        AssignWeaponProp("Cleric",  ClericSceptre);
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         RaceClassRegistry.Invalidate();
-        Debug.Log("[ClassContent] Built Fire Bolt + Minor Heal, added Kick damage, assigned starting abilities. " +
-                  "Set per-class base stats in Tools/Race & Class Editor.");
+        Debug.Log("[ClassContent] Built Fire Bolt + Minor Heal, added Kick damage, assigned starting abilities " +
+                  "+ weapon props. Set per-class base stats in Tools/Race & Class Editor; tune grip offsets in " +
+                  "the 3.1.6 preview. Check no roster body already ships a held weapon (WP2).");
     }
 
     static AbilityDefinition EnsureAbility(string fileName, string id, string displayName, string description,
@@ -108,5 +121,18 @@ public static class ClassContentSetup
         var cls = AssetDatabase.LoadAssetAtPath<ClassDefinition>($"{ClassesDir}/{className}.asset");
         if (cls == null) { Debug.LogWarning($"[ClassContent] {className}.asset not found — skipped."); return; }
         if (!cls.startingAbilities.Contains(ability)) { cls.startingAbilities.Add(ability); EditorUtility.SetDirty(cls); }
+    }
+
+    // Assign the class weapon prop only if unset — preserves grip offsets tuned by hand in the Inspector.
+    static void AssignWeaponProp(string className, string prefabPath)
+    {
+        var cls = AssetDatabase.LoadAssetAtPath<ClassDefinition>($"{ClassesDir}/{className}.asset");
+        if (cls == null) { Debug.LogWarning($"[ClassContent] {className}.asset not found — prop skipped."); return; }
+        if (cls.weaponPropPrefab != null) return; // already assigned; don't clobber a hand-tuned setup
+
+        var prop = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prop == null) { Debug.LogWarning($"[ClassContent] Weapon prop not found: {prefabPath} (pack not imported?)."); return; }
+        cls.weaponPropPrefab = prop;
+        EditorUtility.SetDirty(cls);
     }
 }

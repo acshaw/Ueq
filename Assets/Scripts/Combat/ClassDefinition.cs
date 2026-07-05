@@ -35,4 +35,14 @@ public class ClassDefinition : ScriptableObject
 
     [Header("Abilities")]
     public List<AbilityDefinition> startingAbilities = new();
+
+    [Header("Weapon Prop (3.1.6)")]
+    [Tooltip("Cosmetic weapon attached to the body's right-hand bone (Warrior sword / Wizard staff / " +
+             "Cleric sceptre). Shown in the create preview and in-world. Leave empty for no prop, or for a " +
+             "body that already ships a held weapon.")]
+    public GameObject weaponPropPrefab;
+    [Tooltip("Local position offset of the prop relative to the right-hand bone (tune live in the 3.1.6 preview).")]
+    public Vector3 gripPositionOffset;
+    [Tooltip("Local euler-angle offset of the prop relative to the right-hand bone (tune live in the preview).")]
+    public Vector3 gripEulerOffset;
 }

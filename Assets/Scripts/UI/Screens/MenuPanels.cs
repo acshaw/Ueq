@@ -12,7 +12,11 @@ using TMPro;
 /// <summary>Title / start page (3.1.2). Left-anchored menu column over a cover-fit art plate with a left
 /// legibility scrim; the wordmark is a stylized TMP element (no PNG). Art is a drop-in swap: a Sprite at
 /// <c>Resources/UI/Title/TitleBackground</c> becomes the background (else a procedural gradient), and a
-/// TMP Font Asset at <c>Resources/UI/Title/TitleFont</c> restyles the wordmark. Login/Register live inline.</summary>
+/// TMP Font Asset at <c>Resources/UI/Title/TitleFont</c> restyles the wordmark. Login/Register live inline.
+///
+/// 3.1.6: the three mode forms (Menu / Login / Register) are built ONCE and toggled by visibility rather
+/// than destroyed + rebuilt per switch — the teardown-rebuild caused a one-frame flicker on every mode
+/// change (same fix as the character-create form).</summary>
 public class TitlePanel : ScreenPanel
 {
     enum Mode { Menu, Login, Register }
@@ -22,13 +26,17 @@ public class TitlePanel : ScreenPanel
     static readonly Color Secondary = new Color(0.18f, 0.20f, 0.26f, 0.72f); // low-weight form buttons
     static readonly Color Neutral   = new Color(0.87f, 0.89f, 0.93f, 0.9f);  // status text
 
-    RectTransform _col;   // left column; child 0 is the persistent wordmark, the rest is the swappable form
+    RectTransform _col;   // left column; child 0 is the persistent wordmark, then the three mode forms
     Mode _mode = Mode.Menu;
 
-    TMP_InputField _address, _username, _password;
-    Selectable[] _fields;                 // for Tab/Enter nav
-    List<Selectable> _interactables;      // disabled while connecting
-    TextMeshProUGUI _status;              // error / "Connecting…" line
+    TMP_InputField _address;   // persistent dev field (lives in the dev cluster, not a mode form)
+
+    // Mode forms — built once, shown/hidden by SetMode.
+    GameObject _menuForm, _loginForm, _registerForm;
+    TMP_InputField _loginUser, _loginPass, _regUser, _regPass;
+    TextMeshProUGUI _loginStatus, _regStatus;
+    Selectable[] _loginFields, _regFields;
+    List<Selectable> _loginInteractables, _regInteractables;
 
     protected override void Build()
     {
@@ -42,10 +50,13 @@ public class TitlePanel : ScreenPanel
         MenuUI.GradientOverlay(Root, "Scrim",
             new Color(0.02f, 0.03f, 0.05f, 0.80f), new Color(0.02f, 0.03f, 0.05f, 0f), horizontal: true);
 
-        // 3. Left-anchored column: persistent wordmark + swappable form (Menu / Login / Register).
+        // 3. Left-anchored column: persistent wordmark + the three mode forms (built once, toggled).
         _col = AnchoredColumn(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(150f, 40f),
             380f, TextAnchor.UpperLeft, 10f);
         BuildWordmark(_col);
+        BuildMenuForm();
+        BuildLoginForm();
+        BuildRegisterForm();
 
         // 4. Dev controls — small, dim, tucked bottom-left (dev-only; won't ship).
         var dev = AnchoredColumn(new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 24f),
@@ -82,73 +93,60 @@ public class TitlePanel : ScreenPanel
         MenuUI.AddSoftShadow(word, new Color(0f, 0f, 0f, 0.9f), new Vector2(0.6f, -0.6f), 0.35f);
     }
 
-    // ── Inline mode switching (no screen change, no fade) ────────────────────────
+    // ── Mode forms (built once; SetMode toggles visibility — no teardown, no flicker) ─────────────
+
+    void BuildMenuForm()
+    {
+        var m = SubColumn();
+        _menuForm = m.gameObject;
+        MenuUI.Spacer(m, 18);
+        MenuUI.Button(m, "Play", () => SetMode(Mode.Login), Accent, 24, 52);
+        MenuUI.Button(m, "Quit", Quit, Muted, 22, 48);
+    }
+
+    void BuildLoginForm()
+    {
+        var l = SubColumn();
+        _loginForm = l.gameObject;
+        Heading(l, "Sign In");
+        _loginUser = MenuUI.Input(l, "Username", false);
+        _loginPass = MenuUI.Input(l, "Password", true);
+        MenuUI.Spacer(l, 8);
+        MenuUI.Button(l, "Log In", DoLogin, Accent, 22, 48);                          // primary
+        MenuUI.Button(l, "Create Account", () => SetMode(Mode.Register), Secondary, 18, 40);
+        MenuUI.Button(l, "Back", () => SetMode(Mode.Menu), Secondary, 18, 40);
+        _loginStatus = MenuUI.Text(l, "", 18, TextAlignmentOptions.Left);
+        _loginFields = new Selectable[] { _loginUser, _loginPass };
+        _loginInteractables = new List<Selectable>(_loginForm.GetComponentsInChildren<Selectable>(true));
+    }
+
+    void BuildRegisterForm()
+    {
+        var r = SubColumn();
+        _registerForm = r.gameObject;
+        Heading(r, "Create Account");
+        _regUser = MenuUI.Input(r, "Username", false);
+        _regPass = MenuUI.Input(r, "Password", true);
+        MenuUI.Spacer(r, 8);
+        MenuUI.Button(r, "Register & Connect", DoRegister, Accent, 22, 48);           // primary
+        MenuUI.Button(r, "Back", () => SetMode(Mode.Login), Secondary, 18, 40);
+        _regStatus = MenuUI.Text(r, "", 18, TextAlignmentOptions.Left);
+        _regFields = new Selectable[] { _regUser, _regPass };
+        _regInteractables = new List<Selectable>(_registerForm.GetComponentsInChildren<Selectable>(true));
+    }
+
+    // ── Inline mode switching (visibility toggle, no screen change, no fade) ──────────────────────
 
     void SetMode(Mode m)
     {
         _mode = m;
-        // Clear everything below the persistent wordmark (child 0), then rebuild the requested form.
-        for (int i = _col.childCount - 1; i >= 1; i--)
-        {
-            var ch = _col.GetChild(i);
-            ch.SetParent(null, false);
-            Destroy(ch.gameObject);
-        }
-        _username = _password = null; // _address is persistent (lives in the dev cluster), not rebuilt per mode
-        _fields = null;
-        _status = null;
+        if (_menuForm     != null) _menuForm.SetActive(m == Mode.Menu);
+        if (_loginForm    != null) _loginForm.SetActive(m == Mode.Login);
+        if (_registerForm != null) _registerForm.SetActive(m == Mode.Register);
 
-        switch (m)
-        {
-            case Mode.Menu:     BuildMenu();     break;
-            case Mode.Login:    BuildLogin();    break;
-            case Mode.Register: BuildRegister(); break;
-        }
-
-        // Everything selectable below the wordmark (buttons + inputs) — toggled off while connecting.
-        _interactables = new List<Selectable>(_col.GetComponentsInChildren<Selectable>(true));
-    }
-
-    void BuildMenu()
-    {
-        MenuUI.Spacer(_col, 18);
-        MenuUI.Button(_col, "Play", () => SetMode(Mode.Login), Accent, 24, 52);
-        MenuUI.Button(_col, "Quit", Quit, Muted, 22, 48);
-    }
-
-    void BuildLogin()
-    {
-        Heading("Sign In");
-        _username = MenuUI.Input(_col, "Username", false);
-        _password = MenuUI.Input(_col, "Password", true);
-        MenuUI.Spacer(_col, 8);
-        MenuUI.Button(_col, "Log In", DoLogin, Accent, 22, 48);                         // primary
-        MenuUI.Button(_col, "Create Account", () => SetMode(Mode.Register), Secondary, 18, 40);
-        MenuUI.Button(_col, "Back", () => SetMode(Mode.Menu), Secondary, 18, 40);
-        _status = MenuUI.Text(_col, "", 18, TextAlignmentOptions.Left);
-        _fields = new Selectable[] { _username, _password };
-        MenuUI.Focus(_username);
-    }
-
-    void BuildRegister()
-    {
-        Heading("Create Account");
-        _username = MenuUI.Input(_col, "Username", false);
-        _password = MenuUI.Input(_col, "Password", true);
-        MenuUI.Spacer(_col, 8);
-        MenuUI.Button(_col, "Register & Connect", DoRegister, Accent, 22, 48);          // primary
-        MenuUI.Button(_col, "Back", () => SetMode(Mode.Login), Secondary, 18, 40);
-        _status = MenuUI.Text(_col, "", 18, TextAlignmentOptions.Left);
-        _fields = new Selectable[] { _username, _password };
-        MenuUI.Focus(_username);
-    }
-
-    void Heading(string text)
-    {
-        var h = MenuUI.Text(_col, text, 30, TextAlignmentOptions.Left);
-        h.fontStyle = FontStyles.Bold;
-        h.color = new Color(0.96f, 0.93f, 0.86f, 1f);
-        MenuUI.AddSoftShadow(h, new Color(0f, 0f, 0f, 0.8f), new Vector2(0.4f, -0.4f), 0.3f);
+        // Fresh (empty) status + focus the first field on entering a form mode.
+        if (m == Mode.Login)    { if (_loginStatus != null) _loginStatus.text = ""; MenuUI.Focus(_loginUser); }
+        else if (m == Mode.Register) { if (_regStatus != null) _regStatus.text = ""; MenuUI.Focus(_regUser); }
     }
 
     // Title (re)appears only on boot or after logout — always present the clean menu. During the login /
@@ -162,13 +160,17 @@ public class TitlePanel : ScreenPanel
 
         bool connecting = NetworkClient.active; // started connecting, not yet authenticated (else → CharacterSelect)
 
-        if (_status != null)
+        var status        = _mode == Mode.Login ? _loginStatus        : _regStatus;
+        var interactables = _mode == Mode.Login ? _loginInteractables : _regInteractables;
+        var fields        = _mode == Mode.Login ? _loginFields        : _regFields;
+
+        if (status != null)
         {
-            _status.text  = connecting ? "Connecting…" : (UIScreenManager.LastError ?? "");
-            _status.color = connecting ? Neutral : MenuUI.ErrorColor;
+            status.text  = connecting ? "Connecting..." : (UIScreenManager.LastError ?? "");
+            status.color = connecting ? Neutral : MenuUI.ErrorColor;
         }
-        if (_interactables != null)
-            foreach (var s in _interactables) if (s != null) s.interactable = !connecting;
+        if (interactables != null)
+            foreach (var s in interactables) if (s != null) s.interactable = !connecting;
 
         if (MenuUI.BackPressed())
         {
@@ -180,7 +182,7 @@ public class TitlePanel : ScreenPanel
         if (!connecting)
         {
             System.Action submit = _mode == Mode.Register ? (System.Action)DoRegister : DoLogin;
-            MenuUI.HandleFormKeys(_fields, submit);
+            MenuUI.HandleFormKeys(fields, submit);
         }
     }
 
@@ -188,17 +190,39 @@ public class TitlePanel : ScreenPanel
     {
         if (NetworkClient.active) return; // already connecting
         if (_address != null) Manager.SetAddress(_address.text);
-        Manager.Connect(_username.text.Trim(), _password.text, register: false);
+        Manager.Connect(_loginUser.text.Trim(), _loginPass.text, register: false);
     }
 
     void DoRegister()
     {
         if (NetworkClient.active) return;
         if (_address != null) Manager.SetAddress(_address.text);
-        Manager.Connect(_username.text.Trim(), _password.text, register: true);
+        Manager.Connect(_regUser.text.Trim(), _regPass.text, register: true);
     }
 
     // ── Layout helpers ───────────────────────────────────────────────────────────
+
+    // A vertical sub-column under _col holding one mode's widgets. Inactive forms take no layout space, so
+    // the active form always sits directly under the wordmark.
+    RectTransform SubColumn()
+    {
+        var go = new GameObject("Form", typeof(RectTransform));
+        go.transform.SetParent(_col, false);
+        var vlg = go.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.UpperLeft;
+        vlg.spacing = 10f;
+        vlg.childControlWidth = true;  vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        return (RectTransform)go.transform;
+    }
+
+    void Heading(Transform parent, string text)
+    {
+        var h = MenuUI.Text(parent, text, 30, TextAlignmentOptions.Left);
+        h.fontStyle = FontStyles.Bold;
+        h.color = new Color(0.96f, 0.93f, 0.86f, 1f);
+        MenuUI.AddSoftShadow(h, new Color(0f, 0f, 0f, 0.8f), new Vector2(0.4f, -0.4f), 0.3f);
+    }
 
     RectTransform AnchoredColumn(Vector2 anchor, Vector2 pivot, Vector2 pos, float width,
                                  TextAnchor align, float spacing)

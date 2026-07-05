@@ -17,6 +17,10 @@ using UnityEngine;
 public class CharacterRoster : ScriptableObject
 {
     public List<RosterEntry> entries = new();
+
+    [Tooltip("Locomotion controller (PlayerLocomotion) assigned to instantiated bodies. Lives here so the " +
+             "runtime create-form preview (3.1.6) can resolve it via Resources without a serialized scene ref.")]
+    public RuntimeAnimatorController locomotionController;
 }
 
 [System.Serializable]

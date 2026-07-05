@@ -4,15 +4,23 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// M3.1.1 — uGUI character select / create (replaces the IMGUI <c>CharacterSelectUI</c>). Reuses the exact
-/// same Mirror messages (<c>CharacterListRequest</c>/<c>CharacterListMessage</c>, <c>EnterWorldMessage</c>,
+/// Character select / create (M3.1.1 shell; redesigned in 3.1.6). Reuses the exact same Mirror messages
+/// (<c>CharacterListRequest</c>/<c>CharacterListMessage</c>, <c>EnterWorldMessage</c>,
 /// <c>CreateCharacterMessage</c>, <c>DeleteCharacterMessage</c>, <c>CharacterActionResult</c>) — no server
-/// change. Minimal/unstyled (SF6); the styled redesign + live 3D preview is 3.1.6. Race/class pickers are
-/// simple cycle buttons here (functional, not final UI).
+/// change.
+///
+/// 3.1.6: the roster and the two-column create form (live 3D <see cref="CharacterPreview"/> + ◀/▶ selectors)
+/// are persistent containers toggled by visibility, and the create form is built once — switching
+/// roster ↔ create and cycling gender/race/class update in place, so nothing tears down and flickers. Only a
+/// roster data change (list arrival / delete-confirm) repopulates the roster rows.
 /// </summary>
 public class CharacterSelectPanel : ScreenPanel
 {
-    RectTransform _content;
+    CharacterPreview _preview;
+
+    RectTransform   _rosterRoot, _createRoot;
+    TextMeshProUGUI _loadingText, _errorText;
+    Button          _backButton;
 
     bool _haveList;
     bool _creating;
@@ -21,19 +29,29 @@ public class CharacterSelectPanel : ScreenPanel
 
     CharacterListMessage _list;
     int _genderIdx, _raceIdx, _classIdx;
-    string _pendingName = "";   // survives the per-click form rebuild so the name field isn't wiped
+
+    // Persistent create-form widgets (built once; updated in place by RefreshCreate).
+    TMP_InputField   _nameField;
+    TextMeshProUGUI  _genderLabel, _raceLabel, _classLabel;
+    string[] _genders = new string[0], _races = new string[0], _classes = new string[0];
 
     protected override void Build()
     {
         MenuUI.FullScreenImage(Root, "Dim", new Color(0.05f, 0.06f, 0.09f, 1f));
-        var card = MenuUI.Card(Root, 520, 700);
+        var card = MenuUI.Card(Root, 720, 700);
         MenuUI.Text(card, "Character Select", 32, TextAlignmentOptions.Center);
 
-        // Roster/create rows are appended directly to the card (matching the Title/Login panels) so the
-        // card's own VerticalLayoutGroup stacks them — a nested container + ContentSizeFitter overlapped
-        // the title due to a layout-ordering race. The persistent title stays as child 0; ClearContent
-        // rebuilds everything below it.
-        _content = card;
+        _loadingText = MenuUI.Text(card, "Loading...", 20, TextAlignmentOptions.Center);
+        _rosterRoot  = Column(card);
+        _createRoot  = Column(card);
+        _errorText   = MenuUI.Text(card, "", 18, TextAlignmentOptions.Center);
+        _errorText.color = MenuUI.ErrorColor;
+        MenuUI.Button(card, "Log Out", () => Manager.Disconnect());
+
+        _preview = CharacterPreview.Create(360, 528); // 3D staging built once; RawImage lives in the create form
+        BuildCreateForm();
+
+        ShowMode();
     }
 
     public override void OnShow()
@@ -44,18 +62,21 @@ public class CharacterSelectPanel : ScreenPanel
         _error = "";
         _haveList = false;
         _genderIdx = _raceIdx = _classIdx = 0;
-        _pendingName = "";
+        if (_nameField != null) _nameField.text = "";
         if (NetworkClient.active) NetworkClient.Send(new CharacterListRequest());
-        Rebuild();
+        ShowMode();
+    }
+
+    public override void OnHide()
+    {
+        if (_preview != null) _preview.SetActive(false);
     }
 
     void RegisterHandlers()
     {
         // Re-register every time the screen shows. Mirror wipes NetworkClient.handlers on every disconnect
         // (NetworkClient.Shutdown → handlers.Clear), so a guard that persisted across reconnects left these
-        // unregistered after a camp/relogin — the server's character-list reply then had no handler and
-        // Mirror disconnected the client ("failed to unpack and invoke message"). ReplaceHandler is
-        // idempotent within a live session (no duplicate-handler warning).
+        // unregistered after a camp/relogin. ReplaceHandler is idempotent within a live session.
         NetworkClient.ReplaceHandler<CharacterListMessage>(OnList);
         NetworkClient.ReplaceHandler<CharacterActionResult>(OnResult);
     }
@@ -65,12 +86,13 @@ public class CharacterSelectPanel : ScreenPanel
         _list = msg;
         _haveList = true;
         if (msg.entries == null || msg.entries.Length == 0) _creating = true;
-        Rebuild();
+        RebuildRoster();
+        ShowMode();
     }
 
     void OnResult(CharacterActionResult msg)
     {
-        if (!msg.ok) { _error = msg.error; Rebuild(); }
+        if (!msg.ok) { _error = msg.error; ShowMode(); }
     }
 
     void Update()
@@ -79,7 +101,7 @@ public class CharacterSelectPanel : ScreenPanel
         // Esc cancels the create form back to the roster when there's one to return to; otherwise it logs out.
         if (_creating && _list.entries != null && _list.entries.Length > 0)
         {
-            _error = ""; _creating = false; Rebuild();
+            _error = ""; _creating = false; ShowMode();
         }
         else
         {
@@ -87,127 +109,171 @@ public class CharacterSelectPanel : ScreenPanel
         }
     }
 
-    // ── Build the dynamic content ────────────────────────────────────────────────
+    // ── Mode visibility (no teardown → no flicker on roster ↔ create) ─────────────
 
-    void Rebuild()
+    void ShowMode()
     {
-        if (_content == null) return;
+        _loadingText.gameObject.SetActive(!_haveList);
+        _rosterRoot.gameObject.SetActive(_haveList && !_creating);
+        _createRoot.gameObject.SetActive(_haveList && _creating);
+        if (_preview != null) _preview.SetActive(_haveList && _creating);
 
-        // The form is torn down + rebuilt on every interaction (the flicker + full redesign is 3.1.6).
-        // Preserve the typed name across that teardown so cycling gender/race/class doesn't wipe it, and
-        // null the stale field ref so a later rebuild can't read a destroyed input. BuildCreate restores it.
-        if (_nameField != null) _pendingName = _nameField.text;
-        _nameField = null;
+        _errorText.gameObject.SetActive(!string.IsNullOrEmpty(_error));
+        _errorText.text = _error ?? "";
 
-        ClearContent();
-
-        if (!_haveList)
-        {
-            MenuUI.Text(_content, "Loading…", 20, TextAlignmentOptions.Center);
-            MenuUI.Spacer(_content, 10);
-            MenuUI.Button(_content, "Log Out", () => Manager.Disconnect());
-            return;
-        }
-
-        if (_creating) BuildCreate();
-        else           BuildRoster();
-
-        if (!string.IsNullOrEmpty(_error))
-        {
-            var e = MenuUI.Text(_content, _error, 18, TextAlignmentOptions.Center);
-            e.color = MenuUI.ErrorColor;
-        }
-
-        MenuUI.Spacer(_content, 10);
-        MenuUI.Button(_content, "Log Out", () => Manager.Disconnect());
+        if (_haveList && _creating) RefreshCreate();
     }
 
-    void BuildRoster()
+    // ── Roster (rebuilt only on a data/confirm change, while roster is shown) ─────
+
+    void RebuildRoster()
     {
+        ClearChildren(_rosterRoot);
+
         int count = _list.entries != null ? _list.entries.Length : 0;
-        MenuUI.Text(_content, $"Characters ({count}/{_list.maxSlots})", 18, TextAlignmentOptions.Center);
+        MenuUI.Text(_rosterRoot, $"Characters ({count}/{_list.maxSlots})", 18, TextAlignmentOptions.Center);
 
         for (int i = 0; i < count; i++)
         {
             var e = _list.entries[i];
-            MenuUI.Text(_content, $"{e.name} — Lvl {e.level} {e.gender} {e.race} {e.cls}", 18, TextAlignmentOptions.Center);
+            MenuUI.Text(_rosterRoot, $"{e.name} — Lvl {e.level} {e.gender} {e.race} {e.cls}", 18, TextAlignmentOptions.Center);
 
             if (_confirmDeleteId == e.id)
             {
-                MenuUI.Text(_content, $"Delete {e.name}? This cannot be undone.", 16, TextAlignmentOptions.Center);
-                MenuUI.Button(_content, "Confirm Delete", () =>
+                MenuUI.Text(_rosterRoot, $"Delete {e.name}? This cannot be undone.", 16, TextAlignmentOptions.Center);
+                MenuUI.Button(_rosterRoot, "Confirm Delete", () =>
                 {
                     _confirmDeleteId = 0; _error = ""; _haveList = false;
                     NetworkClient.Send(new DeleteCharacterMessage { characterId = e.id });
-                    Rebuild();
+                    ShowMode();
                 });
-                MenuUI.Button(_content, "Cancel", () => { _confirmDeleteId = 0; Rebuild(); });
+                MenuUI.Button(_rosterRoot, "Cancel", () => { _confirmDeleteId = 0; RebuildRoster(); });
             }
             else
             {
-                MenuUI.Button(_content, $"▶ Enter World as {e.name}", () =>
+                MenuUI.Button(_rosterRoot, $"Enter World as {e.name}", () =>
                 {
                     _error = "";
                     NetworkClient.Send(new EnterWorldMessage { characterId = e.id });
                 });
-                MenuUI.Button(_content, $"Delete {e.name}", () => { _confirmDeleteId = e.id; Rebuild(); });
+                MenuUI.Button(_rosterRoot, $"Delete {e.name}", () => { _confirmDeleteId = e.id; RebuildRoster(); });
             }
-            MenuUI.Spacer(_content, 4);
+            MenuUI.Spacer(_rosterRoot, 4);
         }
 
         if (count < _list.maxSlots)
-            MenuUI.Button(_content, "Create New Character", () => { _error = ""; _creating = true; Rebuild(); });
+            MenuUI.Button(_rosterRoot, "Create New Character", () => { _error = ""; _creating = true; ShowMode(); });
         else
-            MenuUI.Text(_content, "All character slots are full.", 16, TextAlignmentOptions.Center);
+            MenuUI.Text(_rosterRoot, "All character slots are full.", 16, TextAlignmentOptions.Center);
     }
 
-    TMP_InputField _nameField;
+    // ── Create form (built once; two columns, in-place selector updates) ─────────
 
-    void BuildCreate()
+    void BuildCreateForm()
     {
-        MenuUI.Text(_content, "Create a character", 20, TextAlignmentOptions.Center);
-        _nameField = MenuUI.Input(_content, "Name", false);
-        if (_nameField != null) _nameField.text = _pendingName;   // restore across the rebuild
+        MenuUI.Text(_createRoot, "Create a character", 22, TextAlignmentOptions.Center);
 
-        // 3.1.4 — gated cascade from the roster: gender → race (for that gender) → class (for that pair).
+        var row = HRow(_createRoot, 448);
+        MenuUI.RawImage(row, _preview != null ? _preview.Texture : null, 300, 440);
+        var form = VColumn(row);
+
+        _nameField = MenuUI.Input(form, "Name", false);
+
+        _genderLabel = MenuUI.ArrowSelector(form,
+            () => { _genderIdx = Prev(_genderIdx, _genders.Length); _raceIdx = 0; _classIdx = 0; RefreshCreate(); },
+            () => { _genderIdx = Next(_genderIdx, _genders.Length); _raceIdx = 0; _classIdx = 0; RefreshCreate(); });
+        _raceLabel = MenuUI.ArrowSelector(form,
+            () => { _raceIdx = Prev(_raceIdx, _races.Length); _classIdx = 0; RefreshCreate(); },
+            () => { _raceIdx = Next(_raceIdx, _races.Length); _classIdx = 0; RefreshCreate(); });
+        _classLabel = MenuUI.ArrowSelector(form,
+            () => { _classIdx = Prev(_classIdx, _classes.Length); RefreshCreate(); },
+            () => { _classIdx = Next(_classIdx, _classes.Length); RefreshCreate(); });
+
+        MenuUI.Spacer(form, 6);
+        MenuUI.Button(form, "Create & Enter", OnCreateSubmit);
+        _backButton = MenuUI.Button(form, "Back", () => { _error = ""; _creating = false; ShowMode(); });
+    }
+
+    // Recompute the gated cascade + push it to the labels and the 3D preview — no teardown.
+    void RefreshCreate()
+    {
         var opts = _list.createOptions ?? new CreateOption[0];
 
-        string[] genders = Genders(opts);
-        _genderIdx = Clamp(_genderIdx, genders.Length);
-        string gender = Pick(genders, _genderIdx);
+        _genders = Genders(opts);
+        _genderIdx = Clamp(_genderIdx, _genders.Length);
+        string gender = Pick(_genders, _genderIdx);
 
-        string[] races = RacesFor(opts, gender);
-        _raceIdx = Clamp(_raceIdx, races.Length);
-        string race = Pick(races, _raceIdx);
+        _races = RacesFor(opts, gender);
+        _raceIdx = Clamp(_raceIdx, _races.Length);
+        string race = Pick(_races, _raceIdx);
 
-        string[] classes = ClassesFor(opts, gender, race);
-        _classIdx = Clamp(_classIdx, classes.Length);
-        string cls = Pick(classes, _classIdx);
+        _classes = ClassesFor(opts, gender, race);
+        _classIdx = Clamp(_classIdx, _classes.Length);
+        string cls = Pick(_classes, _classIdx);
 
-        // Changing an earlier pick resets the later ones to a valid default (avoids landing on a stale
-        // out-of-range combination when the available options shrink).
-        MenuUI.Button(_content, $"Gender:  {gender}",
-            () => { _genderIdx = Next(_genderIdx, genders.Length); _raceIdx = 0; _classIdx = 0; Rebuild(); });
-        MenuUI.Button(_content, $"Race:  {race}",
-            () => { _raceIdx = Next(_raceIdx, races.Length); _classIdx = 0; Rebuild(); });
-        MenuUI.Button(_content, $"Class:  {cls}",
-            () => { _classIdx = Next(_classIdx, classes.Length); Rebuild(); });
+        if (_genderLabel != null) _genderLabel.text = $"Gender:  {gender}";
+        if (_raceLabel   != null) _raceLabel.text   = $"Race:  {race}";
+        if (_classLabel  != null) _classLabel.text  = $"Class:  {cls}";
 
-        MenuUI.Spacer(_content, 6);
-        MenuUI.Button(_content, "Create & Enter", () =>
+        // Back is hidden when there's no roster to return to (creating the first character).
+        if (_backButton != null)
+            _backButton.gameObject.SetActive(_list.entries != null && _list.entries.Length > 0);
+
+        if (_preview != null && System.Enum.TryParse<Gender>(gender, out var g))
+            _preview.Show(g, race, cls);
+    }
+
+    void OnCreateSubmit()
+    {
+        _error = "";
+        NetworkClient.Send(new CreateCharacterMessage
         {
-            _error = "";
-            NetworkClient.Send(new CreateCharacterMessage
-            {
-                name   = _nameField != null ? _nameField.text.Trim() : "",
-                gender = gender,
-                race   = race,
-                cls    = cls,
-            });
+            name   = _nameField != null ? _nameField.text.Trim() : "",
+            gender = Pick(_genders, _genderIdx),
+            race   = Pick(_races, _raceIdx),
+            cls    = Pick(_classes, _classIdx),
         });
+    }
 
-        if (_list.entries != null && _list.entries.Length > 0)
-            MenuUI.Button(_content, "Back", () => { _error = ""; _creating = false; Rebuild(); });
+    // ── Layout scaffolding ───────────────────────────────────────────────────────
+
+    RectTransform Column(Transform parent)
+    {
+        var go = new GameObject("Column", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var vlg = go.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 8;
+        vlg.childControlWidth = true;  vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        return (RectTransform)go.transform;
+    }
+
+    RectTransform HRow(Transform parent, float height)
+    {
+        var go = new GameObject("Row", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var hlg = go.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 20;
+        hlg.childControlWidth = true;  hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
+        hlg.childAlignment = TextAnchor.UpperCenter;
+        MenuUI.SetPreferredHeight(go, height);
+        return (RectTransform)go.transform;
+    }
+
+    RectTransform VColumn(Transform parent)
+    {
+        var go = new GameObject("Column", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var vlg = go.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 10;
+        vlg.childControlWidth = true;  vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        var le = go.AddComponent<LayoutElement>();
+        le.flexibleWidth = 1; le.minWidth = 320;
+        return (RectTransform)go.transform;
     }
 
     // ── Roster filters (client-side; the server re-validates the tuple on create) ─────────────────
@@ -237,13 +303,11 @@ public class CharacterSelectPanel : ScreenPanel
 
     static int Clamp(int idx, int len) => len <= 0 ? 0 : Mathf.Clamp(idx, 0, len - 1);
 
-    // Rebuilding: detach immediately (out of the layout) + destroy next frame. Child 0 is the persistent
-    // "Character Select" title — keep it; rebuild only the roster/create rows below it.
-    void ClearContent()
+    void ClearChildren(RectTransform container)
     {
-        for (int i = _content.childCount - 1; i >= 1; i--)
+        for (int i = container.childCount - 1; i >= 0; i--)
         {
-            var ch = _content.GetChild(i);
+            var ch = container.GetChild(i);
             ch.SetParent(null, false);
             Destroy(ch.gameObject);
         }
@@ -253,4 +317,5 @@ public class CharacterSelectPanel : ScreenPanel
         => opts != null && idx >= 0 && idx < opts.Length ? opts[idx] : "(none)";
 
     static int Next(int idx, int len) => len <= 0 ? 0 : (idx + 1) % len;
+    static int Prev(int idx, int len) => len <= 0 ? 0 : (idx - 1 + len) % len;
 }

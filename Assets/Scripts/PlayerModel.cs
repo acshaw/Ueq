@@ -65,20 +65,10 @@ public class PlayerModel : MonoBehaviour
 
         if (_instance != null) Destroy(_instance);
 
-        var prefab = CharacterRosterRegistry.GetModel(gender, race, cls) ?? fallbackModel;
-        if (prefab == null)
-        {
-            Debug.LogWarning($"[PlayerModel] No body model for {gender}/{race}/{cls} and no fallback assigned.");
-            return;
-        }
-
-        var mount = EnsureMount();
-        _instance = Instantiate(prefab, mount);
-        _instance.transform.localPosition = Vector3.zero;
-        _instance.transform.localRotation = Quaternion.identity;
-        _instance.name = $"Model_{gender}_{race}_{cls}";
-
-        WireAnimator(_instance);
+        // Shared recipe (3.1.6) — the create-form preview builds bodies the same way, so the two can't drift.
+        // driveLocomotion: true adds PlayerAnimator so movement feeds the blend tree.
+        _instance = CharacterModelFactory.Build(EnsureMount(), gender, race, cls,
+            locomotionController, driveLocomotion: true, fallback: fallbackModel);
     }
 
     Transform EnsureMount()
@@ -89,17 +79,6 @@ public class PlayerModel : MonoBehaviour
         modelMount.SetParent(transform, false);
         modelMount.localPosition = mountOffset;
         return modelMount;
-    }
-
-    // Set the controller BEFORE adding PlayerAnimator so its Awake sees a live controller (no T-pose).
-    void WireAnimator(GameObject instance)
-    {
-        var anim = instance.GetComponentInChildren<Animator>();
-        if (anim == null) return; // a prop-only model with no rig — nothing to drive
-        if (locomotionController != null) anim.runtimeAnimatorController = locomotionController;
-        else Debug.LogWarning("[PlayerModel] No locomotion controller assigned — the body will not animate.");
-        anim.applyRootMotion = false;
-        if (anim.GetComponent<PlayerAnimator>() == null) anim.gameObject.AddComponent<PlayerAnimator>();
     }
 
     void OnDestroy()
