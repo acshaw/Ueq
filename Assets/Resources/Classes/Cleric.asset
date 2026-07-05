@@ -32,4 +32,5 @@ MonoBehaviour:
   manaCap: 200
   baseManaRatio: 0.23
   manaGrowthRate: 0.16
-  startingAbilities: []
+  startingAbilities:
+  - {fileID: 11400000, guid: 26574282bcbedb04882b2c19c9c92c16, type: 2}

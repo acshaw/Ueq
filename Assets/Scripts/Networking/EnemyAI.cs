@@ -17,6 +17,9 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     [Header("Aggro")]
     [SerializeField] int baseAggroThreat = 1;
 
+    [Header("Facing")]
+    [SerializeField] float turnSpeed = 540f; // deg/sec — server-side facing toward the target while in Combat
+
     // resolved at OnStartServer from MobDefinition → serialized fallback
     float _attackRange;
     int   _attackDamage;
@@ -48,6 +51,36 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         // and a NetworkTransform syncs it to clients. Start the agent disabled so on non-host clients it
         // never fights the NetworkTransform for control of the transform; OnStartServer re-enables it.
         if (_agent != null) _agent.enabled = false;
+
+        // Sync rotation so remote clients see the mob turn (chase via the agent, combat via Update below).
+        // The prefab ships syncRotation off; override it here on every peer — the format must match on both
+        // sides, and Awake runs before spawn. (Same pattern NetworkedPlayer uses for player yaw.)
+        var nt = GetComponent<NetworkTransformBase>();
+        if (nt != null) nt.syncRotation = true;
+    }
+
+    // Server-only: while attacking (agent path reset → no auto-rotation) turn to face the current target so
+    // remote clients see the mob look at whoever it's fighting. During Chase the agent handles facing.
+    void Update()
+    {
+        if (!isServer || _agent == null || !_agent.enabled) return;
+
+        if (_state == State.Combat && _currentTarget != null)
+        {
+            if (_agent.updateRotation) _agent.updateRotation = false;
+
+            Vector3 to = _currentTarget.transform.position - transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude > 0.0001f)
+            {
+                Quaternion goal = Quaternion.LookRotation(to);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, goal, turnSpeed * Time.deltaTime);
+            }
+        }
+        else if (!_agent.updateRotation)
+        {
+            _agent.updateRotation = true; // hand facing back to the agent for Chase/Return/Idle movement
+        }
     }
 
     public override void OnStartServer()

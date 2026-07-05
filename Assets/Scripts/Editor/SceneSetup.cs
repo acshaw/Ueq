@@ -572,7 +572,8 @@ public static class SceneSetup
     // Mobs move server-side (EnemyAI drives a NavMeshAgent on the server). That movement only reaches
     // remote clients through a NetworkTransform — without one, non-host clients see the mob frozen at its
     // spawn while the server AI actually chases/attacks (host-only testing hid this). Server-authoritative
-    // (syncDirection stays ServerToClient), position-only (syncRotation off, matching the player), and
+    // (syncDirection stays ServerToClient), syncRotation on so remote clients see mobs turn toward their
+    // target (EnemyAI drives facing server-side; also forced on at runtime in EnemyAI.Awake), and
     // coordinateSpace = World so mobs in offset zone scenes (3.0) sync at their true world position.
     static void AddEnemyNetworkTransform(GameObject enemy)
     {
@@ -584,7 +585,7 @@ public static class SceneSetup
 
         var so = new SerializedObject(nt);
         so.FindProperty("syncPosition").boolValue = true;
-        so.FindProperty("syncRotation").boolValue = false;
+        so.FindProperty("syncRotation").boolValue = true;
         var cs = so.FindProperty("coordinateSpace");
         if (cs != null) cs.enumValueIndex = 1; // Mirror.CoordinateSpace.World
         so.ApplyModifiedPropertiesWithoutUndo();

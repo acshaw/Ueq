@@ -26,6 +26,7 @@ public static class PlayerAnimatorSetup
     const string SpeedParam   = "Speed";
     const string AttackParam  = "Attack";
     const string KickParam    = "Kick";
+    const string CastParam    = "Cast";
 
     // Blend thresholds — match NetworkedPlayer.moveSpeed (3, walk) and sprintSpeed (5, run).
     // PlayerAnimator feeds the real world-space speed, so these must equal the actual
@@ -75,12 +76,14 @@ public static class PlayerAnimatorSetup
         var run  = Match(k => k.Contains("run") || k.Contains("jog") || k.Contains("sprint"));
         var attack = Match(k => k.Contains("attack") || k.Contains("slash") || k.Contains("swing"));
         var kick   = Match(k => k.Contains("kick"));
+        var cast   = Match(k => k.Contains("cast") || k.Contains("spell"));
 
         if (idle == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'idle' clip found — leaving idle node empty.");
         if (walk == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'walk' clip found — leaving walk node empty.");
         if (run  == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'run/jog/sprint' clip found — leaving run node empty.");
         if (attack == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'attack/slash/swing' clip found — skipping Attack state.");
         if (kick   == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'kick' clip found — skipping Kick state.");
+        if (cast   == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'cast/spell' clip found — skipping Cast state (3.1.5 spells won't animate).");
 
         // Ensure the output directory exists.
         var dir = System.IO.Path.GetDirectoryName(OutputPath).Replace('\\', '/');
@@ -115,6 +118,7 @@ public static class PlayerAnimatorSetup
         // body isn't needed yet.
         if (attack != null) AddTriggeredState(controller, sm, state, attack, AttackParam, "Attack");
         if (kick   != null) AddTriggeredState(controller, sm, state, kick,   KickParam,   "Kick");
+        if (cast   != null) AddTriggeredState(controller, sm, state, cast,   CastParam,   "Cast");
 
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
@@ -123,7 +127,8 @@ public static class PlayerAnimatorSetup
         EditorGUIUtility.PingObject(controller);
         Debug.Log($"[PlayerAnimatorSetup] Built {OutputPath} — idle:{(idle ? idle.name : "MISSING")} " +
                   $"walk:{(walk ? walk.name : "MISSING")} run:{(run ? run.name : "MISSING")} " +
-                  $"attack:{(attack ? attack.name : "MISSING")} kick:{(kick ? kick.name : "MISSING")}");
+                  $"attack:{(attack ? attack.name : "MISSING")} kick:{(kick ? kick.name : "MISSING")} " +
+                  $"cast:{(cast ? cast.name : "MISSING")}");
     }
 
     // Builds a one-shot state driven by a trigger: Any State → state (on trigger),

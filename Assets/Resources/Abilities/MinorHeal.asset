@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-1670676460385390964
+--- !u!114 &-495619849854174808
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -9,11 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0445d4887a4bda348922dcb5d71e232f, type: 3}
-  m_Name: Kick_DamageEffect
-  m_EditorClassIdentifier: Assembly-CSharp::DamageEffect
-  baseDamage: 8
-  scalingStat: 1
+  m_Script: {fileID: 11500000, guid: 33da471eb2ddf9445a71d5448386882e, type: 3}
+  m_Name: MinorHeal_HealEffect
+  m_EditorClassIdentifier: Assembly-CSharp::HealEffect
+  baseHeal: 20
+  scalingStat: 6
   scalingFactor: 0.5
 --- !u!114 &11400000
 MonoBehaviour:
@@ -25,20 +25,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9050873bdd3b4384a9dfebdaa726686c, type: 3}
-  m_Name: Kick
+  m_Name: MinorHeal
   m_EditorClassIdentifier: Assembly-CSharp::AbilityDefinition
-  abilityId: kick
-  displayName: Kick
-  description: Kicks the target
-  targetingType: 1
-  range: 10
+  abilityId: minor_heal
+  displayName: Minor Heal
+  description: Channels a mending light, restoring your own health.
+  targetingType: 0
+  range: 0
   castTime: 0
-  manaCost: 0
-  animTrigger: Kick
-  tags:
-  - {fileID: 11400000, guid: 3cd043aed2e4040429c91c2490f7024c, type: 2}
-  cooldownLinks:
-  - tag: {fileID: 11400000, guid: 3cd043aed2e4040429c91c2490f7024c, type: 2}
-    duration: 10
+  manaCost: 10
+  animTrigger: Cast
+  tags: []
+  cooldownLinks: []
   effects:
-  - {fileID: -1670676460385390964}
+  - {fileID: -495619849854174808}

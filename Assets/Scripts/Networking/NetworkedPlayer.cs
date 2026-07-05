@@ -58,7 +58,17 @@ public class NetworkedPlayer : NetworkBehaviour
         // world space (the spike's lever for the owner-side offset on cross-scene teleports). For an
         // unparented player local==world, so this is a no-op in the single-scene case.
         var nt = GetComponent<NetworkTransformBase>();
-        if (nt != null) nt.coordinateSpace = CoordinateSpace.World;
+        if (nt != null)
+        {
+            nt.coordinateSpace = CoordinateSpace.World;
+
+            // 3.1 — sync rotation so REMOTE players visibly turn (the server sets yaw in CmdSendInput; the
+            // prefab has syncRotation off). The body transform is yaw-only — pitch lives on the camera
+            // holder — so this syncs facing, not the camera. No cost to the owner: the local player's NT is
+            // disabled on clients (OnStartLocalPlayer) and the host renders its own transform, so this only
+            // affects how OTHER players see this one. (Overrides the prefab's serialized syncRotation:0.)
+            nt.syncRotation = true;
+        }
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
