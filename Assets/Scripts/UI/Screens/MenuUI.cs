@@ -67,6 +67,66 @@ public static class MenuUI
         return img;
     }
 
+    // ── Backdrops (3.1.2) ────────────────────────────────────────────────────────
+
+    /// <summary>Full-screen background image that cover-fits (fills + crops, keeps aspect, centered) via an
+    /// AspectRatioFitter — the correct way to show a 16:9 art plate on any window aspect.</summary>
+    public static Image CoverBackground(Transform parent, Sprite sprite)
+    {
+        var rt = FullScreen(parent, "Background");
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); // centered; the fitter drives the size
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        img.preserveAspect = false;
+        var fitter = rt.gameObject.AddComponent<AspectRatioFitter>();
+        fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        fitter.aspectRatio = sprite.rect.height > 0 ? sprite.rect.width / sprite.rect.height : 16f / 9f;
+        return img;
+    }
+
+    /// <summary>A full-screen overlay tinted by a 1-D gradient sprite — used for the left legibility scrim
+    /// (dark → transparent) and the art-free fallback background.</summary>
+    public static Image GradientOverlay(Transform parent, string name, Color a, Color b, bool horizontal)
+    {
+        var rt = FullScreen(parent, name);
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = GradientSprite(a, b, horizontal);
+        img.type = Image.Type.Simple;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    static Sprite GradientSprite(Color a, Color b, bool horizontal)
+    {
+        const int n = 128;
+        var tex = new Texture2D(horizontal ? n : 1, horizontal ? 1 : n, TextureFormat.RGBA32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear,
+        };
+        for (int i = 0; i < n; i++)
+        {
+            var c = Color.Lerp(a, b, i / (float)(n - 1)); // index 0 = a (left / bottom)
+            if (horizontal) tex.SetPixel(i, 0, c); else tex.SetPixel(0, i, c);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    /// <summary>Give a TMP element a soft drop shadow via the font's underlay (per-instance material — does
+    /// not touch other text). Adds depth/legibility for the wordmark over art.</summary>
+    public static void AddSoftShadow(TextMeshProUGUI t, Color color, Vector2 offset, float softness)
+    {
+        var mat = t.fontMaterial; // accessing fontMaterial creates a per-instance material
+        mat.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+        mat.SetColor(ShaderUtilities.ID_UnderlayColor, color);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, offset.x);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, offset.y);
+        mat.SetFloat(ShaderUtilities.ID_UnderlaySoftness, softness);
+    }
+
     public static TextMeshProUGUI Text(Transform parent, string text, int size, TextAlignmentOptions align)
     {
         var go = new GameObject("Text", typeof(RectTransform));
@@ -101,21 +161,36 @@ public static class MenuUI
     }
 
     public static Button Button(Transform parent, string label, System.Action onClick)
+        => Button(parent, label, onClick, ButtonColor);
+
+    public static Button Button(Transform parent, string label, System.Action onClick, Color baseColor,
+                                int fontSize = 22, float height = 44)
     {
         var go = new GameObject("Button_" + label, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         var img = go.AddComponent<Image>();
-        img.color = ButtonColor;
+        img.color = baseColor;
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
+
+        // Hover / press / focus feedback (T5) — the default Selectable has no states configured.
+        var colors = btn.colors;
+        colors.normalColor      = baseColor;
+        colors.highlightedColor = Color.Lerp(baseColor, Color.white, 0.14f);
+        colors.selectedColor    = Color.Lerp(baseColor, Color.white, 0.10f);
+        colors.pressedColor     = Color.Lerp(baseColor, Color.black, 0.18f);
+        colors.disabledColor    = new Color(0.3f, 0.3f, 0.32f, 0.6f);
+        colors.fadeDuration     = 0.08f;
+        btn.colors = colors;
+
         if (onClick != null) btn.onClick.AddListener(() => onClick());
 
-        var label2 = Text(go.transform, label, 22, TextAlignmentOptions.Center);
+        var label2 = Text(go.transform, label, fontSize, TextAlignmentOptions.Center);
         var lrt = label2.rectTransform;
         lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
         lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
 
-        SetPreferredHeight(go, 44);
+        SetPreferredHeight(go, height);
         return btn;
     }
 

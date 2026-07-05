@@ -1,12 +1,10 @@
 using UnityEngine;
 
-/// <summary>M3.1.1 — the client shell's logical screens.</summary>
+/// <summary>M3.1.1 — the client shell's logical screens. (3.1.2: Login/Register/Connecting folded into
+/// inline modes of the Title screen, so the pre-connect flow stays on the title art with no fade.)</summary>
 public enum ClientScreen
 {
     Title,
-    Login,
-    Register,
-    Connecting,
     CharacterSelect,
     InWorld,
 }

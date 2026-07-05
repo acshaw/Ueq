@@ -22,7 +22,6 @@ public class UIScreenManager : MonoBehaviour
     readonly Dictionary<ClientScreen, ScreenPanel> _panels = new();
 
     ClientScreen _current = ClientScreen.InWorld;   // sentinel — no panel, so the first show renders Title
-    ClientScreen _preConnect = ClientScreen.Title;  // which pre-connect screen the user navigated to
     bool _transitioning;
 
     public static void EnsureExists()
@@ -65,12 +64,10 @@ public class UIScreenManager : MonoBehaviour
         if (NetworkClient.active && NetworkClient.localPlayer != null) return ClientScreen.InWorld;
         if (NetworkClient.active && NetworkClient.connection != null && NetworkClient.connection.isAuthenticated)
             return ClientScreen.CharacterSelect;
-        if (NetworkClient.active) return ClientScreen.Connecting;
-        return _preConnect; // disconnected: Title/Login/Register per navigation
+        // Disconnected OR connecting-not-yet-authenticated: the Title hosts login/register/connecting inline,
+        // so the pre-connect flow never leaves the title art (no fade until auth success).
+        return ClientScreen.Title;
     }
-
-    /// <summary>Pre-connect navigation (Title ⇄ Login ⇄ Register). Update picks up the change.</summary>
-    public void GoTo(ClientScreen screen) => _preConnect = screen;
 
     // ── Transitions ────────────────────────────────────────────────────────────
 
@@ -129,10 +126,7 @@ public class UIScreenManager : MonoBehaviour
 
     void BuildPanels()
     {
-        CreatePanel<TitlePanel>(ClientScreen.Title);
-        CreatePanel<LoginPanel>(ClientScreen.Login);
-        CreatePanel<RegisterPanel>(ClientScreen.Register);
-        CreatePanel<ConnectingPanel>(ClientScreen.Connecting);
+        CreatePanel<TitlePanel>(ClientScreen.Title);   // hosts login/register/connecting inline (3.1.2)
         CreatePanel<CharacterSelectPanel>(ClientScreen.CharacterSelect);
         // InWorld has no panel — all menu panels hide, the HUD shows through.
 
@@ -178,7 +172,6 @@ public class UIScreenManager : MonoBehaviour
     /// <summary>Drop the connection and return to the Title screen (Log Out from character select).</summary>
     public void Disconnect()
     {
-        _preConnect = ClientScreen.Title; // land on Title, not Login, once disconnected
         var nm = NetworkManager.singleton;
         if (nm == null) return;
         if (NetworkServer.active && NetworkClient.active) nm.StopHost();      // dev host
