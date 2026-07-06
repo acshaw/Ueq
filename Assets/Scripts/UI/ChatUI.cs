@@ -117,9 +117,14 @@ public class ChatUI : MonoBehaviour
     {
         _open = true;
         inputRow.SetActive(true);
+        // Don't select-all on focus, or the "/" prefix gets highlighted and replaced by the first keystroke
+        // (reads as "the / disappeared"). With it off, the prefix stays and the caret sits after it, so
+        // pressing "/" then typing lands "/command" — feels like typing straight away.
+        inputField.onFocusSelectAll = false;
         inputField.text = prefix;
         inputField.ActivateInputField();
-        if (prefix.Length > 0) inputField.caretPosition = prefix.Length;
+        inputField.caretPosition = prefix.Length;
+        inputField.stringPosition = prefix.Length; // pin the caret after the prefix (no lingering selection)
         inputField.onSubmit.RemoveAllListeners();
         inputField.onSubmit.AddListener(_ => Submit());
     }

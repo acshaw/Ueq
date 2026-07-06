@@ -83,7 +83,15 @@ public class CampController : MonoBehaviour
         }
 
         _camping = null;
-        NetworkClient.Send(new CampMessage());
+
+        // 3.1.8 CP1 — route the despawn through the shell's scripted exit so the fade covers the player-pop /
+        // camera gap (fade to black → send CampMessage under black → reveal on Character Select). A refused
+        // camp (server combat re-check) recovers via the ExitWorld timeout. Fallback to a raw send if the shell
+        // isn't present (shouldn't happen on a client that can camp).
+        if (UIScreenManager.Instance != null)
+            UIScreenManager.Instance.ExitWorld(() => NetworkClient.Send(new CampMessage()));
+        else
+            NetworkClient.Send(new CampMessage());
     }
 
     void Cancel(string reason)

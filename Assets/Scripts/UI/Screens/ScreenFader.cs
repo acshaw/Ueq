@@ -37,6 +37,21 @@ public class ScreenFader : MonoBehaviour
         _group.blocksRaycasts = false;
     }
 
+    /// <summary>Fade to black and hold (blocks input) — for a scripted exit that must cover a teardown before
+    /// the swap (3.1.8 camp: fade first, despawn under black, then reveal on Character Select).</summary>
+    public IEnumerator Cover()
+    {
+        _group.blocksRaycasts = true;
+        yield return FadeTo(1f);
+    }
+
+    /// <summary>Fade back from black and release input.</summary>
+    public IEnumerator Reveal()
+    {
+        yield return FadeTo(0f);
+        _group.blocksRaycasts = false;
+    }
+
     IEnumerator FadeTo(float target)
     {
         float start = _group.alpha;

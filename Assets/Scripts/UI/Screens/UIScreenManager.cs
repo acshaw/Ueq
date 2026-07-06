@@ -78,6 +78,40 @@ public class UIScreenManager : MonoBehaviour
         _transitioning = false;
     }
 
+    const float ExitTimeout = 2f; // CP4 — max wait for the despawn before assuming a refused camp
+
+    /// <summary>3.1.8 CP1 — scripted exit-to-menu that covers a server-side teardown with a fade: fade to black
+    /// FIRST, run <paramref name="teardown"/> (e.g. send CampMessage) under black, wait for Mirror to leave
+    /// In-World, then swap + reveal on the resolved screen. So the player-pop / camera gap never shows. If the
+    /// despawn never lands within <see cref="ExitTimeout"/> the action was refused server-side (CP4) → reveal
+    /// back to In-World instead of stranding the screen black.</summary>
+    public void ExitWorld(System.Action teardown)
+    {
+        if (_transitioning) return;
+        StartCoroutine(ExitRoutine(teardown));
+    }
+
+    IEnumerator ExitRoutine(System.Action teardown)
+    {
+        _transitioning = true;
+        yield return _fader.Cover();          // cover the world before anything despawns
+
+        teardown?.Invoke();                    // e.g. NetworkClient.Send(new CampMessage()) — despawns under black
+
+        float t = 0f;
+        var target = ComputeTarget();
+        while (target == ClientScreen.InWorld && t < ExitTimeout)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+            target = ComputeTarget();
+        }
+
+        SwapTo(target, fade: true);            // CharacterSelect on success, or back to InWorld if refused
+        yield return _fader.Reveal();
+        _transitioning = false;
+    }
+
     void SwapTo(ClientScreen target, bool fade)
     {
         if (_panels.TryGetValue(_current, out var cur) && cur != null)
