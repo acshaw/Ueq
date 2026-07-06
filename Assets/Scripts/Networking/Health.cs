@@ -85,6 +85,9 @@ public class Health : NetworkBehaviour
         GetComponent<CombatState>()?.MarkCombat();
         if (attacker != null) attacker.GetComponent<CombatState>()?.MarkCombat();
 
+        // 3.1.7 — taking a hit stands a seated player (null-safe for mobs).
+        GetComponent<PlayerSitting>()?.ServerStand();
+
         _current = Mathf.Max(0, _current - amount);
         if (IsDead)
         {

@@ -27,6 +27,7 @@ public static class PlayerAnimatorSetup
     const string AttackParam  = "Attack";
     const string KickParam    = "Kick";
     const string CastParam    = "Cast";
+    const string SitParam     = "Sitting";
 
     // Blend thresholds — match NetworkedPlayer.moveSpeed (3, walk) and sprintSpeed (5, run).
     // PlayerAnimator feeds the real world-space speed, so these must equal the actual
@@ -77,6 +78,7 @@ public static class PlayerAnimatorSetup
         var attack = Match(k => k.Contains("attack") || k.Contains("slash") || k.Contains("swing"));
         var kick   = Match(k => k.Contains("kick"));
         var cast   = Match(k => k.Contains("cast") || k.Contains("spell"));
+        var sit    = Match(k => k.Contains("sit"));
 
         if (idle == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'idle' clip found — leaving idle node empty.");
         if (walk == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'walk' clip found — leaving walk node empty.");
@@ -84,6 +86,7 @@ public static class PlayerAnimatorSetup
         if (attack == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'attack/slash/swing' clip found — skipping Attack state.");
         if (kick   == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'kick' clip found — skipping Kick state.");
         if (cast   == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'cast/spell' clip found — skipping Cast state (3.1.5 spells won't animate).");
+        if (sit    == null) Debug.LogWarning("[PlayerAnimatorSetup] No 'sit' clip found — skipping Sit state (3.1.7 sitting won't animate). Import sitting.fbx as Humanoid + Loop Time.");
 
         // Ensure the output directory exists.
         var dir = System.IO.Path.GetDirectoryName(OutputPath).Replace('\\', '/');
@@ -120,6 +123,9 @@ public static class PlayerAnimatorSetup
         if (kick   != null) AddTriggeredState(controller, sm, state, kick,   KickParam,   "Kick");
         if (cast   != null) AddTriggeredState(controller, sm, state, cast,   CastParam,   "Cast");
 
+        // Held (bool-driven) state: Locomotion → Sit while Sitting is true, back when it clears (3.1.7).
+        if (sit    != null) AddBoolState(controller, sm, state, sit, SitParam, "Sit");
+
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -128,7 +134,29 @@ public static class PlayerAnimatorSetup
         Debug.Log($"[PlayerAnimatorSetup] Built {OutputPath} — idle:{(idle ? idle.name : "MISSING")} " +
                   $"walk:{(walk ? walk.name : "MISSING")} run:{(run ? run.name : "MISSING")} " +
                   $"attack:{(attack ? attack.name : "MISSING")} kick:{(kick ? kick.name : "MISSING")} " +
-                  $"cast:{(cast ? cast.name : "MISSING")}");
+                  $"cast:{(cast ? cast.name : "MISSING")} sit:{(sit ? sit.name : "MISSING")}");
+    }
+
+    // Builds a held state driven by a bool: Locomotion → state while the bool is true, state → Locomotion
+    // when it clears. Used for sitting (3.1.7) — a looping pose, not a one-shot like AddTriggeredState.
+    static void AddBoolState(AnimatorController controller, AnimatorStateMachine sm,
+                             AnimatorState loco, AnimationClip clip,
+                             string boolParam, string stateName)
+    {
+        controller.AddParameter(boolParam, AnimatorControllerParameterType.Bool);
+
+        var holdState    = sm.AddState(stateName);
+        holdState.motion = clip;
+
+        var toState = loco.AddTransition(holdState);
+        toState.AddCondition(AnimatorConditionMode.If, 0f, boolParam);
+        toState.hasExitTime = false;
+        toState.duration    = 0.15f;
+
+        var toLoco = holdState.AddTransition(loco);
+        toLoco.AddCondition(AnimatorConditionMode.IfNot, 0f, boolParam);
+        toLoco.hasExitTime = false;
+        toLoco.duration    = 0.15f;
     }
 
     // Builds a one-shot state driven by a trigger: Any State → state (on trigger),

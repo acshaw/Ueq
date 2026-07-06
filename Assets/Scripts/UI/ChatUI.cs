@@ -60,6 +60,7 @@ public class ChatUI : MonoBehaviour
         ("/shout <msg>",          "Shout to a wider area"),
         ("/whisper <name> <msg>", "Private message to a player"),
         ("/camp",                 "Return to character select (10s, must be out of combat)"),
+        ("/sit",                  "Sit / stand (also hotbar key 0); rest faster while seated"),
         ("/unstuck",              "Warp to a safe spot if stuck or falling (out of combat)"),
         ("/help",                 "List chat commands"),
         ("/font-size <1-5>",      "Set chat text size"),
@@ -150,6 +151,18 @@ public class ChatUI : MonoBehaviour
         if (raw.Equals("/camp", StringComparison.OrdinalIgnoreCase))
         {
             CampController.Instance?.RequestCamp();
+            return true;
+        }
+
+        if (raw.Equals("/sit", StringComparison.OrdinalIgnoreCase))
+        {
+            LocalPlayer.Current?.GetComponent<PlayerSitting>()?.CmdToggleSit();
+            return true;
+        }
+
+        if (raw.Equals("/stand", StringComparison.OrdinalIgnoreCase))
+        {
+            LocalPlayer.Current?.GetComponent<PlayerSitting>()?.CmdStand();
             return true;
         }
 

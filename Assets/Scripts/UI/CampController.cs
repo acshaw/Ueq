@@ -32,10 +32,20 @@ public class CampController : MonoBehaviour
             ChatUI.AddMessage("You can't camp while in combat.");
             return;
         }
-        _camping = StartCoroutine(CampRoutine(p, combat));
+
+        // 3.1.8 CP6 — sitting is required to camp (EQ-style). Moving or taking a hit stands the player
+        // (3.1.7), so this interlocks with the move/combat cancels below.
+        var sitting = p.GetComponent<PlayerSitting>();
+        if (sitting == null || !sitting.IsSitting)
+        {
+            ChatUI.AddMessage("You must be sitting to camp.");
+            return;
+        }
+
+        _camping = StartCoroutine(CampRoutine(p, combat, sitting));
     }
 
-    IEnumerator CampRoutine(NetworkedPlayer p, CombatState combat)
+    IEnumerator CampRoutine(NetworkedPlayer p, CombatState combat, PlayerSitting sitting)
     {
         Vector3 start = p.transform.position;
         ChatUI.AddMessage($"Camping… {Mathf.CeilToInt(CampSeconds)}");
@@ -55,6 +65,11 @@ public class CampController : MonoBehaviour
             if (combat != null && combat.InCombat)
             {
                 Cancel("Camp cancelled — you're in combat.");
+                yield break;
+            }
+            if (sitting == null || !sitting.IsSitting)
+            {
+                Cancel("Camp cancelled — you stood up.");
                 yield break;
             }
 

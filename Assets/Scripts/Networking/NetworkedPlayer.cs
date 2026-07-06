@@ -19,12 +19,19 @@ public class NetworkedPlayer : NetworkBehaviour
     [Header("Look")]
     [SerializeField] float lookSensitivity = 0.15f;
     [SerializeField] float maxPitch = 80f;
+    [Tooltip("How far the camera lowers when seated, in metres (feel of the sit/stand height change).")]
+    [SerializeField] float sitCameraDrop = 0.85f;
+    [Tooltip("Camera height ease speed for sit/stand (higher = snappier).")]
+    [SerializeField] float sitCameraLerp = 8f;
 
     CharacterController _cc;
     Camera _cam;
+    PlayerSitting _sitting;
     float _pitch;
     float _yaw;
     float _verticalVelocity;
+    float _camStandY;          // captured standing camera height; the seated pose eases below it
+    bool  _camStandYCaptured;
 
     Vector3 _bindPoint;
     string  _zoneId = ZoneCatalog.DefaultStarterZoneId; // M3.0 — server-side current zone
@@ -53,6 +60,7 @@ public class NetworkedPlayer : NetworkBehaviour
     void Awake()
     {
         _cc = GetComponent<CharacterController>();
+        _sitting = GetComponent<PlayerSitting>();
 
         // 3.0 — zones are authored at distinct world-space offsets, so the player transform must sync in
         // world space (the spike's lever for the owner-side offset on cross-scene teleports). For an
@@ -272,6 +280,28 @@ public class NetworkedPlayer : NetworkBehaviour
 
     void ApplyLook()
     {
+        // Camera height eases down when seated / back up when standing so the player feels the height change.
+        if (cameraHolder)
+        {
+            if (!_camStandYCaptured) { _camStandY = cameraHolder.localPosition.y; _camStandYCaptured = true; }
+            bool seated  = _sitting != null && _sitting.IsSitting;
+            float targetY = _camStandY - (seated ? sitCameraDrop : 0f);
+            var lp = cameraHolder.localPosition;
+            lp.y = Mathf.Lerp(lp.y, targetY, Mathf.Clamp01(sitCameraLerp * Time.deltaTime));
+            cameraHolder.localPosition = lp;
+        }
+
+        // Seated (3.1.7): the body stays put; free-look rotates only the camera. The camera holder is a child
+        // of the body, so its world yaw = bodyYaw + localYaw — offset the holder by (_yaw − bodyYaw) so the
+        // camera still tracks _yaw while the body is frozen. On standing, ApplyLook resumes driving the body
+        // to _yaw and the holder offset returns to 0, so the view doesn't jump (the body turns to face it).
+        if (_sitting != null && _sitting.IsSitting)
+        {
+            float holderYaw = cameraHolder ? Mathf.DeltaAngle(transform.eulerAngles.y, _yaw) : 0f;
+            if (cameraHolder) cameraHolder.localEulerAngles = new Vector3(_pitch, holderYaw, 0f);
+            return;
+        }
+
         transform.eulerAngles = new Vector3(0f, _yaw, 0f);
         if (cameraHolder) cameraHolder.localEulerAngles = new Vector3(_pitch, 0f, 0f);
     }
@@ -305,7 +335,15 @@ public class NetworkedPlayer : NetworkBehaviour
         _yaw       = yaw;
         _sprint    = sprint;
         if (jump && !isLocalPlayer) _jumpQueued = true;
-        transform.eulerAngles = new Vector3(0f, _yaw, 0f);
+
+        // 3.1.7 — moving stands a seated player (server-authoritative). Pressing a move key stands you, then
+        // ApplyMovement carries you off — no need to block movement while seated.
+        if (move.sqrMagnitude > 0.01f) _sitting?.ServerStand();
+
+        // Body yaw follows look only while standing; a seated player's body stays frozen (free-look moves the
+        // camera, not the body) — this is the rotation observers see, so it must match the local ApplyLook.
+        if (_sitting == null || !_sitting.IsSitting)
+            transform.eulerAngles = new Vector3(0f, _yaw, 0f);
 
         if (ChatManager.Instance != null &&
             Vector3.Distance(transform.position, _lastChatPos) > ChatPosUpdateThreshold)

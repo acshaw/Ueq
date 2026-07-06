@@ -76,6 +76,7 @@ public static class SceneSetup
             typeof(PlayerExperience),
             typeof(PlayerMana),
             typeof(PlayerRegen),
+            typeof(PlayerSitting),
             typeof(PlayerAbilities),
             typeof(CharacterPersistence),
             typeof(NetworkedPlayer),
@@ -128,6 +129,7 @@ public static class SceneSetup
             typeof(PlayerExperience),
             typeof(PlayerMana),
             typeof(PlayerRegen),
+            typeof(PlayerSitting),
             typeof(PlayerAbilities),
             typeof(CharacterPersistence),
             typeof(PlayerModel),
@@ -490,6 +492,7 @@ public static class SceneSetup
         player.AddComponent<PlayerExperience>();
         player.AddComponent<PlayerMana>();
         player.AddComponent<PlayerRegen>();
+        player.AddComponent<PlayerSitting>();
         player.AddComponent<PlayerAbilities>();
         player.AddComponent<CharacterPersistence>();
         var np = player.AddComponent<NetworkedPlayer>();
