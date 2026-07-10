@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LowPolyTerrain
+  m_Shader: {fileID: 4800000, guid: c763db88af7e5fb4c9f65da1641c2c8d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _GrassTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RockTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SandTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AmbientBoost: 1
+    - _RockBlend: 48.4
+    - _RockMinY: 35.200005
+    - _SandBlend: 22
+    - _SandMaxY: -24.199997
+    - _SlopeRockEnd: 0.7
+    - _SlopeRockStart: 0.9
+    - _TexTiling: 0.1
+    m_Colors:
+    - _GrassColor: {r: 0.34, g: 0.52, b: 0.26, a: 1}
+    - _RockColor: {r: 0.44, g: 0.44, b: 0.47, a: 1}
+    - _SandColor: {r: 0.76, g: 0.7, b: 0.5, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
