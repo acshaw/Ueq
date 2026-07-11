@@ -23,23 +23,44 @@ public static class CharacterModelFactory
             return null;
         }
 
+        var instance = BuildFromPrefab(parent, prefab, controller, driveLocomotion);
+        if (instance == null) return null;
+        instance.name = $"Model_{gender}_{race}_{cls}";
+
+        if (controller == null)
+            Debug.LogWarning("[CharacterModelFactory] No locomotion controller — the body will not animate.");
+
+        // Class weapon prop is player-only (mobs resolve their own art); attach it after the shared build.
+        var anim = instance.GetComponentInChildren<Animator>();
+        if (anim != null) AttachWeaponProp(anim, cls);
+
+        return instance;
+    }
+
+    /// <summary>
+    /// Shared instantiate + Animator-wiring recipe with no roster/class coupling (3.1.10 Stage 0). Used by the
+    /// player path above and by <see cref="MobModel"/> to attach an arbitrary Synty body prefab. Sets the
+    /// controller BEFORE adding <see cref="PlayerAnimator"/> so its Awake sees a live controller (no T-pose);
+    /// <paramref name="driveLocomotion"/> feeds transform movement into the blend tree (works for mobs too —
+    /// their transform is NetworkTransform-driven on clients).
+    /// </summary>
+    public static GameObject BuildFromPrefab(Transform parent, GameObject prefab,
+                                             RuntimeAnimatorController controller, bool driveLocomotion)
+    {
+        if (prefab == null) return null;
+
         var instance = Object.Instantiate(prefab, parent);
         instance.transform.localPosition = Vector3.zero;
         instance.transform.localRotation = Quaternion.identity;
-        instance.name = $"Model_{gender}_{race}_{cls}";
 
         var anim = instance.GetComponentInChildren<Animator>();
         if (anim != null)
         {
-            // Set the controller BEFORE adding PlayerAnimator so its Awake sees a live controller (no T-pose).
             if (controller != null) anim.runtimeAnimatorController = controller;
-            else Debug.LogWarning("[CharacterModelFactory] No locomotion controller — the body will not animate.");
             anim.applyRootMotion = false;
 
             if (driveLocomotion && anim.GetComponent<PlayerAnimator>() == null)
                 anim.gameObject.AddComponent<PlayerAnimator>();
-
-            AttachWeaponProp(anim, cls);
         }
 
         return instance;

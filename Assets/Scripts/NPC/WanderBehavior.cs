@@ -2,6 +2,12 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// Idle wandering: repeatedly pick a random navmesh point and walk there, pausing between moves. 3.1.11 made the
+/// "where may I roam" question pluggable via <see cref="IWanderRegion"/> — leashed to spawn (default, unchanged),
+/// bounded to an authored <see cref="WanderRegion"/> volume, or free-range across the zone. The loop is identical
+/// across all three; only the region's sampling differs. Regions never touch chase/aggro — idle wander only.
+/// </summary>
 public class WanderBehavior : MonoBehaviour, INpcMovementBehavior
 {
     [SerializeField] float wanderRadius   = 10f;
@@ -9,25 +15,39 @@ public class WanderBehavior : MonoBehaviour, INpcMovementBehavior
     [SerializeField] float wanderPauseMax = 6f;
 
     NavMeshAgent _agent;
-    Vector3      _spawnPoint;
     Coroutine    _wander;
 
-    float _radius;
     float _pauseMin;
     float _pauseMax;
 
+    IWanderRegion _region;              // built in Startup from the mode below
+    WanderRegion  _boundedRegion;       // optional authored volume (set by SpawnPoint before spawn)
+    bool          _freeRange;           // roam the whole zone (set by SpawnPoint before spawn)
+    float         _freeRangeRadius = 400f;
+
     void Awake() => _agent = GetComponent<NavMeshAgent>();
+
+    // Injected by SpawnPoint before NetworkServer.Spawn (mirrors PatrolBehavior.SetRoute), so Startup sees them.
+    // A bounded region wins over free-range; neither set = the default spawn leash.
+    public void SetBoundedRegion(WanderRegion region) => _boundedRegion = region;
+    public void SetFreeRange(float radius) { _freeRange = true; if (radius > 0f) _freeRangeRadius = radius; }
 
     public void Startup()
     {
-        _spawnPoint = transform.position;
-
         var def = GetComponent<MobApplicator>()?.Definition;
-        _radius   = def != null ? def.wanderRadius   : wanderRadius;
-        _pauseMin = def != null ? def.wanderPauseMin : wanderPauseMin;
-        _pauseMax = def != null ? def.wanderPauseMax : wanderPauseMax;
+        float radius = def != null ? def.wanderRadius   : wanderRadius;
+        _pauseMin    = def != null ? def.wanderPauseMin : wanderPauseMin;
+        _pauseMax    = def != null ? def.wanderPauseMax : wanderPauseMax;
 
+        _region = BuildRegion(transform.position, radius);
         Resume();
+    }
+
+    IWanderRegion BuildRegion(Vector3 spawn, float leashRadius)
+    {
+        if (_boundedRegion != null) return new BoundedRegion(_boundedRegion);
+        if (_freeRange)             return new ZoneRegion(spawn, _freeRangeRadius);
+        return new SpawnAnchoredRegion(spawn, leashRadius); // default = pre-3.1.11 behavior, unchanged
     }
 
     public void Suspend()
@@ -42,16 +62,18 @@ public class WanderBehavior : MonoBehaviour, INpcMovementBehavior
         _wander = StartCoroutine(WanderLoop());
     }
 
+    public Vector3 GetReturnAnchor(Vector3 spawnPoint)
+        => _region != null ? _region.GetReturnAnchor(transform.position) : spawnPoint;
+
     IEnumerator WanderLoop()
     {
         while (true)
         {
-            if (_agent.isActiveAndEnabled && _agent.isOnNavMesh)
+            if (_agent.isActiveAndEnabled && _agent.isOnNavMesh && _region != null)
             {
-                var dest = RandomNavPoint(_spawnPoint, _radius);
-                if (dest.HasValue)
+                if (_region.TryGetRandomPoint(out var dest))
                 {
-                    _agent.SetDestination(dest.Value);
+                    _agent.SetDestination(dest);
 
                     // Wait until arrived or 10s timeout — guards against stuck paths
                     float elapsed = 0f;
@@ -66,14 +88,5 @@ public class WanderBehavior : MonoBehaviour, INpcMovementBehavior
 
             yield return new WaitForSeconds(Random.Range(_pauseMin, _pauseMax));
         }
-    }
-
-    static Vector3? RandomNavPoint(Vector3 origin, float radius)
-    {
-        var candidate = origin + Random.insideUnitSphere * radius;
-        candidate.y   = origin.y;
-        return NavMesh.SamplePosition(candidate, out var hit, radius, NavMesh.AllAreas)
-            ? hit.position
-            : (Vector3?)null;
     }
 }

@@ -9,6 +9,15 @@ public class MobDefinition : ScriptableObject
     [Header("Identity")]
     public string     displayName = "Unnamed Mob";
     public int        mobLevel    = 1;
+
+    // 3.1.10 Stage 0: the visual body is a plain art prefab loaded at runtime from
+    // Resources/MobModels/<modelId> (see MobModel) — no per-mob networked prefab. Blank = use the mob id
+    // (convention), so naming the art prefab to match the mob id needs no explicit value; an explicit id
+    // lets several mobs share one body (e.g. rat variants → one "giant_rat" model).
+    public string     modelId     = "";
+
+    // The networked Mirror spawnable to instantiate — almost always the shared "Enemy". Distinct art no
+    // longer needs a distinct prefab (that's modelId now); reserve this for genuinely different net setups.
     public GameObject prefab;
 
     [Header("Combat")]

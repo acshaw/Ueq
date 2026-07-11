@@ -15,6 +15,21 @@ public class SpawnPoint : MonoBehaviour
     [SerializeField] string     mobId = "";
     [SerializeField] float      activationRadius = 50f;
 
+    [Header("Patrol (optional)")]
+    [Tooltip("3.1.10: if set, spawned mobs patrol this route's ordered child waypoints instead of " +
+             "wandering/standing. Leave empty for normal movement (wander/stationary per the mob definition).")]
+    [SerializeField] PatrolRoute patrolRoute;
+
+    [Header("Wander region (optional — ignored if a Patrol Route is set)")]
+    [Tooltip("3.1.11: constrain wander mobs to this authored box/sphere area instead of a sphere around the " +
+             "spawn point (leash). Ignored for stationary mobs and when a Patrol Route is set.")]
+    [SerializeField] WanderRegion wanderRegion;
+    [Tooltip("3.1.11: let wander mobs roam the whole zone (free-range) instead of a spawn leash. Ignored if a " +
+             "Wander Region is set.")]
+    [SerializeField] bool         freeRange;
+    [Tooltip("Free-range roam spread. Kept well under the ~5000u zone spacing so mobs never wander into another zone.")]
+    [SerializeField] float        freeRangeRadius = 400f;
+
     [Header("Placement")]
     [Tooltip("Drop the spawn onto the terrain surface + navmesh so mobs sit on hills " +
              "instead of at the spawn point's raw Y. Disable for floating/aerial spawns.")]
@@ -23,6 +38,13 @@ public class SpawnPoint : MonoBehaviour
     [SerializeField] LayerMask groundMask   = ~0;
     [Tooltip("How far to search for the nearest navmesh point when snapping the spawn.")]
     [SerializeField] float     navSampleRadius = 8f;
+
+    // Read-only accessors for the editor scene-view labels (EncounterGizmos).
+    public string SpawnTableId    => spawnTableId;
+    public string MobId           => mobId;
+    public bool   HasPatrol       => patrolRoute != null && patrolRoute.HasPoints;
+    public bool   HasWanderRegion => wanderRegion != null;
+    public bool   FreeRange       => freeRange;
 
     bool            _active;
     bool            _respawnPending;
@@ -110,6 +132,15 @@ public class SpawnPoint : MonoBehaviour
             SceneManager.MoveGameObjectToScene(go, gameObject.scene);
 
         go.GetComponent<MobApplicator>()?.SetDefinition(def);
+
+        // 3.1.10: turn this mob into a patroller if the spawn point has a route — swap the wander/stationary
+        // behavior for a PatrolBehavior seeded with the route's world-space waypoints. Must run before Spawn so
+        // EnemyAI.OnStartServer resolves the INpcMovementBehavior as the patrol (not the wander it just added).
+        if (patrolRoute != null && patrolRoute.HasPoints)
+            ApplyPatrol(go);
+        else
+            ApplyWanderRegion(go); // 3.1.11: configure the wander mode (no-op for the default spawn leash)
+
         NetworkServer.Spawn(go);
 
         var id = go.GetComponent<NetworkIdentity>();
@@ -122,6 +153,31 @@ public class SpawnPoint : MonoBehaviour
             handler = _ => { health.OnDied -= handler; OnMemberDied(id); };
             health.OnDied += handler;
         }
+    }
+
+    // Replace the mob's wander/stationary movement with a route patrol. DestroyImmediate (as MobApplicator
+    // already uses at runtime) so GetComponent<INpcMovementBehavior> in EnemyAI.OnStartServer sees only the
+    // PatrolBehavior. Each group member patrols the same route (spread by the spawn jitter).
+    void ApplyPatrol(GameObject go)
+    {
+        var wander = go.GetComponent<WanderBehavior>();
+        if (wander != null) DestroyImmediate(wander);
+        var stationary = go.GetComponent<StationaryBehavior>();
+        if (stationary != null) DestroyImmediate(stationary);
+
+        var patrol = go.GetComponent<PatrolBehavior>() ?? go.AddComponent<PatrolBehavior>();
+        patrol.SetRoute(patrolRoute.Points, patrolRoute.loop, patrolRoute.pausePerPoint);
+    }
+
+    // 3.1.11: configure a wander mob's roam region before it spawns. Bounded volume wins over free-range; neither
+    // set = the default spawn leash (WanderBehavior left untouched). No-op for stationary mobs (no WanderBehavior).
+    void ApplyWanderRegion(GameObject go)
+    {
+        if (wanderRegion == null && !freeRange) return;      // default leash — nothing to change
+        var wander = go.GetComponent<WanderBehavior>();
+        if (wander == null) return;                          // stationary mob — nothing to constrain
+        if (wanderRegion != null) wander.SetBoundedRegion(wanderRegion);
+        else                      wander.SetFreeRange(freeRangeRadius);
     }
 
     // Resolve where the mob actually appears: drop straight down onto the terrain

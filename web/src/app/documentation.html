@@ -1,0 +1,294 @@
+<article class="doc">
+  <h1>Spawn System — User Guide</h1>
+  <p class="lead">A practical, end-to-end guide to creating monsters and NPC spawns in Ueq. No coding required for
+    day-to-day content work. Read the <strong>Big Picture</strong> first, then jump to the <strong>Recipes</strong>
+    for step-by-step examples.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>Key concepts</li>
+      <li>Two spawn styles: single mob vs. spawn table</li>
+      <li>The lifecycle of a spawn</li>
+      <li>Movement modes</li>
+      <li>Giving a mob a body</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Aggro in one paragraph</li>
+      <li>A ready-made reference to copy</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>Making something appear in the world is <strong>two separate jobs</strong>:</p>
+  <ol>
+    <li><strong>Define the creature</strong> — <em>what</em> it is: name, health, damage, faction, XP, loot, and
+      which 3D body it wears. This is data, authored in the <strong>web editors</strong> (this app) and stored in
+      the database. Think of it as the creature's character sheet.</li>
+    <li><strong>Place a spawn</strong> — <em>where and how</em> it appears: you drop a <strong>Spawn Point</strong>
+      into the Unity scene and tell it which creature (or weighted list) to spawn, how many, how often, and how it
+      moves. This is done in the <strong>Unity editor</strong>.</li>
+  </ol>
+  <div class="note"><strong>Mental model:</strong> the <em>Mob Definition</em> is the recipe; the <em>Spawn
+    Point</em> is the oven that bakes copies of it at a spot in the world. One recipe can be used by many spawn
+    points; one spawn point can roll from a weighted list of recipes.</div>
+
+  <h3>Where each piece lives</h3>
+  <table>
+    <tr><th>Piece</th><th>What it is</th><th>Authored in</th><th>Stored in</th></tr>
+    <tr><td>Mob Definition</td><td>A creature's stats/identity</td><td>Web <strong>Mob Editor</strong></td><td>Database</td></tr>
+    <tr><td>Spawn Table</td><td>Weighted list of mobs + group size + respawn timer</td><td>Web <strong>Spawn Editor</strong></td><td>Database</td></tr>
+    <tr><td>Mob body (model)</td><td>The Synty 3D character a mob wears</td><td>Unity <strong>Mob Model Catalog</strong></td><td>Unity project</td></tr>
+    <tr><td>Spawn Point</td><td>The in-world spawner</td><td>Unity <strong>scene</strong></td><td>The scene file</td></tr>
+    <tr><td>Patrol Route / Wander Region</td><td>Optional movement shapes</td><td>Unity <strong>scene</strong></td><td>The scene file</td></tr>
+  </table>
+
+  <h3>The three programs involved</h3>
+  <ol>
+    <li><strong>Postgres</strong> (the database) — started with Docker: <code>docker compose up -d</code>.</li>
+    <li><strong>The web app</strong> (this UI + the small API) — started from a terminal; the browser UI is where
+      mobs, spawn tables, loot, factions, etc. are authored.</li>
+    <li><strong>Unity</strong> — hosts the game server, which loads all content from the database
+      <strong>when the host starts</strong>.</li>
+  </ol>
+  <div class="note">⚠️ <strong>Important:</strong> Unity reads the database <strong>once, at host start.</strong>
+    If you edit a mob in the web app while the game is running, <strong>restart the Unity host</strong> to see the
+    change.</div>
+
+  <h2>2. Key concepts</h2>
+  <ul>
+    <li><strong>Mob id</strong> — a mob's unique internal name (e.g. <code>goblin_scout</code>). Spawn points and
+      spawn tables reference mobs by this id. Distinct from the <strong>display name</strong> ("Goblin Scout")
+      players see.</li>
+    <li><strong>Spawn Point</strong> — a GameObject in the scene that spawns mobs when a player is near. Its yellow
+      wire sphere is its <strong>activation radius</strong>.</li>
+    <li><strong>Activation</strong> — a spawn point checks every <strong>5 seconds</strong> whether a player is
+      within its <strong>activation radius</strong> (default <strong>50 units</strong>). If yes and nothing is
+      alive there, it spawns.</li>
+    <li><strong>Respawn</strong> — when everything a spawn point spawned has died, it waits for the
+      <strong>respawn timer</strong>, then spawns again (while a player is still nearby; otherwise it spawns fresh
+      the next time a player arrives).</li>
+    <li><strong>Movement mode</strong> — how a mob moves when <em>not</em> fighting: <strong>leash</strong>
+      (default), <strong>wander region</strong>, <strong>free-range</strong>, or <strong>patrol</strong> (§5).</li>
+    <li><strong>Aggro</strong> — whether a mob attacks a player. Driven by <strong>faction standing</strong>, not
+      the spawn system. A mob with no faction just stands there peacefully.</li>
+    <li><strong>Mob body / model</strong> — the visible Synty 3D character, assigned separately from stats (§6). A
+      mob with no assigned body shows a placeholder white cube.</li>
+  </ul>
+
+  <h2>3. Two spawn styles: single mob vs. spawn table</h2>
+  <p>A Spawn Point spawns in one of two ways. It uses the first field that's filled in:</p>
+  <table>
+    <tr><th>Field on the Spawn Point</th><th>Behavior</th><th>Use it for</th></tr>
+    <tr><td><code>spawnTableId</code> (highest priority)</td><td>Rolls a <strong>weighted random</strong> mob,
+      can spawn a <strong>group</strong>, uses the table's <strong>respawn timer</strong></td>
+      <td>Wilderness camps, varied encounters, packs</td></tr>
+    <tr><td><code>mobId</code></td><td>Spawns <strong>one specific</strong> mob, respawns after a default
+      5-minute timer</td><td>Unique/named NPCs (a vendor, a boss, a quest-giver)</td></tr>
+  </table>
+  <p>If both are set, the <strong>spawn table wins</strong>. If neither is set, the spawn point warns and does
+    nothing.</p>
+
+  <h2>4. The lifecycle of a spawn</h2>
+  <ol>
+    <li><strong>Idle</strong> — no player nearby. Nothing spawned.</li>
+    <li><strong>Player enters the activation radius</strong> (checked every 5s) → the spawn point spawns its
+      mob(s). A spawn table rolls an entry and spawns <code>groupSize</code> copies (spread out so they don't
+      stack); a single mob spawns one. Each is dropped onto the ground/navmesh so it sits on hills correctly.</li>
+    <li><strong>Mobs live and behave</strong> — wander/patrol, aggro nearby players by faction, chase, fight, and
+      (on losing their target) return and heal.</li>
+    <li><strong>All spawned mobs die</strong> → the spawn point starts the <strong>respawn timer</strong> (table
+      timer = base ± variance; single mob = 5 minutes). If a player is still nearby when it elapses → respawn; if
+      not → it spawns fresh the next time a player arrives.</li>
+  </ol>
+
+  <h2>5. Movement modes</h2>
+  <p>When a mob isn't fighting, its idle movement is one of four modes. A Spawn Point picks the mode by which field
+    is set — checked <strong>in this order</strong> (first match wins):</p>
+  <table>
+    <tr><th>Priority</th><th>Set this on the Spawn Point</th><th>Mode</th><th>What the mob does</th></tr>
+    <tr><td>1</td><td>Patrol Route</td><td>Patrol</td><td>Walks an ordered loop of waypoints; resumes its beat after a fight</td></tr>
+    <tr><td>2</td><td>Wander Region</td><td>Bounded wander</td><td>Wanders randomly inside an authored box/sphere, ignoring its spawn spot</td></tr>
+    <tr><td>3</td><td>Free Range (checkbox)</td><td>Free-range wander</td><td>Wanders the whole zone</td></tr>
+    <tr><td>4</td><td><em>(none of the above)</em></td><td>Leash wander (default)</td><td>Wanders within <code>wanderRadius</code> of its spawn point (from the Mob Definition, default 10u)</td></tr>
+  </table>
+  <ul>
+    <li>A <strong>Stationary</strong> mob (its Mob Definition's <code>movementType = Stationary</code>) ignores
+      regions/free-range — it just stands at its spawn.</li>
+    <li><strong>Chasing is never limited.</strong> A mob chases its target until the target dies or leaves the
+      zone — movement modes only shape <em>idle</em> wandering. When a target zones out, the mob disengages and
+      returns to its idle behavior.</li>
+    <li><strong>After a fight:</strong> a <em>leashed</em> mob walks home to its spawn and heals; a
+      <em>roaming</em> mob (region/free-range) resets where it stands; patrollers walk back and rejoin the nearest
+      waypoint.</li>
+  </ul>
+
+  <h2>6. Giving a mob a body (the 3D model)</h2>
+  <p>A mob's <strong>stats</strong> and its <strong>3D body</strong> are separate. Skip this and the mob spawns as
+    a plain white cube. Bodies are managed in the <strong>Mob Model Catalog</strong>:</p>
+  <ol>
+    <li>Menu: <strong>Tools → Character → Build Mob Model Catalog</strong>. This creates/updates
+      <code>Assets/Resources/MobModelCatalog.asset</code> and auto-fills it with every imported Synty character
+      prefab. Each entry has a <strong>Model Id</strong> (defaults to the prefab's name) and the <strong>prefab</strong>.</li>
+    <li>Open <code>MobModelCatalog.asset</code> (in <code>Assets/Resources/</code>).</li>
+    <li>Find an entry whose prefab is the body you want, and set its <strong>Model Id</strong> to your
+      <strong>mob id</strong> (e.g. change an entry's Model Id to <code>goblin_scout</code>). By default a mob
+      looks for a body whose Model Id equals its mob id; you can also set an explicit <code>modelId</code> on the
+      Mob Definition so several mobs share one body (e.g. rat variants → one <code>giant_rat</code> body).</li>
+    <li>(Optional, non-Humanoid bodies) if a body isn't a Humanoid rig, set the entry's <strong>animator
+      controller</strong> so it animates with its own clips. Leave it blank for normal Humanoid Synty characters.</li>
+  </ol>
+  <div class="note"><strong>Shortcut:</strong> instead of the catalog, drop a prefab named exactly like the mob id
+    into <code>Assets/Resources/MobModels/</code> and it's found automatically. The catalog is preferred because it
+    references prefabs in place (no copying).</div>
+
+  <h2>7. Recipes (step-by-step examples)</h2>
+  <p>These assume Postgres + the web app are running, and you're in Unity. After any web-editor change,
+    <strong>restart the Unity host</strong> before testing.</p>
+
+  <div class="recipe">
+    <h3>Recipe A — A single named NPC at a fixed spot</h3>
+    <p class="goal">Goal: one "Old Hermit" that always appears by the well.</p>
+    <ol>
+      <li><strong>Author the mob</strong> (Mob Editor): id <code>old_hermit</code>, display "Old Hermit"; set
+        health; <strong>leave the faction empty</strong> so he's peaceful. Save.</li>
+      <li><strong>Give him a body</strong> (§6): set a catalog entry's Model Id to <code>old_hermit</code>.</li>
+      <li><strong>Restart the Unity host</strong> so it loads the new mob.</li>
+      <li><strong>Place the spawn</strong>: Scene view at the well → <strong>Tools → Zones → Place Encounter (Spawn
+        Point)</strong>. Select it, set <code>mobId = old_hermit</code> (leave <code>spawnTableId</code> empty).
+        Save the scene.</li>
+      <li><strong>Test:</strong> Play as Host, walk near the well — the Old Hermit spawns and stands around.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — A wilderness camp with a weighted mix (spawn table + groups)</h3>
+    <p class="goal">Goal: a clearing where mostly goblins spawn, occasionally a bigger brute, sometimes in pairs.</p>
+    <ol>
+      <li><strong>Author the mobs</strong> (Mob Editor): e.g. <code>goblin_scout</code> and <code>goblin_brute</code>,
+        each with a hostile faction (§8), XP reward, and a loot table. Give each a body (§6).</li>
+      <li><strong>Author a spawn table</strong> (Spawn Editor): id <code>greenwood_goblins</code>. Entry 1: mob
+        <code>goblin_scout</code>, <strong>weight 4</strong>, <strong>group size 2</strong>. Entry 2: mob
+        <code>goblin_brute</code>, <strong>weight 1</strong>, group size 1. Respawn timer base <code>45</code>,
+        variance <code>15</code> (~30–60s). Save. (Weights are relative — scouts appear 4× as often as brutes.)</li>
+      <li><strong>Restart the Unity host.</strong></li>
+      <li><strong>Place the spawn</strong>: Place Encounter → set <code>spawnTableId = greenwood_goblins</code>
+        (leave <code>mobId</code> empty). Save the scene.</li>
+      <li><strong>Test:</strong> walk into the clearing — a weighted roll spawns either a pair of scouts or a brute;
+        when all are dead it respawns after the timer.</li>
+    </ol>
+    <div class="note">Place <strong>several</strong> spawn points sharing the same <code>spawnTableId</code> to
+      fill a larger area with the same encounter mix.</div>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — A mob that roams a bounded area (Wander Region)</h3>
+    <p class="goal">Goal: a wolf that patrols a meadow, not tied to one bush.</p>
+    <ol>
+      <li>Author <code>dire_wolf</code> (hostile faction, body) and restart the host.</li>
+      <li><strong>Place the spawn</strong> with <code>mobId = dire_wolf</code> (or a spawn table).</li>
+      <li><strong>Create the region:</strong> Scene view at the meadow → <strong>Tools → Zones → New Wander
+        Region</strong>. Select it, choose <strong>Box</strong> or <strong>Sphere</strong> and size it to cover the
+        meadow (the green gizmo shows the area). Make sure it sits over walkable ground (the navmesh).</li>
+      <li><strong>Link them:</strong> select the Spawn Point → drag the <code>Wander Region</code> object into its
+        <strong>Wander Region</strong> field.</li>
+      <li>Save the scene, restart, test: the wolf wanders anywhere inside the green volume, ignoring where it
+        spawned.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe D — A free-range wanderer</h3>
+    <p class="goal">Goal: a lone ghost that drifts across the whole zone.</p>
+    <ol>
+      <li>Author <code>lost_ghost</code> + body, restart.</li>
+      <li>Place the spawn (<code>mobId = lost_ghost</code>).</li>
+      <li>On the Spawn Point, tick <strong>Free Range</strong> (leave Wander Region empty). Optionally raise
+        <strong>Free Range Radius</strong> to widen roaming (the default is safe — keep it comfortably under the
+        distance between zones).</li>
+      <li>Save, restart, test: it roams the zone's walkable area.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe E — A patrolling guard</h3>
+    <p class="goal">Goal: a city guard that walks a fixed route down the road and back.</p>
+    <ol>
+      <li>Author <code>city_guard</code> (usually a guard faction friendly to players, so it won't attack you) +
+        body, restart.</li>
+      <li><strong>Create the route:</strong> Scene view at the first post → <strong>Tools → Zones → New Patrol
+        Route</strong>. With the route selected, move the Scene camera to each next post and use <strong>Tools →
+        Zones → Add Patrol Waypoint</strong> to drop points in order (the blue line + numbers show the path). On
+        the Patrol Route set <strong>Loop</strong> (walk the loop) or uncheck it (ping-pong), and <strong>Pause Per
+        Point</strong> (seconds paused at each post).</li>
+      <li><strong>Place the spawn</strong> (<code>mobId = city_guard</code>) → drag the <code>Patrol Route</code>
+        into its <strong>Patrol Route</strong> field.</li>
+      <li>Save, restart, test: the guard walks its beat, aggros anything hostile it perceives, and returns to the
+        nearest post afterward.</li>
+    </ol>
+  </div>
+
+  <h2>8. Aggro in one paragraph</h2>
+  <p>Whether a mob attacks you is decided by <strong>faction standing</strong>, not the spawn system. In the web
+    editors you give a mob a <strong>faction</strong>; every player has a numeric standing with every faction
+    (seeded from their race). When a mob perceives a player within its <strong>perception radius</strong>, it looks
+    up that standing: low enough → it attacks; middling → it warns; friendly → it ignores/greets you. So a
+    <strong>peaceful NPC</strong> (vendor, quest-giver) gets <strong>no faction</strong> (or one players stand well
+    with), and a <strong>hostile monster</strong> gets a faction players stand poorly with (e.g. a "Monster"
+    faction set hostile to all races). The example content seeds exactly such a Monster faction as a reference.</p>
+
+  <h2>9. A ready-made reference to copy</h2>
+  <p>The fastest way to learn by example is the seeded starter content: <strong>Tools → Database → Seed
+    Database</strong> then <strong>Tools → Zones → Build Example Encounters (Creslins Field)</strong> creates a
+    Monster faction, three wilderness mobs (Goblin Scout / Skeleton Soldier / Goblin Warchief), a weighted spawn
+    table, and three placed encounters near spawn (a random-table camp, a static boss, and a city-guard patrol
+    loop). Open those in the Mob/Spawn editors and in the scene to see every field filled in correctly, then copy
+    the pattern.</p>
+
+  <h2>10. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>Mob spawns as a <strong>white cube</strong></td><td>No body assigned. Do §6 (catalog Model Id = mob id).</td></tr>
+    <tr><td><strong>Nothing spawns</strong> when I walk up</td><td>Not within the activation radius (default 50u); or neither <code>spawnTableId</code> nor <code>mobId</code> is set; or you're not running as Host/Server (spawns are server-side). Check the Console for a <code>[SpawnPoint]</code> warning.</td></tr>
+    <tr><td>My <strong>web edit didn't show up</strong></td><td>Unity loads content at host start — restart the Unity host. Also confirm Postgres + the API are running.</td></tr>
+    <tr><td>Mob <strong>won't wander into its region</strong> / stands still</td><td>The Wander Region (or the spawn) isn't over the navmesh. Move it over walkable ground; confirm the green volume overlaps the blue navmesh. Also confirm the mob's <code>movementType</code> is Wander, not Stationary.</td></tr>
+    <tr><td>Mob <strong>ignores my Wander Region</strong></td><td>A Patrol Route is also set (patrol wins). Clear it. Or the mob is Stationary.</td></tr>
+    <tr><td>Mob <strong>isn't hostile</strong></td><td>It has no faction, or the player's standing with its faction is high. Give it a hostile faction (§8).</td></tr>
+    <tr><td>Mob <strong>chases forever / off the map</strong></td><td>By design chasing has no distance leash; it stops when the target dies or zones out.</td></tr>
+    <tr><td>Mob spawns <strong>floating or buried</strong></td><td><code>Snap To Ground</code> is off, or there's no ground collider / navmesh under the point. Keep Snap To Ground on and place over baked navmesh.</td></tr>
+  </table>
+
+  <h2>11. Quick reference</h2>
+  <h3>Spawn Point fields (Unity Inspector)</h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><code>spawnTableId</code></td><td>DB spawn table to roll from (weighted, grouped, timed). Top priority.</td></tr>
+    <tr><td><code>mobId</code></td><td>A single DB mob to spawn (used if no spawn table).</td></tr>
+    <tr><td><code>activationRadius</code></td><td>How close a player must be to trigger spawning (default 50).</td></tr>
+    <tr><td><code>patrolRoute</code></td><td>Optional patrol path (movement priority 1).</td></tr>
+    <tr><td><code>wanderRegion</code></td><td>Optional bounded roam area (movement priority 2).</td></tr>
+    <tr><td><code>freeRange</code> / <code>freeRangeRadius</code></td><td>Roam the whole zone (movement priority 3).</td></tr>
+    <tr><td><code>snapToGround</code> / <code>groundMask</code> / <code>navSampleRadius</code></td><td>Placement onto the ground + navmesh.</td></tr>
+  </table>
+  <h3>Mob Definition fields (Mob Editor)</h3>
+  <p>Identity (display name, level, model id) · Combat (max health, attack damage, attack interval, attack range) ·
+    Movement (movement type Wander/Stationary, move speed, wander radius, wander pause min/max) · AI (perception
+    radius, base aggro threat) · Faction (faction + aggro/warning standings + on-kill faction hits) · Loot (loot
+    table id) · Rewards (XP reward) · Vendor/Conversation ids (for shop/dialogue NPCs).</p>
+  <h3>Tools menu</h3>
+  <table>
+    <tr><th>Menu</th><th>Does</th></tr>
+    <tr><td>Tools → Zones → Place Encounter (Spawn Point)</td><td>Drops a Spawn Point at the Scene-view focus</td></tr>
+    <tr><td>Tools → Zones → New Wander Region</td><td>Drops a box/sphere roam area</td></tr>
+    <tr><td>Tools → Zones → New Patrol Route / Add Patrol Waypoint</td><td>Builds a patrol path</td></tr>
+    <tr><td>Tools → Character → Build Mob Model Catalog</td><td>Registers Synty bodies; set an entry's Model Id to a mob id</td></tr>
+    <tr><td>Tools → Database → Seed Database</td><td>Loads the seeded reference content into the DB</td></tr>
+    <tr><td>Tools → Zones → Build Example Encounters (Creslins Field)</td><td>Places the reference camp/boss/patrol to copy</td></tr>
+  </table>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/SpawnPoint.cs</code>,
+    <code>MobDefinition.cs</code>, <code>SpawnTable.cs</code>, and the movement behaviors under
+    <code>Assets/Scripts/NPC/</code>.</footer>
+</article>

@@ -23,6 +23,82 @@ public static class DatabaseSeeder
         SeedMobs(conn);
         SeedMobFactionHits(conn);
         SeedSpawnTables(conn);
+        SeedExampleEncounters(conn); // 3.1.10 Stage 3 — running-start wilderness content
+    }
+
+    // ── Example wilderness encounters (3.1.10 Stage 3) ──────────────────────────────────────────
+    // A running-start content set for Creslin's Field: 3 wilderness mob types, a weighted "random
+    // encounter" table, and a Monster faction all player races are hostile to (so they aggro on sight).
+    // Edit these in the web Mob/Spawn editors, or delete this method + its call to remove the examples.
+    // The bodies are wired to Synty Dungeon prefabs by Tools/Zones/Build Example Encounters (editor side).
+    static void SeedExampleEncounters(NpgsqlConnection conn)
+    {
+        // Faction: everything the players are hostile to. (NPC-to-NPC guard↔monster relation drives future
+        // social aggro — harmless now.)
+        SeedFaction(conn, "Monster", "Monsters");
+        SeedRaceDefault(conn, "Human", "Monster", -2000);
+        SeedRaceDefault(conn, "Dwarf", "Monster", -2000);
+        SeedRaceDefault(conn, "Troll", "Monster", -2000);
+        SeedRelation(conn, "CityGuards", "Monster", "hostile");
+        SeedRelation(conn, "Monster", "CityGuards", "hostile");
+
+        // 3 wilderness mob types — increasing level/HP/attack/XP. All wander, all Monster faction.
+        // modelId resolves by convention (mob id → MobModelCatalog entry); Goblin Scout reuses the rat loot.
+        SeedWildMob(conn, "Goblin Scout",     2, 25, 2,  50, loot: "Giant Rat Loot Table");
+        SeedWildMob(conn, "Skeleton Soldier", 4, 45, 4,  90);
+        SeedWildMob(conn, "Goblin Warchief",  6, 90, 7, 200);
+
+        // Weighted "random encounter" table — mostly scouts, the warchief is rare. 45s ± 15s respawn.
+        if (SeedSpawnTableHeader(conn, "Creslins Field Wildlife", "Creslins Field Wildlife", 45, 15))
+        {
+            SeedSpawnEntry(conn, "Creslins Field Wildlife", "Goblin Scout",     4, 0);
+            SeedSpawnEntry(conn, "Creslins Field Wildlife", "Skeleton Soldier", 2, 1);
+            SeedSpawnEntry(conn, "Creslins Field Wildlife", "Goblin Warchief",  1, 2);
+            Debug.Log("[DB] Seed: example wildlife (Goblin Scout/Skeleton Soldier/Goblin Warchief + table).");
+        }
+    }
+
+    static void SeedWildMob(NpgsqlConnection conn, string id, int level, int hp, int atk, int xp,
+                            string loot = null)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO mobs (mob_id, display_name, prefab_address, mob_level, max_health, attack_damage, " +
+            "movement_type, faction_id, loot_table_id, xp_reward) " +
+            "VALUES (@id, @name, 'Enemy', @lvl, @hp, @atk, 1, 'Monster', @loot, @xp) " +
+            "ON CONFLICT (mob_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", id);
+        cmd.Parameters.AddWithValue("lvl", level);
+        cmd.Parameters.AddWithValue("hp", hp);
+        cmd.Parameters.AddWithValue("atk", atk);
+        cmd.Parameters.AddWithValue("loot", (object)loot ?? System.DBNull.Value);
+        cmd.Parameters.AddWithValue("xp", xp);
+        cmd.ExecuteNonQuery();
+    }
+
+    // Returns true only on first insert (so entries are added once — later web edits are left intact).
+    static bool SeedSpawnTableHeader(NpgsqlConnection conn, string id, string name, int baseSeconds, int variance)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO spawn_tables (spawn_table_id, display_name, timer_base_seconds, timer_variance) " +
+            "VALUES (@id, @name, @base, @var) ON CONFLICT (spawn_table_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", name);
+        cmd.Parameters.AddWithValue("base", baseSeconds);
+        cmd.Parameters.AddWithValue("var", variance);
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    static void SeedSpawnEntry(NpgsqlConnection conn, string tableId, string mobId, int weight, int order)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO spawn_table_entries (spawn_table_id, mob_id, weight, group_size, sort_order) " +
+            "VALUES (@id, @mob, @w, 1, @o)", conn);
+        cmd.Parameters.AddWithValue("id", tableId);
+        cmd.Parameters.AddWithValue("mob", mobId);
+        cmd.Parameters.AddWithValue("w", weight);
+        cmd.Parameters.AddWithValue("o", order);
+        cmd.ExecuteNonQuery();
     }
 
     // ── Spawn tables (M2.7.2) — migrate the existing SO spawn tables (all on the "Fast" 30s timer) ──

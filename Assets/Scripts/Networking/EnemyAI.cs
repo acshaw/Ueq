@@ -39,6 +39,7 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     INpcMovementBehavior _movementBehavior;
 
     readonly Dictionary<NetworkIdentity, int> _threatList = new();
+    readonly List<NetworkIdentity>            _zonedOut   = new(); // WR7 scratch — reused each prune, no alloc
 
     void Awake()
     {
@@ -64,6 +65,8 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     void Update()
     {
         if (!isServer || _agent == null || !_agent.enabled) return;
+
+        PruneZonedOutThreats(); // WR7 — drop targets that changed zone (scene)
 
         if (_state == State.Combat && _currentTarget != null)
         {
@@ -182,11 +185,13 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         }
     }
 
-    IEnumerator ReturnLoop()
+    // WR5: the return anchor is the movement behavior's call — spawn (leash → walk home) for a leashed/patrol/
+    // stationary mob, or the mob's current position (reset in place) for a free-range/bounded roamer.
+    IEnumerator ReturnLoop(Vector3 anchor)
     {
         while (_state == State.Return)
         {
-            if (Vector3.Distance(transform.position, _spawnPoint) <= _agent.stoppingDistance + 0.5f)
+            if (Vector3.Distance(transform.position, anchor) <= _agent.stoppingDistance + 0.5f)
             {
                 _health.ResetToFull();
                 _state = State.Idle;
@@ -225,8 +230,41 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         _dispatcher.DispatchAggroLost();
         _currentTarget = null;
         _state = State.Return;
-        TrySetDestination(_spawnPoint);
-        StartCoroutine(ReturnLoop());
+        Vector3 anchor = _movementBehavior != null ? _movementBehavior.GetReturnAnchor(_spawnPoint) : _spawnPoint;
+        TrySetDestination(anchor);
+        StartCoroutine(ReturnLoop(anchor));
+    }
+
+    // WR7: a player who zones is moved to another scene (~5000u away) without being destroyed, so _currentTarget
+    // stays non-null and the mob would otherwise chase toward the far-off position forever. Treat "target in a
+    // different scene" as target-loss. Prune all zoned-out entries first, then reassess ONCE via the existing
+    // threat-list logic (next same-zone threat, else return) — the same coroutine-safe path player-death uses,
+    // called from Update (outside the movement coroutines). No fresh perception scan for a new bystander (that's
+    // 3.4). Runs while the mob is alive + active (Update's guards), so it's cheap and idle mobs skip it (no threat).
+    void PruneZonedOutThreats()
+    {
+        if (_threatList.Count == 0) return;
+
+        _zonedOut.Clear();
+        foreach (var ni in _threatList.Keys)
+            if (ni == null || ni.gameObject.scene != gameObject.scene)
+                _zonedOut.Add(ni);
+        if (_zonedOut.Count == 0) return;
+
+        bool droppedCurrent = false;
+        foreach (var ni in _zonedOut)
+        {
+            _threatList.Remove(ni);
+            if (_currentTarget != null && ni == _currentTarget) droppedCurrent = true;
+        }
+
+        // Only reassess if the mob was actively engaged with a target that just left the zone. If it was already
+        // returning/idle (_currentTarget null), pruning stale entries is enough — don't spuriously re-engage.
+        if (!droppedCurrent) return;
+
+        var next = GetTopThreat();
+        if (next != null) SwitchTarget(next);
+        else              EnterReturn();
     }
 
     NetworkIdentity GetTopThreat()

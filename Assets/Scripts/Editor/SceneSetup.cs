@@ -213,11 +213,14 @@ public static class SceneSetup
             typeof(Enemy),
             typeof(NpcConversation),   // keyword listener (drives vendor "wares")
             typeof(VendorApplicator),  // inert unless the mob's definition sets a vendorId
+            typeof(MobModel),          // 3.1.10 — runtime body from Resources/MobModels/<modelId>
         });
 
         // Server-authoritative movement sync — without this, mobs move only on the server and look
         // frozen on remote (non-host) clients. Missing on the original prefab; masked by host-only testing.
         AddEnemyNetworkTransform(prefabRoot);
+
+        WireMobModel(prefabRoot); // 3.1.10 — assign the shared locomotion controller onto MobModel
 
         PrefabUtility.SaveAsPrefabAsset(prefabRoot, PrefabPath);
         PrefabUtility.UnloadPrefabContents(prefabRoot);
@@ -561,15 +564,42 @@ public static class SceneSetup
         enemy.AddComponent<CombatLog>();
         enemy.AddComponent<Enemy>();
         enemy.AddComponent<NpcEventLogger>();
+        enemy.AddComponent<MobModel>();   // 3.1.10 — runtime body from Resources/MobModels/<modelId>
 
         Debug.LogWarning("[SceneSetup] Enemy rebuilt — bake the NavMesh before hitting Play (Window > AI > Navigation > Bake).");
 
         // Conversations are DB-authored (M2.4) and resolved at runtime via the mob's
         // conversationSetId (ConversationRegistry); no SO keyword set is wired here anymore.
         enemy.AddComponent<NpcConversation>();
+
+        WireMobModel(enemy);
 #endif
 
         return enemy;
+    }
+
+    // Wire the shared locomotion controller onto MobModel (3.1.10) so runtime-built Synty bodies animate
+    // (Humanoid mob bodies retarget PlayerLocomotion; movement → the blend tree via PlayerAnimator).
+    static void WireMobModel(GameObject root)
+    {
+#if MIRROR
+        var mobModel = root.GetComponent<MobModel>();
+        if (mobModel == null) return;
+
+        var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+            "Assets/Animations/PlayerLocomotion.controller");
+        if (controller == null)
+        {
+            Debug.LogWarning("[SceneSetup] PlayerLocomotion.controller not found — mob bodies won't animate " +
+                             "until you run Tools/Build Player Locomotion Controller, then re-patch the Enemy.");
+            return;
+        }
+
+        var so = new SerializedObject(mobModel);
+        so.FindProperty("locomotionController").objectReferenceValue = controller;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[SceneSetup] Wired PlayerLocomotion onto MobModel.");
+#endif
     }
 
     // Mobs move server-side (EnemyAI drives a NavMeshAgent on the server). That movement only reaches

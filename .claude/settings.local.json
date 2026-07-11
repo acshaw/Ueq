@@ -71,7 +71,10 @@
       "Bash(grep -rn \"case \\\\\"/\\\\|StartsWith\\(\\\\\"/\\\\|chat command\\\\|/setfaction\\\\|/faction\" Assets/Scripts --include=*.cs)",
       "Bash(grep -v \"//\")",
       "Bash(awk '/NavMeshAgent/{f=1} f&&/m_Enabled/{print NR\": \"$0; f=0}' Assets/Prefabs/Enemy.prefab)",
-      "Bash(awk '/^###? .*3\\\\.1/{f=1} f&&/^## [A-Z]/&&!/3\\\\.1/{if\\(seen\\)exit} /3\\\\.1/{seen=1} f{print}' roadmap.md)"
+      "Bash(awk '/^###? .*3\\\\.1/{f=1} f&&/^## [A-Z]/&&!/3\\\\.1/{if\\(seen\\)exit} /3\\\\.1/{seen=1} f{print}' roadmap.md)",
+      "Bash(grep -iB1 \"networkstartposition\")",
+      "Bash(cat Assets/Scripts/Combat/SpawnTable.cs)",
+      "Bash(cat Assets/Scripts/Combat/SpawnTimer.cs)"
     ]
   },
   "hooks": {

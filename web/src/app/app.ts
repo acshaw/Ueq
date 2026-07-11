@@ -7,6 +7,7 @@ import { FactionEditor } from './faction-editor';
 import { LootEditor } from './loot-editor';
 import { XpEditor } from './xp-editor';
 import { SpawnEditor } from './spawn-editor';
+import { Documentation } from './documentation';
 
 /**
  * Shell for the Ueq content editors. A simple left-nav switches between the per-type editors
@@ -14,7 +15,7 @@ import { SpawnEditor } from './spawn-editor';
  */
 @Component({
   selector: 'app-root',
-  imports: [ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor],
+  imports: [ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, Documentation],
   template: `
     <header>
       <strong>Ueq Content</strong>
@@ -27,6 +28,7 @@ import { SpawnEditor } from './spawn-editor';
         <button [class.active]="view() === 'loot'" (click)="view.set('loot')">Loot</button>
         <button [class.active]="view() === 'xp'" (click)="view.set('xp')">XP</button>
         <button [class.active]="view() === 'spawns'" (click)="view.set('spawns')">Spawns</button>
+        <button class="docs" [class.active]="view() === 'docs'" (click)="view.set('docs')">Documentation</button>
       </nav>
     </header>
 
@@ -40,6 +42,7 @@ import { SpawnEditor } from './spawn-editor';
         @case ('loot')          { <app-loot-editor /> }
         @case ('xp')            { <app-xp-editor /> }
         @case ('spawns')        { <app-spawn-editor /> }
+        @case ('docs')          { <app-documentation /> }
       }
     </div>
   `,
@@ -52,9 +55,10 @@ import { SpawnEditor } from './spawn-editor';
                  border-radius: 4px; color: #555; }
     nav button:hover { background: #eee; }
     nav button.active { background: #1a73e8; color: #fff; }
+    nav button.docs { margin-left: 0.5rem; border-left: 1px solid #e3e3e3; padding-left: 0.9rem; }
     .body { max-width: 980px; margin: 1.25rem auto; padding: 0 1rem; }
   `]
 })
 export class App {
-  readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns'>('items');
+  readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'docs'>('items');
 }
