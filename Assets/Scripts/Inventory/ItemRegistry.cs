@@ -64,6 +64,7 @@ public class ItemRegistry : MonoBehaviour
         def.weaponCategory   = (WeaponCategory)s.WeaponCategory;
         def.buyPrice         = s.BuyPrice;
         def.sellPrice        = s.SellPrice;
+        def.lore             = s.Lore;
         // icon_address (s.IconAddress) is resolved lazily via AssetResolver where the sprite is shown;
         // ItemDefinition has no icon field yet (inventory is text today). Stored on the row for 2.2's
         // asset-binding proof; UI wiring is a later pass.

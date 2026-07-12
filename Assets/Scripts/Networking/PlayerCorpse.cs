@@ -70,7 +70,8 @@ public class PlayerCorpse : NetworkBehaviour
     {
         for (int i = _loot.Count - 1; i >= 0; i--)
         {
-            if (inv.AddItem(_loot[i].itemId, _loot[i].quantity))
+            // 3.2.1: enforce LORE — a dupe of a held LORE item just stays on the corpse.
+            if (inv.AddItem(_loot[i].itemId, _loot[i].quantity, enforceLore: true))
                 _loot.RemoveAt(i);
         }
         if (_copper > 0)

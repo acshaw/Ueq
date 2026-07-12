@@ -28,6 +28,8 @@ export interface Item {
   buyPrice: number;
   sellPrice: number;
 
+  lore: boolean;          // 3.2.1 — max one in possession (EQ1-style)
+
   iconAddress: string | null;
   updatedAt?: string;
 }
@@ -39,7 +41,7 @@ export function emptyItem(): Item {
     isEquippable: false, equipSlot: 11,
     bonusStr: 0, bonusSta: 0, bonusAgi: 0, bonusDex: 0, bonusInt: 0, bonusWis: 0, bonusCha: 0,
     weaponBaseDamage: 10, weaponDelay: 2, weaponRange: 3, weaponCategory: 0,
-    buyPrice: 0, sellPrice: 0, iconAddress: null,
+    buyPrice: 0, sellPrice: 0, lore: false, iconAddress: null,
   };
 }
 

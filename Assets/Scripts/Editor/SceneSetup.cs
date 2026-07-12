@@ -211,9 +211,10 @@ public static class SceneSetup
             typeof(MobKillReward),
             typeof(CombatLog),
             typeof(Enemy),
-            typeof(NpcConversation),   // keyword listener (drives vendor "wares")
-            typeof(VendorApplicator),  // inert unless the mob's definition sets a vendorId
-            typeof(MobModel),          // 3.1.10 — runtime body from Resources/MobModels/<modelId>
+            typeof(NpcConversation),        // keyword listener (drives vendor "wares")
+            typeof(VendorApplicator),       // inert unless the mob's definition sets a vendorId
+            typeof(KeywordRewardApplicator),// 3.2 — inert unless a keyword carries a quest transaction bundle
+            typeof(MobModel),               // 3.1.10 — runtime body from Resources/MobModels/<modelId>
         });
 
         // Server-authoritative movement sync — without this, mobs move only on the server and look
@@ -571,6 +572,8 @@ public static class SceneSetup
         // Conversations are DB-authored (M2.4) and resolved at runtime via the mob's
         // conversationSetId (ConversationRegistry); no SO keyword set is wired here anymore.
         enemy.AddComponent<NpcConversation>();
+        enemy.AddComponent<VendorApplicator>();        // inert unless the mob's definition sets a vendorId
+        enemy.AddComponent<KeywordRewardApplicator>(); // 3.2 — inert unless a keyword carries a transaction
 
         WireMobModel(enemy);
 #endif

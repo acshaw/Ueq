@@ -15,7 +15,6 @@
       <li>Giving a mob a body</li>
       <li>Recipes (step-by-step)</li>
       <li>Aggro in one paragraph</li>
-      <li>A ready-made reference to copy</li>
       <li>Troubleshooting</li>
       <li>Quick reference</li>
     </ol>
@@ -126,40 +125,70 @@
   </ul>
 
   <h2>6. Giving a mob a body (the 3D model)</h2>
-  <p>A mob's <strong>stats</strong> and its <strong>3D body</strong> are separate. Skip this and the mob spawns as
-    a plain white cube. Bodies are managed in the <strong>Mob Model Catalog</strong>:</p>
+  <p>A mob's <strong>stats</strong> (Web app) and its <strong>3D body</strong> (Unity) are separate. Skip this and
+    the mob spawns as a plain white cube. There are two ways to give it a body — both done by hand in Unity, no
+    menu commands.</p>
+
+  <h3>Option 1 — the Mob Model Catalog asset</h3>
+  <p>A catalog asset maps a <strong>Model Id</strong> to a body prefab. It lives at
+    <code>Assets/Resources/MobModelCatalog.asset</code>.</p>
   <ol>
-    <li>Menu: <strong>Tools → Character → Build Mob Model Catalog</strong>. This creates/updates
-      <code>Assets/Resources/MobModelCatalog.asset</code> and auto-fills it with every imported Synty character
-      prefab. Each entry has a <strong>Model Id</strong> (defaults to the prefab's name) and the <strong>prefab</strong>.</li>
-    <li>Open <code>MobModelCatalog.asset</code> (in <code>Assets/Resources/</code>).</li>
-    <li>Find an entry whose prefab is the body you want, and set its <strong>Model Id</strong> to your
-      <strong>mob id</strong> (e.g. change an entry's Model Id to <code>goblin_scout</code>). By default a mob
-      looks for a body whose Model Id equals its mob id; you can also set an explicit <code>modelId</code> on the
-      Mob Definition so several mobs share one body (e.g. rat variants → one <code>giant_rat</code> body).</li>
-    <li>(Optional, non-Humanoid bodies) if a body isn't a Humanoid rig, set the entry's <strong>animator
-      controller</strong> so it animates with its own clips. Leave it blank for normal Humanoid Synty characters.</li>
+    <li><span class="tag unity">Unity</span> If the asset doesn't exist yet: in the <strong>Project</strong> window
+      open <code>Assets/Resources/</code>, right-click → <strong>Create → Ueq → Mob Model Catalog</strong>, and name
+      it exactly <code>MobModelCatalog</code>. (It must sit directly under a <code>Resources</code> folder.)</li>
+    <li><span class="tag unity">Unity</span> Select the asset. In the Inspector, under <strong>Entries</strong>,
+      click <strong>+</strong> to add a row.</li>
+    <li><span class="tag unity">Unity</span> Set the entry's <strong>Model Id</strong> to your <strong>mob id</strong>
+      (e.g. <code>goblin_scout</code>) and drag a rigged Synty character prefab into the <strong>Prefab</strong>
+      field (a character prefab with a SkinnedMeshRenderer + Animator, not a raw <code>.fbx</code>). By default a
+      mob looks for a body whose Model Id equals its mob id; you can instead set an explicit <strong>Model Id</strong>
+      on the Mob Definition (Web app) so several mobs share one body.</li>
+    <li><span class="tag unity">Unity</span> (Optional, non-Humanoid bodies) if a body isn't a Humanoid rig, set the
+      entry's <strong>Animator Controller</strong> so it animates with its own clips. Leave it blank for normal
+      Humanoid Synty characters.</li>
   </ol>
-  <div class="note"><strong>Shortcut:</strong> instead of the catalog, drop a prefab named exactly like the mob id
-    into <code>Assets/Resources/MobModels/</code> and it's found automatically. The catalog is preferred because it
-    references prefabs in place (no copying).</div>
+
+  <h3>Option 2 — the folder convention (simplest)</h3>
+  <p><span class="tag unity">Unity</span> Drop a rigged character prefab named <strong>exactly like the mob id</strong>
+    (e.g. <code>goblin_scout.prefab</code>) into <code>Assets/Resources/MobModels/</code>. It's found automatically
+    at runtime — no catalog entry needed. (Create the <code>MobModels</code> folder under <code>Resources</code> if
+    it isn't there.)</p>
 
   <h2>7. Recipes (step-by-step examples)</h2>
-  <p>These assume Postgres + the web app are running, and you're in Unity. After any web-editor change,
-    <strong>restart the Unity host</strong> before testing.</p>
+  <p>These assume Postgres + the web app are running, and you have the game scene open in Unity. Every step is
+    tagged by where you do it. After any Web-app change, <strong>restart the Unity host</strong> before testing.</p>
+  <div class="legend">
+    <span><span class="tag web">Web app</span> in this browser UI</span>
+    <span><span class="tag unity">Unity</span> in the Unity editor (Hierarchy / Inspector / Scene)</span>
+  </div>
+  <div class="note">Ready-made <strong>drag-in prefabs</strong> live in <code>Assets/Prefabs/Encounters/</code> —
+    <strong>SpawnPoint</strong>, <strong>WanderRegion</strong>, and <strong>PatrolRoute</strong>. Drag one from the
+    Project window into the scene, position it, and fill in its fields — no menu commands. Each already has the right
+    component and sensible defaults (the PatrolRoute even ships three example waypoint children). You can still build
+    any of them by hand (an empty GameObject + the matching component); the prefabs just save that step. A Spawn
+    Point drops its mob onto the ground/navmesh at runtime (<em>Snap To Ground</em> is on by default), so placing it
+    roughly above walkable ground is enough.</div>
 
   <div class="recipe">
     <h3>Recipe A — A single named NPC at a fixed spot</h3>
     <p class="goal">Goal: one "Old Hermit" that always appears by the well.</p>
     <ol>
-      <li><strong>Author the mob</strong> (Mob Editor): id <code>old_hermit</code>, display "Old Hermit"; set
-        health; <strong>leave the faction empty</strong> so he's peaceful. Save.</li>
-      <li><strong>Give him a body</strong> (§6): set a catalog entry's Model Id to <code>old_hermit</code>.</li>
-      <li><strong>Restart the Unity host</strong> so it loads the new mob.</li>
-      <li><strong>Place the spawn</strong>: Scene view at the well → <strong>Tools → Zones → Place Encounter (Spawn
-        Point)</strong>. Select it, set <code>mobId = old_hermit</code> (leave <code>spawnTableId</code> empty).
-        Save the scene.</li>
-      <li><strong>Test:</strong> Play as Host, walk near the well — the Old Hermit spawns and stands around.</li>
+      <li><span class="tag web">Web app</span> <strong>Author the mob</strong> in the <strong>Mob Editor</strong>:
+        id <code>old_hermit</code>, display "Old Hermit"; set health; <strong>leave the faction empty</strong> so
+        he's peaceful. Save.</li>
+      <li><span class="tag unity">Unity</span> <strong>Give him a body</strong> (§6): add a catalog entry with
+        Model Id <code>old_hermit</code> and a character prefab, or drop <code>old_hermit.prefab</code> into
+        <code>Assets/Resources/MobModels/</code>.</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
+        <code>Assets/Prefabs/Encounters/SpawnPoint.prefab</code> from the Project window into the scene, and position
+        it just above the ground by the well (drag it in the Scene view, or set its Transform position). Rename it
+        e.g. <code>OldHermitSpawn</code> if you like.</li>
+      <li><span class="tag unity">Unity</span> In its <strong>Spawn Point</strong> component set <strong>Mob
+        Id</strong> = <code>old_hermit</code> (leave <strong>Spawn Table Id</strong> empty).</li>
+      <li><span class="tag unity">Unity</span> <strong>Save the scene</strong> (Ctrl+S), then
+        <strong>restart the Unity host</strong> so it loads the new mob.</li>
+      <li><span class="tag unity">Unity</span> <strong>Test:</strong> Play as Host, walk near the well — the Old
+        Hermit spawns and stands around.</li>
     </ol>
   </div>
 
@@ -167,35 +196,45 @@
     <h3>Recipe B — A wilderness camp with a weighted mix (spawn table + groups)</h3>
     <p class="goal">Goal: a clearing where mostly goblins spawn, occasionally a bigger brute, sometimes in pairs.</p>
     <ol>
-      <li><strong>Author the mobs</strong> (Mob Editor): e.g. <code>goblin_scout</code> and <code>goblin_brute</code>,
-        each with a hostile faction (§8), XP reward, and a loot table. Give each a body (§6).</li>
-      <li><strong>Author a spawn table</strong> (Spawn Editor): id <code>greenwood_goblins</code>. Entry 1: mob
-        <code>goblin_scout</code>, <strong>weight 4</strong>, <strong>group size 2</strong>. Entry 2: mob
-        <code>goblin_brute</code>, <strong>weight 1</strong>, group size 1. Respawn timer base <code>45</code>,
-        variance <code>15</code> (~30–60s). Save. (Weights are relative — scouts appear 4× as often as brutes.)</li>
-      <li><strong>Restart the Unity host.</strong></li>
-      <li><strong>Place the spawn</strong>: Place Encounter → set <code>spawnTableId = greenwood_goblins</code>
-        (leave <code>mobId</code> empty). Save the scene.</li>
-      <li><strong>Test:</strong> walk into the clearing — a weighted roll spawns either a pair of scouts or a brute;
-        when all are dead it respawns after the timer.</li>
+      <li><span class="tag web">Web app</span> <strong>Author the mobs</strong> (Mob Editor): e.g.
+        <code>goblin_scout</code> and <code>goblin_brute</code>, each with a hostile faction (§8), XP reward, and a
+        loot table.</li>
+      <li><span class="tag unity">Unity</span> <strong>Give each a body</strong> (§6).</li>
+      <li><span class="tag web">Web app</span> <strong>Author a spawn table</strong> (Spawn Editor): id
+        <code>greenwood_goblins</code>. Entry 1: mob <code>goblin_scout</code>, <strong>weight 4</strong>,
+        <strong>group size 2</strong>. Entry 2: mob <code>goblin_brute</code>, <strong>weight 1</strong>, group
+        size 1. Respawn timer base <code>45</code>, variance <code>15</code> (~30–60s). Save. (Weights are
+        relative — scouts appear 4× as often as brutes.)</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
+        <code>Encounters/SpawnPoint.prefab</code> into the scene over the clearing, rename it <code>GoblinCamp</code>.
+        Set <strong>Spawn Table Id</strong> = <code>greenwood_goblins</code> (leave <strong>Mob Id</strong> empty).</li>
+      <li><span class="tag unity">Unity</span> <strong>Save the scene</strong>, then <strong>restart the Unity
+        host.</strong></li>
+      <li><span class="tag unity">Unity</span> <strong>Test:</strong> walk into the clearing — a weighted roll
+        spawns either a pair of scouts or a brute; when all are dead it respawns after the timer.</li>
     </ol>
-    <div class="note">Place <strong>several</strong> spawn points sharing the same <code>spawnTableId</code> to
-      fill a larger area with the same encounter mix.</div>
+    <div class="note"><span class="tag unity">Unity</span> Duplicate the spawn-point GameObject (Ctrl+D) and move
+      the copies around to fill a larger area with the same encounter mix — they all share the one
+      <code>greenwood_goblins</code> table.</div>
   </div>
 
   <div class="recipe">
     <h3>Recipe C — A mob that roams a bounded area (Wander Region)</h3>
     <p class="goal">Goal: a wolf that patrols a meadow, not tied to one bush.</p>
     <ol>
-      <li>Author <code>dire_wolf</code> (hostile faction, body) and restart the host.</li>
-      <li><strong>Place the spawn</strong> with <code>mobId = dire_wolf</code> (or a spawn table).</li>
-      <li><strong>Create the region:</strong> Scene view at the meadow → <strong>Tools → Zones → New Wander
-        Region</strong>. Select it, choose <strong>Box</strong> or <strong>Sphere</strong> and size it to cover the
-        meadow (the green gizmo shows the area). Make sure it sits over walkable ground (the navmesh).</li>
-      <li><strong>Link them:</strong> select the Spawn Point → drag the <code>Wander Region</code> object into its
-        <strong>Wander Region</strong> field.</li>
-      <li>Save the scene, restart, test: the wolf wanders anywhere inside the green volume, ignoring where it
-        spawned.</li>
+      <li><span class="tag web">Web app</span> Author <code>dire_wolf</code> (hostile faction). <span class="tag unity">Unity</span>
+        Give it a body (§6).</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
+        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>dire_wolf</code>.</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the region:</strong> drag
+        <code>Encounters/WanderRegion.prefab</code> into the scene, rename <code>MeadowRegion</code>, position it at
+        the meadow center over walkable ground. On its <strong>Wander Region</strong> component set
+        <strong>Shape</strong> (Box or Sphere) and its size (<strong>Box Size</strong> or <strong>Sphere
+        Radius</strong>) so the green gizmo covers the meadow.</li>
+      <li><span class="tag unity">Unity</span> <strong>Link them:</strong> select the Spawn Point → drag the
+        <code>MeadowRegion</code> object into its <strong>Wander Region</strong> field.</li>
+      <li><span class="tag unity">Unity</span> Save the scene, restart the host, test: the wolf wanders anywhere
+        inside the green volume, ignoring where it spawned.</li>
     </ol>
   </div>
 
@@ -203,12 +242,15 @@
     <h3>Recipe D — A free-range wanderer</h3>
     <p class="goal">Goal: a lone ghost that drifts across the whole zone.</p>
     <ol>
-      <li>Author <code>lost_ghost</code> + body, restart.</li>
-      <li>Place the spawn (<code>mobId = lost_ghost</code>).</li>
-      <li>On the Spawn Point, tick <strong>Free Range</strong> (leave Wander Region empty). Optionally raise
-        <strong>Free Range Radius</strong> to widen roaming (the default is safe — keep it comfortably under the
-        distance between zones).</li>
-      <li>Save, restart, test: it roams the zone's walkable area.</li>
+      <li><span class="tag web">Web app</span> Author <code>lost_ghost</code>. <span class="tag unity">Unity</span>
+        Give it a body (§6).</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
+        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>lost_ghost</code>.</li>
+      <li><span class="tag unity">Unity</span> On the Spawn Point, tick <strong>Free Range</strong> (leave Wander
+        Region empty). Optionally raise <strong>Free Range Radius</strong> to widen roaming (the default is safe —
+        keep it comfortably under the distance between zones).</li>
+      <li><span class="tag unity">Unity</span> Save the scene, restart the host, test: it roams the zone's walkable
+        area.</li>
     </ol>
   </div>
 
@@ -216,17 +258,20 @@
     <h3>Recipe E — A patrolling guard</h3>
     <p class="goal">Goal: a city guard that walks a fixed route down the road and back.</p>
     <ol>
-      <li>Author <code>city_guard</code> (usually a guard faction friendly to players, so it won't attack you) +
-        body, restart.</li>
-      <li><strong>Create the route:</strong> Scene view at the first post → <strong>Tools → Zones → New Patrol
-        Route</strong>. With the route selected, move the Scene camera to each next post and use <strong>Tools →
-        Zones → Add Patrol Waypoint</strong> to drop points in order (the blue line + numbers show the path). On
-        the Patrol Route set <strong>Loop</strong> (walk the loop) or uncheck it (ping-pong), and <strong>Pause Per
-        Point</strong> (seconds paused at each post).</li>
-      <li><strong>Place the spawn</strong> (<code>mobId = city_guard</code>) → drag the <code>Patrol Route</code>
-        into its <strong>Patrol Route</strong> field.</li>
-      <li>Save, restart, test: the guard walks its beat, aggros anything hostile it perceives, and returns to the
-        nearest post afterward.</li>
+      <li><span class="tag web">Web app</span> Author <code>city_guard</code> (usually a guard faction friendly to
+        players, so it won't attack you). <span class="tag unity">Unity</span> Give it a body (§6).</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the route:</strong> drag
+        <code>Encounters/PatrolRoute.prefab</code> into the scene, rename <code>GuardPatrol</code>. It comes with
+        three child waypoints — <strong>position each child</strong> at a post along the road (the blue line +
+        numbers in the Scene view show the path). Add or delete child GameObjects to change the number of posts;
+        <strong>child order = walk order</strong>. On the <strong>Patrol Route</strong> component set
+        <strong>Loop</strong> (walk the loop) or uncheck it (ping-pong), and <strong>Pause Per Point</strong>
+        (seconds paused at each post).</li>
+      <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
+        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>city_guard</code>, then
+        drag the <code>GuardPatrol</code> object into its <strong>Patrol Route</strong> field.</li>
+      <li><span class="tag unity">Unity</span> Save the scene, restart the host, test: the guard walks its beat,
+        aggros anything hostile it perceives, and returns to the nearest post afterward.</li>
     </ol>
   </div>
 
@@ -237,17 +282,9 @@
     up that standing: low enough → it attacks; middling → it warns; friendly → it ignores/greets you. So a
     <strong>peaceful NPC</strong> (vendor, quest-giver) gets <strong>no faction</strong> (or one players stand well
     with), and a <strong>hostile monster</strong> gets a faction players stand poorly with (e.g. a "Monster"
-    faction set hostile to all races). The example content seeds exactly such a Monster faction as a reference.</p>
+    faction set hostile to all races, authored in the Faction Editor).</p>
 
-  <h2>9. A ready-made reference to copy</h2>
-  <p>The fastest way to learn by example is the seeded starter content: <strong>Tools → Database → Seed
-    Database</strong> then <strong>Tools → Zones → Build Example Encounters (Creslins Field)</strong> creates a
-    Monster faction, three wilderness mobs (Goblin Scout / Skeleton Soldier / Goblin Warchief), a weighted spawn
-    table, and three placed encounters near spawn (a random-table camp, a static boss, and a city-guard patrol
-    loop). Open those in the Mob/Spawn editors and in the scene to see every field filled in correctly, then copy
-    the pattern.</p>
-
-  <h2>10. Troubleshooting</h2>
+  <h2>9. Troubleshooting</h2>
   <table>
     <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
     <tr><td>Mob spawns as a <strong>white cube</strong></td><td>No body assigned. Do §6 (catalog Model Id = mob id).</td></tr>
@@ -260,7 +297,7 @@
     <tr><td>Mob spawns <strong>floating or buried</strong></td><td><code>Snap To Ground</code> is off, or there's no ground collider / navmesh under the point. Keep Snap To Ground on and place over baked navmesh.</td></tr>
   </table>
 
-  <h2>11. Quick reference</h2>
+  <h2>10. Quick reference</h2>
   <h3>Spawn Point fields (Unity Inspector)</h3>
   <table>
     <tr><th>Field</th><th>Meaning</th></tr>
@@ -277,15 +314,23 @@
     Movement (movement type Wander/Stationary, move speed, wander radius, wander pause min/max) · AI (perception
     radius, base aggro threat) · Faction (faction + aggro/warning standings + on-kill faction hits) · Loot (loot
     table id) · Rewards (XP reward) · Vendor/Conversation ids (for shop/dialogue NPCs).</p>
-  <h3>Tools menu</h3>
+  <h3>Placing the scene objects (Unity)</h3>
+  <p>Drag the ready-made prefabs from <code>Assets/Prefabs/Encounters/</code> into the scene — no menu commands.
+    Save the scene (Ctrl+S) after, and restart the host to load Web-app content changes. (Each can also be built by
+    hand: an empty GameObject + the matching component; the prefabs just carry the component and defaults.)</p>
   <table>
-    <tr><th>Menu</th><th>Does</th></tr>
-    <tr><td>Tools → Zones → Place Encounter (Spawn Point)</td><td>Drops a Spawn Point at the Scene-view focus</td></tr>
-    <tr><td>Tools → Zones → New Wander Region</td><td>Drops a box/sphere roam area</td></tr>
-    <tr><td>Tools → Zones → New Patrol Route / Add Patrol Waypoint</td><td>Builds a patrol path</td></tr>
-    <tr><td>Tools → Character → Build Mob Model Catalog</td><td>Registers Synty bodies; set an entry's Model Id to a mob id</td></tr>
-    <tr><td>Tools → Database → Seed Database</td><td>Loads the seeded reference content into the DB</td></tr>
-    <tr><td>Tools → Zones → Build Example Encounters (Creslins Field)</td><td>Places the reference camp/boss/patrol to copy</td></tr>
+    <tr><th>To place…</th><th>Do this</th></tr>
+    <tr><td><strong>Spawn Point</strong></td><td>Drag <code>Encounters/SpawnPoint.prefab</code> in → position it →
+      set <strong>Mob Id</strong> or <strong>Spawn Table Id</strong>.</td></tr>
+    <tr><td><strong>Wander Region</strong></td><td>Drag <code>Encounters/WanderRegion.prefab</code> in → position +
+      size it (Shape + Box Size / Sphere Radius) → drag it into the Spawn Point's <strong>Wander Region</strong>
+      field.</td></tr>
+    <tr><td><strong>Patrol Route</strong></td><td>Drag <code>Encounters/PatrolRoute.prefab</code> in → position its
+      child waypoints (add/remove children to change count; order = walk order) → drag the route into the Spawn
+      Point's <strong>Patrol Route</strong> field.</td></tr>
+    <tr><td><strong>Mob body</strong></td><td>Edit <code>Assets/Resources/MobModelCatalog.asset</code> (Create →
+      Ueq → Mob Model Catalog if absent): add an entry with Model Id = mob id + a character prefab. Or drop a prefab
+      named like the mob id into <code>Assets/Resources/MobModels/</code>. (§6)</td></tr>
   </table>
 
   <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/SpawnPoint.cs</code>,

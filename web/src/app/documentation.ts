@@ -1,41 +1,38 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
+import { SpawnGuide } from './spawn-guide';
+import { QuestGuide } from './quest-guide';
+import { ConversationGuide } from './conversation-guide';
 
 /**
- * Documentation tab — in-app reference guides for content authors (spawn system, and more as they're written).
- * Static content (no data/services); the guide markup lives in documentation.html.
+ * Documentation tab — in-app reference guides for content authors. A small sub-nav switches between
+ * guides (spawn system, conversations, quest rewards, …); each guide is its own component with the
+ * shared DOC_STYLES.
  */
 @Component({
   selector: 'app-documentation',
-  templateUrl: './documentation.html',
+  imports: [SpawnGuide, ConversationGuide, QuestGuide],
+  template: `
+    <nav class="guides">
+      <button [class.active]="guide() === 'spawn'" (click)="guide.set('spawn')">Spawn System</button>
+      <button [class.active]="guide() === 'conversation'" (click)="guide.set('conversation')">Conversations</button>
+      <button [class.active]="guide() === 'quest'" (click)="guide.set('quest')">Quest Rewards</button>
+    </nav>
+    @switch (guide()) {
+      @case ('spawn') { <app-spawn-guide /> }
+      @case ('conversation') { <app-conversation-guide /> }
+      @case ('quest') { <app-quest-guide /> }
+    }
+  `,
   styles: [`
     :host { display: block; }
-    .doc { line-height: 1.6; color: #222; }
-    .doc h1 { font-size: 1.9rem; margin: 0 0 0.25rem; }
-    .doc .lead { color: #555; margin: 0 0 1.5rem; }
-    .doc h2 { font-size: 1.35rem; margin: 2rem 0 0.6rem; padding-bottom: 0.3rem;
-              border-bottom: 2px solid #eee; }
-    .doc h3 { font-size: 1.1rem; margin: 1.4rem 0 0.4rem; }
-    .doc p, .doc li { font-size: 0.95rem; }
-    .doc ul, .doc ol { padding-left: 1.4rem; }
-    .doc li { margin: 0.2rem 0; }
-    .doc code { background: #f2f4f7; border: 1px solid #e3e7ec; border-radius: 4px;
-                padding: 0.05rem 0.35rem; font-family: ui-monospace, Menlo, Consolas, monospace;
-                font-size: 0.85em; color: #b02a5b; }
-    .doc table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.9rem; }
-    .doc th, .doc td { border: 1px solid #e3e7ec; padding: 0.45rem 0.6rem; text-align: left;
-                       vertical-align: top; }
-    .doc th { background: #f7f9fb; }
-    .doc .note { background: #fff8e6; border: 1px solid #f2dfa0; border-radius: 6px;
-                 padding: 0.6rem 0.85rem; margin: 0.9rem 0; font-size: 0.9rem; }
-    .doc .toc { background: #f7f9fb; border: 1px solid #e3e7ec; border-radius: 8px;
-                padding: 0.75rem 1rem; margin: 1rem 0 2rem; }
-    .doc .toc ol { margin: 0.3rem 0 0; }
-    .doc .recipe { border: 1px solid #e3e7ec; border-left: 4px solid #1a73e8; border-radius: 6px;
-                   padding: 0.5rem 1rem; margin: 1rem 0; background: #fbfcfe; }
-    .doc .recipe h3 { margin-top: 0.5rem; }
-    .doc .goal { color: #1a73e8; font-style: italic; margin: 0.2rem 0 0.6rem; }
-    .doc footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #eee;
-                  color: #888; font-size: 0.85rem; }
+    .guides { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid #eee;
+              padding-bottom: 0.75rem; }
+    .guides button { background: none; border: 1px solid #dfe3e8; padding: 0.35rem 0.9rem; cursor: pointer;
+                     border-radius: 999px; color: #555; font-size: 0.9rem; }
+    .guides button:hover { background: #f2f4f7; }
+    .guides button.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
   `]
 })
-export class Documentation {}
+export class Documentation {
+  readonly guide = signal<'spawn' | 'conversation' | 'quest'>('spawn');
+}

@@ -418,3 +418,6 @@ MonoBehaviour:
   - modelId: City Guard
     prefab: {fileID: 1428387009061096, guid: a96b63f27d072234bbc3d7818166e4eb, type: 3}
     animatorController: {fileID: 0}
+  - modelId: hagar_sureshot
+    prefab: {fileID: 1428387009061096, guid: a96b63f27d072234bbc3d7818166e4eb, type: 3}
+    animatorController: {fileID: 0}

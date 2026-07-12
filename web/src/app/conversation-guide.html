@@ -1,0 +1,336 @@
+<article class="doc">
+  <h1>Conversation System — User Guide</h1>
+  <p class="lead">How to make an NPC talk — greetings, gated dialogue, keyword unlocks, opening a shop — entirely in
+    the <strong>Conversation Editor</strong>. There is no dialogue tree and no clickable UI: the NPC listens to
+    chat and matches <strong>keywords</strong>. Read the <strong>Big Picture</strong>, then the
+    <strong>Recipes</strong>.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>Key concepts</li>
+      <li>Where each piece lives</li>
+      <li>The conversation flow</li>
+      <li>Anatomy of a keyword</li>
+      <li>Wiring a conversation to an NPC</li>
+      <li>Special case: opening a shop</li>
+      <li>Quests ride on keywords too</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Known gaps — what still needs Unity (or isn't built yet)</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>An NPC's dialogue is a <strong>conversation set</strong>: a named list of <strong>keywords</strong>. A player
+    talks to an NPC by simply <strong>typing the keyword in chat</strong> near it (after targeting it) — there's no
+    menu. When the NPC hears a keyword it knows, it replies (and optionally does more: opens a shop, runs a quest
+    turn-in, changes what you can ask next).</p>
+  <div class="note"><strong>Mental model:</strong> a <em>conversation set</em> is an NPC's whole vocabulary; a
+    <em>keyword</em> is one entry in it — a trigger word, a response, and a few switches that control when it fires
+    and what it unlocks. Everything you author for dialogue is web-side data; Unity just runs it.</div>
+
+  <h3>Where each piece lives</h3>
+  <table>
+    <tr><th>Piece</th><th>What it is</th><th>Authored in</th><th>Stored in</th></tr>
+    <tr><td>Conversation set</td><td>An NPC's named list of keywords</td><td>Web <strong>Conversation Editor</strong></td><td>Database</td></tr>
+    <tr><td>Keyword</td><td>A trigger word + response + flags + optional transaction</td><td>Web <strong>Conversation Editor</strong></td><td>Database</td></tr>
+    <tr><td>Faction gate</td><td>Minimum standing required for a keyword to respond</td><td>Web <strong>Conversation Editor</strong> (references the <strong>Faction Editor</strong>)</td><td>Database</td></tr>
+    <tr><td>Quest transaction</td><td>Items/coin required + XP/coin/items/faction granted</td><td>The keyword's <strong>Quest transaction</strong> panel — see the <strong>Quest Rewards</strong> guide</td><td>Database</td></tr>
+    <tr><td>The NPC that speaks it</td><td>A mob whose <code>conversationSetId</code> points at the set</td><td>Web <strong>Mob Editor</strong> + a Unity <strong>Spawn Point</strong></td><td>Database + scene</td></tr>
+    <tr><td>Hearing range / timeout / cooldown / closing line</td><td>Per-conversation timing constants</td><td><strong>Not web-authored</strong> — fixed on the shared Unity <code>Enemy</code> prefab (§10)</td><td>Unity project</td></tr>
+  </table>
+
+  <h2>2. Key concepts</h2>
+  <ul>
+    <li><strong>Conversation set</strong> — a named bundle of keywords (<code>set_id</code>, e.g.
+      <code>GuardKeywords</code>). One set can be shared by many NPCs (every City Guard can point at the same
+      set); a unique NPC usually gets its own.</li>
+    <li><strong>Keyword</strong> — one dialogue entry: the trigger word, the response text, and behavior flags
+      (§5).</li>
+    <li><strong>Mode: Passive vs. Active</strong> — Passive keywords are always heard; Active keywords only fire
+      mid-conversation (after a hail).</li>
+    <li><strong>Opener (hail)</strong> — a keyword flagged <strong>Opener</strong> starts a conversation when heard
+      while the NPC is idle. Any keyword can be an opener, not just one literally named "hail" — it's just
+      convention to use that word.</li>
+    <li><strong>Unlock</strong> — a keyword can list other keywords it <strong>unlocks</strong>; an
+      <strong>Active + Requires unlock</strong> keyword only fires for a player who has triggered one of its
+      unlockers first, in that same conversation.</li>
+    <li><strong>Faction gate</strong> — a keyword can require a minimum standing with a faction; if the player
+      doesn't meet it, the NPC doesn't respond at all (not even an error) — see the <strong>Faction System</strong>
+      / Faction Editor for standings.</li>
+    <li><strong>Response tokens</strong> — response text can include <code>&lt;name&gt;</code>,
+      <code>&lt;race&gt;</code>, <code>&lt;class&gt;</code>, <code>&lt;gender&gt;</code>, substituted per-player at
+      delivery time.</li>
+    <li><strong>Quest transaction</strong> — any keyword can carry a turn-in/reward bundle (requirements consumed,
+      rewards granted). This is the game's whole quest system — see the <strong>Quest Rewards</strong> guide for
+      the details; this guide only covers wiring the surrounding conversation.</li>
+  </ul>
+
+  <h2>3. Where each piece lives</h2>
+  <p>Same three programs as the rest of the content pipeline:</p>
+  <ol>
+    <li><strong>Postgres</strong> — started with Docker: <code>docker compose up -d</code>.</li>
+    <li><strong>The web app</strong> — where conversation sets, keywords, and their faction/quest data are
+      authored.</li>
+    <li><strong>Unity</strong> — hosts the game server, which loads every conversation set from the database
+      <strong>when the host starts</strong>, and runs the NPC that speaks it.</li>
+  </ol>
+  <div class="note">⚠️ <strong>Important:</strong> Unity reads the database <strong>once, at host start.</strong>
+    Edit a conversation in the web app while the game is running, and you must <strong>restart the Unity host</strong>
+    to see the change.</div>
+
+  <h2>4. The conversation flow</h2>
+  <p>Each NPC that can talk runs a small state machine:</p>
+  <pre style="background:#f7f9fb;border:1px solid #e3e7ec;border-radius:6px;padding:0.6rem 0.9rem;font-size:0.85rem;">Idle → (player says an Opener keyword) → InConversation(that player) → Idle
+                                                    ↓ 30s of silence, "farewell", or the player un-targets the NPC
+                                              closing line + a short cooldown → Idle</pre>
+  <ul>
+    <li>While <strong>Idle</strong>, the NPC only reacts to <strong>Passive</strong> keywords.</li>
+    <li>Saying an <strong>Opener</strong> keyword while Idle both <strong>starts</strong> the conversation and
+      delivers that keyword's own response in the same beat.</li>
+    <li>While <strong>InConversation</strong> with a player, the NPC also reacts to that player's
+      <strong>Active</strong> keywords (and keeps reacting to Passive ones). It ignores other players' Active
+      keywords.</li>
+    <li>The conversation ends — the NPC says its <strong>closing line</strong> (default "Farewell.", fixed in
+      Unity, §10) — when: a keyword marked <strong>Ends conversation</strong> fires, 30 seconds pass with nothing
+      said, or the player stops targeting the NPC.</li>
+    <li><strong>Unlocked keywords are session-scoped</strong> — they reset to locked when the conversation ends.
+      There's no server-side memory of what a player has unlocked before.</li>
+  </ul>
+  <div class="note">A player must have the NPC <strong>targeted</strong> (clicked) and be within its hearing range
+    to be heard at all — this currently applies to Passive keywords too; see §10 for the design-vs-implementation
+    gap.</div>
+
+  <h2>5. Anatomy of a keyword</h2>
+  <p>Every keyword in the Conversation Editor has these fields:</p>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td>Keyword</td><td>The trigger word. Matching is case-insensitive <strong>substring</strong> containment
+      in the chat message (e.g. keyword <code>wares</code> matches "show me your wares").</td></tr>
+    <tr><td>Mode</td><td><strong>Passive</strong> = always heard while in range/targeted. <strong>Active</strong> =
+      only heard from the player currently in conversation with this NPC.</td></tr>
+    <tr><td>Response</td><td>What the NPC says back (NPC-channel chat, visible to everyone nearby). Supports
+      <code>&lt;name&gt;</code> <code>&lt;race&gt;</code> <code>&lt;class&gt;</code> <code>&lt;gender&gt;</code>.
+      Bracketing a word like <code>[patrol]</code> is just an authoring convention to hint what's sayable next — it
+      has no special engine behavior.</td></tr>
+    <tr><td>Opener (hail)</td><td>If checked, this keyword starts a conversation when heard while the NPC is
+      Idle.</td></tr>
+    <tr><td>Ends conversation</td><td>If checked, the NPC says its closing line and returns to Idle right after
+      this keyword's response.</td></tr>
+    <tr><td>Requires unlock</td><td>If checked, this keyword only fires once one of its unlockers has already
+      fired for this player, this conversation.</td></tr>
+    <tr><td>Unlocks</td><td>A comma-separated list of other keywords in this set that become sayable once this one
+      fires (for that player, that conversation).</td></tr>
+    <tr><td>Required faction / Required standing</td><td>Optional gate — the NPC only responds if the player's
+      standing with that faction is at least the given threshold. Leave both empty for no gate.</td></tr>
+    <tr><td>Quest transaction</td><td>Optional turn-in/reward bundle. Covered in the <strong>Quest Rewards</strong>
+      guide.</td></tr>
+  </table>
+
+  <h2>6. Wiring a conversation to an NPC</h2>
+  <p>This part is <strong>entirely web-authored</strong> — no Unity Inspector editing needed, assuming the mob
+    already exists and its prefab has been patched once (§10):</p>
+  <ol>
+    <li><span class="tag web">Web app</span> Author the conversation set (Conversation Editor) as in §5.</li>
+    <li><span class="tag web">Web app</span> Open the NPC's mob in the <strong>Mob Editor</strong> and set
+      <strong>Conversation set</strong> to your set's id. Save.</li>
+    <li><span class="tag unity">Unity</span> Give the mob a body if it doesn't have one yet, and place/confirm its
+      Spawn Point — see the <strong>Spawn System</strong> guide §6–7 (a talking NPC still needs to be spawned and
+      targetable like any mob).</li>
+    <li><span class="tag unity">Unity</span> <strong>Restart the Unity host</strong> to load the new/edited
+      conversation content.</li>
+    <li><span class="tag unity">Unity</span> Test: target the NPC, type a Passive/Opener keyword in chat (e.g.
+      <code>hail</code>).</li>
+  </ol>
+
+  <h2>7. Special case: opening a shop</h2>
+  <p>A vendor NPC uses the <strong>same conversation system</strong> — "wares" is just a keyword. In the
+    <strong>Mob Editor</strong>, a mob has a separate <strong>Vendor</strong> dropdown (pick a vendor inventory) and
+    a <strong>Vendor open keyword</strong> field (default <code>wares</code>). When a player says that exact
+    keyword to the NPC, its shop UI opens automatically — <em>in addition</em> to whatever response you wrote for
+    that keyword.</p>
+  <div class="note">⚠️ <strong>The vendor-open keyword must have "Ends conversation" <em>unchecked</em>.</strong> If
+    it's checked, the shop opens and is immediately closed in the same beat (ending the conversation closes any open
+    shop). Give the keyword a normal response like "What would you like?" and leave the conversation open.</div>
+
+  <h2>8. Quests ride on keywords too</h2>
+  <p>There's no separate "quest" entity — a quest <em>is</em> a keyword with a <strong>Quest transaction</strong>
+    attached (requirements consumed, rewards granted, all-or-nothing, repeatable). Everything in §1–§7 above still
+    applies: the transaction rides on top of a normal keyword's mode/opener/unlock/faction-gate behavior. See the
+    <strong>Quest Rewards</strong> guide for the transaction fields, the all-or-nothing rule, and worked recipes.</p>
+
+  <h2>9. Recipes (step-by-step)</h2>
+  <p>These assume Postgres + the web app are running, and you have the game scene open in Unity. Every step is
+    tagged by where you do it. After any Web-app change, <strong>restart the Unity host</strong> before testing.</p>
+  <div class="legend">
+    <span><span class="tag web">Web app</span> in this browser UI</span>
+    <span><span class="tag unity">Unity</span> in the Unity editor (Hierarchy / Inspector / Scene)</span>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe A — A simple greeter (no gate, no quest)</h3>
+    <p class="goal">Goal: a villager who says hello and nothing else.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> <strong>Conversation Editor</strong> → New set, id
+        <code>VillagerGreeting</code>. Add one keyword: <code>hail</code>, mode <strong>Passive</strong>,
+        <strong>Opener</strong> checked, <strong>Ends conversation</strong> checked, response
+        <em>"Oh, hello there, &lt;name&gt;."</em> Save.</li>
+      <li><span class="tag web">Web app</span> <strong>Mob Editor</strong> → author (or open) the villager mob,
+        leave faction empty (peaceful), set <strong>Conversation set</strong> = <code>VillagerGreeting</code>.
+        Save.</li>
+      <li><span class="tag unity">Unity</span> Give the mob a body and a Spawn Point (Spawn System guide) if it
+        doesn't have one. <strong>Restart the Unity host.</strong></li>
+      <li><span class="tag unity">Unity</span> Test: target the villager, type <code>hail</code> — it greets you by
+        name and the conversation ends immediately (single-line NPC, nothing more to say).</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — A gated helper + a keyword unlock</h3>
+    <p class="goal">Goal: a guard with an open greeting, a faction-gated "help" response, and a topic ("patrol")
+      that unlocks a follow-up ("danger"). (This mirrors the game's seeded <code>GuardKeywords</code> set.)</p>
+    <ol>
+      <li><span class="tag web">Web app</span> <strong>Faction Editor</strong> — confirm a <code>CityGuards</code>
+        faction (or your own) exists with a standing ladder.</li>
+      <li><span class="tag web">Web app</span> <strong>Conversation Editor</strong> → New set
+        <code>GuardKeywords</code>, add these keywords:
+        <ul>
+          <li><code>hail</code> — Passive, Opener. Response: <em>"Hail, &lt;name&gt;! Ask me about [guards] or
+            [patrol]."</em></li>
+          <li><code>guards</code> — Passive. Response: <em>"The guards are stationed at the north gate."</em></li>
+          <li><code>patrol</code> — Active. Response: <em>"We patrol these roads to keep travelers like you safe,
+            &lt;race&gt;."</em> Unlocks: <code>danger</code>.</li>
+          <li><code>danger</code> — Active, <strong>Requires unlock</strong> checked. Response: <em>"Strange
+            creatures have been seen to the east. Be wary."</em></li>
+          <li><code>help</code> — Active. Response: <em>"What do you need, adventurer?"</em> Required faction =
+            <code>CityGuards</code>, Required standing = <code>Indifferent</code>.</li>
+          <li><code>farewell</code> — Passive, <strong>Ends conversation</strong> checked. Response: <em>"Safe
+            travels, &lt;name&gt;."</em></li>
+        </ul>
+        Save.</li>
+      <li><span class="tag web">Web app</span> <strong>Mob Editor</strong> → set the guard's <strong>Conversation
+        set</strong> = <code>GuardKeywords</code>. Save.</li>
+      <li><span class="tag unity">Unity</span> <strong>Restart the Unity host.</strong></li>
+      <li><span class="tag unity">Unity</span> Test: say <code>danger</code> first — nothing happens (locked). Say
+        <code>patrol</code> — unlocks it. Say <code>danger</code> — now it responds. Say <code>help</code> — only
+        responds if your standing with CityGuards is Indifferent or better; say <code>farewell</code> to close.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — A shopkeeper</h3>
+    <p class="goal">Goal: a merchant who greets you and can open her shop.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> <strong>Vendor Editor</strong> — create/confirm a vendor inventory
+        with some stock.</li>
+      <li><span class="tag web">Web app</span> <strong>Conversation Editor</strong> → set with a
+        <code>hail</code> Opener keyword, and a <code>wares</code> keyword — Passive, response <em>"What would you
+        like?"</em>, <strong>Ends conversation unchecked</strong> (§7). Save.</li>
+      <li><span class="tag web">Web app</span> <strong>Mob Editor</strong> → set <strong>Conversation set</strong>
+        to that set, <strong>Vendor</strong> to your inventory, and confirm <strong>Vendor open keyword</strong> =
+        <code>wares</code> (the default). Save.</li>
+      <li><span class="tag unity">Unity</span> Give her a body + Spawn Point if needed. <strong>Restart the Unity
+        host.</strong></li>
+      <li><span class="tag unity">Unity</span> Test: hail her, then say <code>wares</code> — she responds and the
+        shop window opens.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe D — A quest-giver</h3>
+    <p class="goal">Goal: an NPC that takes an offering and grants a reward on a keyword.</p>
+    <ol>
+      <li>Do <strong>Recipe A or B</strong> first to get the NPC talking normally (an opener + a keyword
+        describing the task).</li>
+      <li><span class="tag web">Web app</span> On the turn-in keyword, open its <strong>Quest transaction</strong>
+        panel and fill in requirements/rewards — see the <strong>Quest Rewards</strong> guide, Recipe A, for the
+        full walkthrough.</li>
+      <li><span class="tag unity">Unity</span> Restart the host and test as in that guide.</li>
+    </ol>
+  </div>
+
+  <h2>10. Known gaps — what still needs Unity (or isn't built yet)</h2>
+  <p>Most of a conversation is fully web-authored. A few things are not (yet):</p>
+  <ul>
+    <li><span class="tag unity">Unity</span> <strong>The NPC's prefab must carry the conversation components once.</strong>
+      Every mob normally uses the shared <code>Enemy</code> prefab, which already carries
+      <code>NpcConversation</code>, <code>NpcEventDispatcher</code>, <code>VendorApplicator</code>, and
+      <code>KeywordRewardApplicator</code> after <strong>Tools → Patch Enemy Prefab</strong> has been run once (it
+      almost certainly already has, from spawn/quest setup). You only need to worry about this if you build a
+      custom NPC prefab from scratch.</li>
+    <li><span class="tag unity">Unity</span> <strong>Hearing range, conversation timeout, cooldown, and the closing
+      line are not web-authored.</strong> They're plain fields on the <code>NpcConversation</code> component
+      (defaults: 20 units hearing range, 30s timeout, 5s cooldown, closing line "Farewell.") baked onto the shared
+      <code>Enemy</code> prefab — so <strong>every</strong> conversation NPC uses the same values. Giving one NPC a
+      longer hearing range or a custom farewell line currently means editing that value on the prefab (affecting
+      all NPCs) or forking a variant prefab in Unity; there's no per-mob override from the web yet.</li>
+    <li><strong>Passive keywords still require the player to have the NPC targeted.</strong> The original design
+      called for Passive listening to work by proximity alone (e.g. overhearing a password through a door without
+      targeting anything), but the current implementation checks the player's target before anything else,
+      regardless of mode. Until that's built, every keyword — Passive or Active — needs the player to have clicked
+      the NPC first.</li>
+    <li><strong>NPC-initiated speech isn't wired up yet.</strong> The design calls for NPCs to greet/warn players
+      on perception (<code>OnPerceived</code>) and speak ambient lines on a timer (<code>IOnTimer</code>). The
+      hooks exist, but today <code>OnPerceived</code>'s friendly/warning branches only write a debug log — no chat
+      message is sent, and there's no generic "say a line" component to wire from the web. A hostile faction still
+      aggroes correctly (that part is live); it just won't greet or warn you first.</li>
+    <li><span class="tag unity">Unity</span> <strong>A non-mob NPC</strong> (one without a <code>MobApplicator</code>,
+      e.g. a hand-placed one-off) falls back to a <code>keywordSet</code> ScriptableObject reference assigned in the
+      Inspector instead of the DB set — not relevant if you always author NPCs through the Mob Editor, which is the
+      normal path.</li>
+  </ul>
+
+  <h2>11. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>NPC <strong>never responds to anything</strong></td><td>You haven't <strong>targeted</strong> it (click
+      it first — required even for Passive keywords, §10); you're out of its hearing range (default 20 units); or
+      its <code>conversationSetId</code> doesn't point at a real set (check the Mob Editor).</td></tr>
+    <tr><td>NPC responds to <strong>some</strong> keywords but not others</td><td>The others are <strong>Active</strong>
+      and you're not in a conversation with it yet (say an Opener first); or they're <strong>Requires unlock</strong>
+      and you haven't said their unlocker yet; or a <strong>faction gate</strong> is blocking them (§5).</td></tr>
+    <tr><td><strong>My web edit didn't show up</strong></td><td>Unity loads content at host start — restart the
+      Unity host. Also confirm Postgres + the API are running.</td></tr>
+    <tr><td>Vendor keyword <strong>opens and instantly closes</strong> the shop</td><td>The keyword has
+      <strong>Ends conversation</strong> checked — uncheck it (§7).</td></tr>
+    <tr><td>Keyword <strong>matches when I didn't mean it to</strong></td><td>Matching is substring, not
+      whole-word — a short keyword like <code>ore</code> also matches "before". Use a more specific keyword.</td></tr>
+    <tr><td><strong>&lt;class&gt;/&lt;gender&gt;</strong> shows a fallback word instead of the real value</td>
+      <td>The player's character predates the class/gender system, or has no class assigned — otherwise this
+      resolves normally.</td></tr>
+    <tr><td>Two NPCs sharing a set <strong>diverge in what a player has unlocked</strong></td><td>Expected —
+      unlocks are per-player, per-conversation, and reset when a conversation ends; they aren't shared across NPCs
+      or saved between sessions.</td></tr>
+    <tr><td>NPC <strong>doesn't greet me on approach</strong> / doesn't warn before attacking</td><td>Not built yet
+      — see §10 (NPC-initiated speech). Aggro itself still works even without a warning line.</td></tr>
+  </table>
+
+  <h2>12. Quick reference</h2>
+  <h3>Conversation set (Conversation Editor)</h3>
+  <p><code>set_id</code> (unique id, referenced by mobs) · Display name · An ordered list of keywords.</p>
+  <h3>Keyword fields (Conversation Editor)</h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td>Keyword</td><td>Trigger word, substring/case-insensitive match.</td></tr>
+    <tr><td>Mode</td><td>Passive (always heard) or Active (mid-conversation only).</td></tr>
+    <tr><td>Response</td><td>What the NPC says; supports <code>&lt;name&gt;&lt;race&gt;&lt;class&gt;&lt;gender&gt;</code>.</td></tr>
+    <tr><td>Opener</td><td>Starts a conversation from Idle.</td></tr>
+    <tr><td>Ends conversation</td><td>Closes the conversation after responding (and closes any open shop).</td></tr>
+    <tr><td>Requires unlock / Unlocks</td><td>Session-scoped keyword gating between keywords in the same set.</td></tr>
+    <tr><td>Required faction / standing</td><td>Optional gate against the Faction System.</td></tr>
+    <tr><td>Quest transaction</td><td>Optional turn-in/reward bundle — see the Quest Rewards guide.</td></tr>
+  </table>
+  <h3>Wiring an NPC (Mob Editor)</h3>
+  <p><strong>Conversation set</strong> (dropdown, the set this mob speaks) · <strong>Vendor</strong> (dropdown,
+    optional shop inventory) · <strong>Vendor open keyword</strong> (text, default <code>wares</code>).</p>
+  <h3>Fixed in Unity, not web-authored (§10)</h3>
+  <p>Hearing range (20u) · conversation timeout (30s) · post-conversation cooldown (5s) · closing line ("Farewell.")
+    — all on the shared <code>Enemy</code> prefab's <code>NpcConversation</code> component.</p>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Conversation/NpcConversation.cs</code>,
+    <code>ConversationKeyword.cs</code>, <code>Assets/Scripts/Networking/VendorApplicator.cs</code>, and
+    <code>Assets/Scripts/Faction/NpcFaction.cs</code> (perception hooks).</footer>
+</article>

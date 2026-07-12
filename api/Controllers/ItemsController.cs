@@ -69,6 +69,7 @@ public class ItemsController : ControllerBase
         row.WeaponCategory = input.WeaponCategory;
         row.BuyPrice = input.BuyPrice;
         row.SellPrice = input.SellPrice;
+        row.Lore = input.Lore;
         row.IconAddress = string.IsNullOrWhiteSpace(input.IconAddress) ? null : input.IconAddress.Trim();
         row.UpdatedAt = DateTime.UtcNow;
 

@@ -26,4 +26,29 @@ public class ConversationKeyword
 
     [Tooltip("Active keywords unlocked for this player after a successful match")]
     public List<string> UnlocksKeywords = new();
+
+    // ── 3.2: quest transaction bundle ─────────────────────────────────────────
+    // Saying this keyword (once its faction gate passes) runs a turn-in: the NPC accepts the required
+    // items/coin and grants the reward. All-or-nothing + repeatable (no completion tracking — Q2). Empty
+    // bundle = a normal talk-only keyword. Applied by KeywordRewardApplicator.
+    [Header("Quest transaction (3.2)")]
+    public int RequiredCopper;
+    public List<KeywordItemAmount> RequiredItems = new();
+
+    public int RewardXp;
+    public int RewardCopper;
+    public List<KeywordItemAmount> RewardItems       = new();
+    public List<KeywordFactionHit> RewardFactionHits = new();
+
+    public bool HasTransaction =>
+        RewardXp > 0 || RewardCopper > 0 || RequiredCopper > 0 ||
+        (RewardItems != null && RewardItems.Count > 0) ||
+        (RequiredItems != null && RequiredItems.Count > 0) ||
+        (RewardFactionHits != null && RewardFactionHits.Count > 0);
 }
+
+[System.Serializable]
+public struct KeywordItemAmount { public string itemId; public int quantity; }
+
+[System.Serializable]
+public struct KeywordFactionHit { public string factionId; public int delta; }

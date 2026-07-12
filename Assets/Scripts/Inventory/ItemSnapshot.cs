@@ -25,5 +25,7 @@ public struct ItemSnapshot
     public int    BuyPrice;
     public int    SellPrice;
 
+    public bool   Lore;            // 3.2.1 — max one in possession (EQ1-style)
+
     public string IconAddress;     // Addressables address (null/empty = none)
 }

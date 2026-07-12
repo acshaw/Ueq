@@ -30,6 +30,7 @@ GameObject:
   - component: {fileID: 7371841444148515036}
   - component: {fileID: 4762545860498518119}
   - component: {fileID: 4464465948153779075}
+  - component: {fileID: 4280025772195936207}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -443,3 +444,18 @@ MonoBehaviour:
   mountOffset: {x: 0, y: -0.5, z: 0}
   locomotionController: {fileID: 9100000, guid: 1f50137d0853cba47932c31914e41051, type: 2}
   fallbackModel: {fileID: 0}
+--- !u!114 &4280025772195936207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2281856003525045576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4112659df4200e1409b6cdcc4984be9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeywordRewardApplicator
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0

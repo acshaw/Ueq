@@ -31,6 +31,8 @@ public class Item
     public int BuyPrice { get; set; }
     public int SellPrice { get; set; }
 
+    public bool Lore { get; set; } // 3.2.1 — max one in possession (EQ1-style)
+
     public string? IconAddress { get; set; }
 
     public DateTime UpdatedAt { get; set; }

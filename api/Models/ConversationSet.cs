@@ -23,6 +23,14 @@ public class ConversationKeywordRow
     public string? RequiredFactionId { get; set; }
     public string? RequiredStanding { get; set; }
     public List<ConversationKeywordUnlock> Unlocks { get; set; } = new();
+
+    // 3.2 quest transaction bundle
+    public int RewardXp { get; set; }
+    public int RewardCopper { get; set; }
+    public int RequiredCopper { get; set; }
+    public List<ConversationKeywordRequiredItem> RequiredItems { get; set; } = new();
+    public List<ConversationKeywordRewardItem> RewardItems { get; set; } = new();
+    public List<ConversationKeywordFactionHit> FactionHits { get; set; } = new();
 }
 
 public class ConversationKeywordUnlock
@@ -30,6 +38,30 @@ public class ConversationKeywordUnlock
     public long Id { get; set; }
     public long KeywordId { get; set; }
     public string UnlockedKeyword { get; set; } = string.Empty;
+}
+
+public class ConversationKeywordRequiredItem
+{
+    public long Id { get; set; }
+    public long KeywordId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+}
+
+public class ConversationKeywordRewardItem
+{
+    public long Id { get; set; }
+    public long KeywordId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+}
+
+public class ConversationKeywordFactionHit
+{
+    public long Id { get; set; }
+    public long KeywordId { get; set; }
+    public string FactionId { get; set; } = string.Empty;
+    public int Delta { get; set; }
 }
 
 // ── Flat DTOs the Angular editor works with ────────────────────────────────────────────────
@@ -51,4 +83,24 @@ public class ConversationKeywordDto
     public string? RequiredFactionId { get; set; }
     public string? RequiredStanding { get; set; }
     public List<string> Unlocks { get; set; } = new();
+
+    // 3.2 quest transaction bundle
+    public int RewardXp { get; set; }
+    public int RewardCopper { get; set; }
+    public int RequiredCopper { get; set; }
+    public List<ItemAmountDto> RequiredItems { get; set; } = new();
+    public List<ItemAmountDto> RewardItems { get; set; } = new();
+    public List<FactionHitDto> FactionHits { get; set; } = new();
+}
+
+public class ItemAmountDto
+{
+    public string ItemId { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+}
+
+public class FactionHitDto
+{
+    public string FactionId { get; set; } = string.Empty;
+    public int Delta { get; set; }
 }

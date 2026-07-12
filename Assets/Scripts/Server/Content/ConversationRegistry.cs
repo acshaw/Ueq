@@ -41,6 +41,12 @@ public static class ConversationRegistry
                 RequiredFactionId    = k.RequiredFactionId,
                 RequiredStanding     = k.RequiredStanding,
                 UnlocksKeywords      = k.Unlocks ?? new List<string>(),
+                RequiredCopper       = k.RequiredCopper,
+                RequiredItems        = k.RequiredItems     ?? new List<KeywordItemAmount>(),
+                RewardXp             = k.RewardXp,
+                RewardCopper         = k.RewardCopper,
+                RewardItems          = k.RewardItems       ?? new List<KeywordItemAmount>(),
+                RewardFactionHits    = k.RewardFactionHits ?? new List<KeywordFactionHit>(),
             });
         }
         return set;

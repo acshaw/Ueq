@@ -62,6 +62,7 @@ public class ContentDbContext : DbContext
             e.Property(i => i.WeaponCategory).HasColumnName("weapon_category");
             e.Property(i => i.BuyPrice).HasColumnName("buy_price");
             e.Property(i => i.SellPrice).HasColumnName("sell_price");
+            e.Property(i => i.Lore).HasColumnName("lore");
             e.Property(i => i.IconAddress).HasColumnName("icon_address");
             e.Property(i => i.UpdatedAt).HasColumnName("updated_at");
         });
@@ -111,7 +112,13 @@ public class ContentDbContext : DbContext
             e.Property(k => k.Response).HasColumnName("response");
             e.Property(k => k.RequiredFactionId).HasColumnName("required_faction_id");
             e.Property(k => k.RequiredStanding).HasColumnName("required_standing");
+            e.Property(k => k.RewardXp).HasColumnName("reward_xp");
+            e.Property(k => k.RewardCopper).HasColumnName("reward_copper");
+            e.Property(k => k.RequiredCopper).HasColumnName("required_copper");
             e.HasMany(k => k.Unlocks).WithOne().HasForeignKey(u => u.KeywordId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(k => k.RequiredItems).WithOne().HasForeignKey(i => i.KeywordId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(k => k.RewardItems).WithOne().HasForeignKey(i => i.KeywordId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(k => k.FactionHits).WithOne().HasForeignKey(f => f.KeywordId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ConversationKeywordUnlock>(e =>
@@ -121,6 +128,36 @@ public class ContentDbContext : DbContext
             e.Property(u => u.Id).HasColumnName("id").ValueGeneratedOnAdd();
             e.Property(u => u.KeywordId).HasColumnName("keyword_id");
             e.Property(u => u.UnlockedKeyword).HasColumnName("unlocked_keyword");
+        });
+
+        modelBuilder.Entity<ConversationKeywordRequiredItem>(e =>
+        {
+            e.ToTable("conversation_keyword_required_items");
+            e.HasKey(i => i.Id);
+            e.Property(i => i.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(i => i.KeywordId).HasColumnName("keyword_id");
+            e.Property(i => i.ItemId).HasColumnName("item_id");
+            e.Property(i => i.Quantity).HasColumnName("quantity");
+        });
+
+        modelBuilder.Entity<ConversationKeywordRewardItem>(e =>
+        {
+            e.ToTable("conversation_keyword_reward_items");
+            e.HasKey(i => i.Id);
+            e.Property(i => i.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(i => i.KeywordId).HasColumnName("keyword_id");
+            e.Property(i => i.ItemId).HasColumnName("item_id");
+            e.Property(i => i.Quantity).HasColumnName("quantity");
+        });
+
+        modelBuilder.Entity<ConversationKeywordFactionHit>(e =>
+        {
+            e.ToTable("conversation_keyword_faction_hits");
+            e.HasKey(f => f.Id);
+            e.Property(f => f.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(f => f.KeywordId).HasColumnName("keyword_id");
+            e.Property(f => f.FactionId).HasColumnName("faction_id");
+            e.Property(f => f.Delta).HasColumnName("delta");
         });
 
         modelBuilder.Entity<Mob>(e =>

@@ -565,17 +565,26 @@ public class NetworkedPlayer : NetworkBehaviour
         {
             var slot = mob.PeekSlot(slotIndex);
             if (slot.IsEmpty) return;
-            if (inv.AddItem(slot.itemId, slot.quantity)) mob.RemoveSlot(slotIndex);
-            else SendSystemMsg("Inventory is full.");
+            if (inv.AddItem(slot.itemId, slot.quantity, enforceLore: true)) mob.RemoveSlot(slotIndex);
+            else SendSystemMsg(AcquireBlockedMsg(inv, slot.itemId));
             return;
         }
         if (TryGetPlayerCorpse(corpseId, out var pc))
         {
             var slot = pc.PeekSlot(slotIndex);
             if (slot.IsEmpty) return;
-            if (inv.AddItem(slot.itemId, slot.quantity)) pc.RemoveSlot(slotIndex);
-            else SendSystemMsg("Inventory is full.");
+            if (inv.AddItem(slot.itemId, slot.quantity, enforceLore: true)) pc.RemoveSlot(slotIndex);
+            else SendSystemMsg(AcquireBlockedMsg(inv, slot.itemId));
         }
+    }
+
+    // 3.2.1: the right refusal line for a blocked acquire — LORE dupe vs a plain full inventory.
+    static string AcquireBlockedMsg(PlayerInventory inv, string itemId)
+    {
+        var def = ItemRegistry.Instance?.Get(itemId);
+        return def != null && def.lore && inv.AlreadyHolds(itemId)
+            ? $"You can only carry one {def.displayName}."
+            : "Inventory is full.";
     }
 
     [Command]
@@ -675,14 +684,12 @@ public class NetworkedPlayer : NetworkBehaviour
         var def = ItemRegistry.Instance?.Get(itemId);
         if (def == null) return;
         var inv = GetComponent<PlayerInventory>();
+        // 3.2.1: check LORE + space BEFORE charging, so a refused buy never spends coin.
+        if (!inv.CanAcquire(itemId))
+        { SendSystemMsg(AcquireBlockedMsg(inv, itemId)); return; }
         if (def.buyPrice > 0 && !inv.SpendCurrency(def.buyPrice))
         { SendSystemMsg("You cannot afford that."); return; }
-        if (!inv.AddItem(itemId))
-        {
-            if (def.buyPrice > 0) inv.AddCurrency(def.buyPrice);
-            SendSystemMsg("Your inventory is full.");
-            return;
-        }
+        inv.AddItem(itemId, 1, enforceLore: true);
         SendSystemMsg($"You buy {def.displayName} for {CurrencyUtil.Format(def.buyPrice)}.");
     }
 

@@ -87,6 +87,14 @@ import { Item, ItemService, emptyItem } from './item.service';
           </section>
 
           <section>
+            <h3>Flags</h3>
+            <label class="check"><input type="checkbox" [(ngModel)]="model.lore" name="lore" (ngModelChange)="onLoreChange()" /> LORE — can only carry one</label>
+            @if (model.lore && model.maxStackSize > 1) {
+              <p class="warn">LORE items are limited to one in possession — stack size is treated as 1.</p>
+            }
+          </section>
+
+          <section>
             <h3>Icon</h3>
             <label>Addressables address <input [(ngModel)]="model.iconAddress" name="iconAddress" placeholder="icon_iron_sword" /></label>
           </section>
@@ -125,6 +133,7 @@ import { Item, ItemService, emptyItem } from './item.service';
     .danger { background: #fff; color: #c00; border: 1px solid #c00; border-radius: 4px; }
     .muted { color: #999; }
     .error { color: #c00; font-size: 0.85rem; }
+    .warn { color: #b8860b; font-size: 0.8rem; margin: 0.25rem 0 0; }
   `]
 })
 export class ItemEditor implements OnInit {
@@ -153,6 +162,11 @@ export class ItemEditor implements OnInit {
   }
 
   newItem(): void { this.model = emptyItem(); this.isNew = true; }
+
+  // 3.2.1: LORE implies max-one — collapse stack size when it's toggled on (guard for decision L4).
+  onLoreChange(): void {
+    if (this.model?.lore && this.model.maxStackSize > 1) this.model.maxStackSize = 1;
+  }
 
   select(it: Item): void { this.model = { ...it }; this.isNew = false; }
 

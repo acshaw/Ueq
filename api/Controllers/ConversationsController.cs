@@ -33,11 +33,21 @@ public class ConversationsController : ControllerBase
             RequiredFactionId = k.RequiredFactionId,
             RequiredStanding = k.RequiredStanding,
             Unlocks = k.Unlocks.Select(u => u.UnlockedKeyword).ToList(),
+            RewardXp = k.RewardXp,
+            RewardCopper = k.RewardCopper,
+            RequiredCopper = k.RequiredCopper,
+            RequiredItems = k.RequiredItems.Select(i => new ItemAmountDto { ItemId = i.ItemId, Quantity = i.Quantity }).ToList(),
+            RewardItems = k.RewardItems.Select(i => new ItemAmountDto { ItemId = i.ItemId, Quantity = i.Quantity }).ToList(),
+            FactionHits = k.FactionHits.Select(f => new FactionHitDto { FactionId = f.FactionId, Delta = f.Delta }).ToList(),
         }).ToList(),
     };
 
     IQueryable<ConversationSet> WithChildren() =>
-        _db.ConversationSets.Include(s => s.Keywords).ThenInclude(k => k.Unlocks);
+        _db.ConversationSets
+            .Include(s => s.Keywords).ThenInclude(k => k.Unlocks)
+            .Include(s => s.Keywords).ThenInclude(k => k.RequiredItems)
+            .Include(s => s.Keywords).ThenInclude(k => k.RewardItems)
+            .Include(s => s.Keywords).ThenInclude(k => k.FactionHits);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ConversationSetDto>>> GetAll()
@@ -124,6 +134,21 @@ public class ConversationsController : ControllerBase
                 Unlocks = (k.Unlocks ?? new List<string>())
                     .Where(u => !string.IsNullOrWhiteSpace(u))
                     .Select(u => new ConversationKeywordUnlock { UnlockedKeyword = u.Trim() })
+                    .ToList(),
+                RewardXp = k.RewardXp,
+                RewardCopper = k.RewardCopper,
+                RequiredCopper = k.RequiredCopper,
+                RequiredItems = (k.RequiredItems ?? new List<ItemAmountDto>())
+                    .Where(i => !string.IsNullOrWhiteSpace(i.ItemId) && i.Quantity > 0)
+                    .Select(i => new ConversationKeywordRequiredItem { ItemId = i.ItemId.Trim(), Quantity = i.Quantity })
+                    .ToList(),
+                RewardItems = (k.RewardItems ?? new List<ItemAmountDto>())
+                    .Where(i => !string.IsNullOrWhiteSpace(i.ItemId) && i.Quantity > 0)
+                    .Select(i => new ConversationKeywordRewardItem { ItemId = i.ItemId.Trim(), Quantity = i.Quantity })
+                    .ToList(),
+                FactionHits = (k.FactionHits ?? new List<FactionHitDto>())
+                    .Where(f => !string.IsNullOrWhiteSpace(f.FactionId) && f.Delta != 0)
+                    .Select(f => new ConversationKeywordFactionHit { FactionId = f.FactionId.Trim(), Delta = f.Delta })
                     .ToList(),
             });
         }

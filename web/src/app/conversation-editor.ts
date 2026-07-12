@@ -4,6 +4,7 @@ import {
   ConversationSet, ConversationKeyword, ConversationService, emptySet, emptyKeyword,
 } from './conversation.service';
 import { FactionService } from './faction.service';
+import { ItemService } from './item.service';
 
 /**
  * The web Conversation Editor (M2.4). A set is a named list of keywords; each keyword has a response,
@@ -81,6 +82,55 @@ import { FactionService } from './faction.service';
                     @for (s of standingNames(); track s) { <option [ngValue]="s">{{ s }}</option> }
                   </select></label>
               </div>
+
+              <details class="tx">
+                <summary>Quest transaction (turn-in → reward) @if (hasTx(kw)) { <span class="badge">active</span> }</summary>
+                <div class="txcols">
+                  <div class="txcol">
+                    <h4>Requirements (consumed on turn-in)</h4>
+                    <label>Coin (copper) <input type="number" min="0" [(ngModel)]="kw.requiredCopper" [name]="'rqc'+i" /></label>
+                    @for (ri of kw.requiredItems; track $index; let ai = $index) {
+                      <div class="row">
+                        <select [(ngModel)]="ri.itemId" [name]="'rqi'+i+'_'+ai">
+                          <option [ngValue]="''">(item)</option>
+                          @for (id of itemIds(); track id) { <option [ngValue]="id">{{ id }}</option> }
+                        </select>
+                        <input type="number" min="1" [(ngModel)]="ri.quantity" [name]="'rqiq'+i+'_'+ai" />
+                        <button class="small danger" (click)="removeAt(kw.requiredItems, ai)">✕</button>
+                      </div>
+                    }
+                    <button class="small" (click)="kw.requiredItems.push({ itemId: '', quantity: 1 })">+ Required item</button>
+                  </div>
+
+                  <div class="txcol">
+                    <h4>Reward (granted)</h4>
+                    <label>XP <input type="number" min="0" [(ngModel)]="kw.rewardXp" [name]="'rwx'+i" /></label>
+                    <label>Coin (copper) <input type="number" min="0" [(ngModel)]="kw.rewardCopper" [name]="'rwc'+i" /></label>
+                    @for (rw of kw.rewardItems; track $index; let bi = $index) {
+                      <div class="row">
+                        <select [(ngModel)]="rw.itemId" [name]="'rwi'+i+'_'+bi">
+                          <option [ngValue]="''">(item)</option>
+                          @for (id of itemIds(); track id) { <option [ngValue]="id">{{ id }}</option> }
+                        </select>
+                        <input type="number" min="1" [(ngModel)]="rw.quantity" [name]="'rwiq'+i+'_'+bi" />
+                        <button class="small danger" (click)="removeAt(kw.rewardItems, bi)">✕</button>
+                      </div>
+                    }
+                    <button class="small" (click)="kw.rewardItems.push({ itemId: '', quantity: 1 })">+ Reward item</button>
+                    @for (fh of kw.factionHits; track $index; let ci = $index) {
+                      <div class="row">
+                        <select [(ngModel)]="fh.factionId" [name]="'fh'+i+'_'+ci">
+                          <option [ngValue]="''">(faction)</option>
+                          @for (id of factionIds(); track id) { <option [ngValue]="id">{{ id }}</option> }
+                        </select>
+                        <input type="number" [(ngModel)]="fh.delta" [name]="'fhd'+i+'_'+ci" placeholder="±" />
+                        <button class="small danger" (click)="removeAt(kw.factionHits, ci)">✕</button>
+                      </div>
+                    }
+                    <button class="small" (click)="kw.factionHits.push({ factionId: '', delta: 0 })">+ Faction hit</button>
+                  </div>
+                </div>
+              </details>
             </section>
           } @empty {
             <p class="muted">No keywords yet.</p>
@@ -126,15 +176,25 @@ import { FactionService } from './faction.service';
     .danger { background: #fff; color: #c00; border: 1px solid #c00; border-radius: 4px; }
     .muted { color: #999; }
     .error { color: #c00; font-size: 0.85rem; }
+    .tx { margin-top: 0.5rem; border-top: 1px dashed #ddd; padding-top: 0.4rem; }
+    .tx summary { cursor: pointer; font-size: 0.82rem; color: #666; }
+    .tx .badge { background: #1a73e8; color: #fff; border-radius: 3px; padding: 0 0.3rem; font-size: 0.7rem; }
+    .txcols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.4rem; }
+    .txcol h4 { margin: 0 0 0.3rem; font-size: 0.82rem; color: #444; }
+    .txcol .row { display: flex; gap: 0.3rem; align-items: center; margin: 0.2rem 0; }
+    .txcol .row select { flex: 1; }
+    .txcol .row input { width: 56px; }
   `]
 })
 export class ConversationEditor implements OnInit {
   private readonly api = inject(ConversationService);
   private readonly factionApi = inject(FactionService);
+  private readonly itemApi = inject(ItemService);
 
   readonly sets = signal<ConversationSet[]>([]);
   readonly factionIds = signal<string[]>([]);
   readonly standingNames = signal<string[]>([]);
+  readonly itemIds = signal<string[]>([]);
   readonly error = signal<string | null>(null);
   model: ConversationSet | null = null;
   isNew = false;
@@ -143,7 +203,15 @@ export class ConversationEditor implements OnInit {
     this.reload();
     this.factionApi.getAll().subscribe({ next: rows => this.factionIds.set(rows.map(r => r.factionId)) });
     this.factionApi.getThresholds().subscribe({ next: rows => this.standingNames.set(rows.map(r => r.name)) });
+    this.itemApi.getAll().subscribe({ next: rows => this.itemIds.set(rows.map(r => r.itemId)) });
   }
+
+  hasTx(kw: ConversationKeyword): boolean {
+    return kw.rewardXp > 0 || kw.rewardCopper > 0 || kw.requiredCopper > 0 ||
+      kw.requiredItems.length > 0 || kw.rewardItems.length > 0 || kw.factionHits.length > 0;
+  }
+
+  removeAt(arr: unknown[], i: number): void { arr.splice(i, 1); }
 
   reload(): void {
     this.api.getAll().subscribe({
@@ -156,7 +224,16 @@ export class ConversationEditor implements OnInit {
 
   select(s: ConversationSet): void {
     // Deep-ish clone so edits don't mutate the list row until saved.
-    this.model = { ...s, keywords: s.keywords.map(k => ({ ...k, unlocks: [...k.unlocks] })) };
+    this.model = {
+      ...s,
+      keywords: s.keywords.map(k => ({
+        ...k,
+        unlocks: [...k.unlocks],
+        requiredItems: (k.requiredItems ?? []).map(x => ({ ...x })),
+        rewardItems: (k.rewardItems ?? []).map(x => ({ ...x })),
+        factionHits: (k.factionHits ?? []).map(x => ({ ...x })),
+      })),
+    };
     this.isNew = false;
   }
 

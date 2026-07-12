@@ -2,6 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface ItemAmount { itemId: string; quantity: number; }
+export interface FactionHit { factionId: string; delta: number; }
+
 export interface ConversationKeyword {
   keyword: string;
   mode: number;              // 0 Passive, 1 Active
@@ -12,6 +15,14 @@ export interface ConversationKeyword {
   requiredFactionId: string | null;
   requiredStanding: string | null;
   unlocks: string[];
+
+  // 3.2 quest transaction bundle
+  requiredCopper: number;
+  requiredItems: ItemAmount[];
+  rewardXp: number;
+  rewardCopper: number;
+  rewardItems: ItemAmount[];
+  factionHits: FactionHit[];
 }
 
 export interface ConversationSet {
@@ -24,6 +35,7 @@ export function emptyKeyword(): ConversationKeyword {
   return {
     keyword: '', mode: 0, isOpener: false, endsConversation: false, requiresUnlock: false,
     response: '', requiredFactionId: null, requiredStanding: null, unlocks: [],
+    requiredCopper: 0, requiredItems: [], rewardXp: 0, rewardCopper: 0, rewardItems: [], factionHits: [],
   };
 }
 

@@ -28,6 +28,12 @@ public class ItemDefinition : ScriptableObject
     public int buyPrice  = 0;  // copper — 0 = not sold by vendors
     public int sellPrice = 0;  // copper — 0 = vendors won't buy this
 
+    [Header("Flags")]
+    // 3.2.1 — LORE (EQ1-style): the item can be possessed at most once (inventory + equipped). Enforced
+    // server-side in PlayerInventory on external acquire paths (loot / vendor buy / quest reward). Implies
+    // max-one regardless of maxStackSize. The anti-farm lever for 3.2's repeatable item-reward quests.
+    public bool lore = false;
+
 #if UNITY_EDITOR
     void OnValidate()
     {

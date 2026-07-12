@@ -13,6 +13,14 @@ public struct ConversationKeywordSnapshot
     public string       RequiredFactionId;
     public string       RequiredStanding;
     public List<string> Unlocks;
+
+    // 3.2 quest transaction bundle
+    public int                     RequiredCopper;
+    public int                     RewardXp;
+    public int                     RewardCopper;
+    public List<KeywordItemAmount> RequiredItems;
+    public List<KeywordItemAmount> RewardItems;
+    public List<KeywordFactionHit> RewardFactionHits;
 }
 
 /// <summary>Plain-data view of one conversation set (M2.4) — a named, ordered list of keywords.</summary>
@@ -57,7 +65,8 @@ public sealed class ConversationRepository : IRepository
         // the same list; the unlock pass below mutates both at once.
         using (var cmd = new NpgsqlCommand(
             "SELECT id, set_id, keyword, mode, is_opener, ends_conversation, requires_unlock, " +
-            "response, required_faction_id, required_standing " +
+            "response, required_faction_id, required_standing, " +
+            "reward_xp, reward_copper, required_copper " +
             "FROM conversation_keywords ORDER BY set_id, sort_order, id", conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
@@ -76,6 +85,12 @@ public sealed class ConversationRepository : IRepository
                     RequiredFactionId = reader.IsDBNull(8) ? null : reader.GetString(8),
                     RequiredStanding  = reader.IsDBNull(9) ? null : reader.GetString(9),
                     Unlocks           = new List<string>(),
+                    RewardXp          = reader.GetInt32(10),
+                    RewardCopper      = reader.GetInt32(11),
+                    RequiredCopper    = reader.GetInt32(12),
+                    RequiredItems     = new List<KeywordItemAmount>(),
+                    RewardItems       = new List<KeywordItemAmount>(),
+                    RewardFactionHits = new List<KeywordFactionHit>(),
                 };
                 kwById[id] = kw;
                 if (sets.TryGetValue(setId, out var set)) set.Keywords.Add(kw);
@@ -95,8 +110,44 @@ public sealed class ConversationRepository : IRepository
             }
         }
 
+        // 3.2 transaction bundle — required items, reward items, reward faction hits (shared-list trick).
+        LoadItemAmounts(conn, tx, "conversation_keyword_required_items", kwById, k => k.RequiredItems);
+        LoadItemAmounts(conn, tx, "conversation_keyword_reward_items",   kwById, k => k.RewardItems);
+
+        using (var cmd = new NpgsqlCommand(
+            "SELECT keyword_id, faction_id, delta FROM conversation_keyword_faction_hits", conn, tx))
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                long kid = reader.GetInt64(0);
+                if (kwById.TryGetValue(kid, out var kw))
+                    kw.RewardFactionHits.Add(new KeywordFactionHit
+                    {
+                        factionId = reader.GetString(1),
+                        delta     = reader.GetInt32(2),
+                    });
+            }
+        }
+
         var rows = new List<ConversationSetSnapshot>(order.Count);
         foreach (var id in order) rows.Add(sets[id]);
         return rows;
+    }
+
+    // Load a {keyword_id, item_id, quantity} child table into each keyword's shared item list. The table
+    // name is a fixed constant (never user input), so interpolation is safe.
+    static void LoadItemAmounts(NpgsqlConnection conn, NpgsqlTransaction tx, string table,
+        Dictionary<long, ConversationKeywordSnapshot> kwById,
+        System.Func<ConversationKeywordSnapshot, List<KeywordItemAmount>> pick)
+    {
+        using var cmd = new NpgsqlCommand($"SELECT keyword_id, item_id, quantity FROM {table}", conn, tx);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            long kid = reader.GetInt64(0);
+            if (kwById.TryGetValue(kid, out var kw))
+                pick(kw).Add(new KeywordItemAmount { itemId = reader.GetString(1), quantity = reader.GetInt32(2) });
+        }
     }
 }

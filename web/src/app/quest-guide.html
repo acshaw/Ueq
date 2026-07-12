@@ -1,0 +1,225 @@
+<article class="doc">
+  <h1>Quest Turn-Ins &amp; Rewards — User Guide</h1>
+  <p class="lead">How to make an NPC accept a hand-off and give a reward — the game's "quest" system. There is no
+    quest log or quest UI: a quest is simply a <strong>conversation keyword</strong> that carries a
+    <strong>transaction</strong>. Say the word to the NPC, it takes what it asked for and gives you the reward.
+    Read the <strong>Big Picture</strong>, then the <strong>Recipes</strong>.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>Anatomy of a turn-in keyword</li>
+      <li>What a transaction can require and grant</li>
+      <li>The all-or-nothing rule</li>
+      <li>Faction gating a quest</li>
+      <li>Repeatable quests &amp; the LORE anti-farm lever</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>The world has <strong>no explicit quests</strong> — players infer objectives from dialogue and clues. A "quest"
+    is authored entirely in the <strong>Conversation Editor</strong>: you attach a <strong>quest transaction</strong>
+    to one of an NPC's keywords. When a player is in conversation with that NPC and types the keyword, the NPC:</p>
+  <ol>
+    <li>Checks the player has the <strong>required</strong> items/coin (and that the reward will fit).</li>
+    <li><strong>Consumes</strong> the required items and coin.</li>
+    <li><strong>Grants</strong> the reward — XP, coin, items, and/or faction standing — with Reward-channel chat.</li>
+  </ol>
+  <div class="note"><strong>Mental model:</strong> a keyword's <em>response text</em> is what the NPC <em>says</em>;
+    its <em>transaction</em> is what the NPC <em>does</em>. "Bring me 4 wolf pelts and I'll reward you" is the
+    response; requiring 4 <code>wolf_pelt</code> and granting 100 XP is the transaction. They ride on the same
+    keyword.</div>
+
+  <h3>Where each piece lives</h3>
+  <table>
+    <tr><th>Piece</th><th>What it is</th><th>Authored in</th></tr>
+    <tr><td>Conversation set</td><td>An NPC's named list of keywords</td><td>Web <strong>Conversation Editor</strong></td></tr>
+    <tr><td>Keyword</td><td>A trigger word + response + optional transaction</td><td>Web <strong>Conversation Editor</strong></td></tr>
+    <tr><td>Quest transaction</td><td>Requirements consumed + reward granted</td><td>The keyword's <strong>Quest transaction</strong> panel</td></tr>
+    <tr><td>Items / factions referenced</td><td>The items and factions a transaction uses</td><td>Web <strong>Item</strong> / <strong>Faction</strong> editors (must exist first)</td></tr>
+    <tr><td>The NPC that runs it</td><td>A mob whose <code>conversationSetId</code> points at the set</td><td>Web <strong>Mob Editor</strong> + a Spawn Point</td></tr>
+  </table>
+
+  <div class="note">⚠️ <strong>Two things to remember before testing:</strong> (1) Unity loads all content
+    <strong>once, at host start</strong> — after any web-editor change, <strong>restart the Unity host</strong>.
+    (2) The NPC must have the <strong>KeywordRewardApplicator</strong> component — it ships on the shared
+    <code>Enemy</code> prefab patch list (<strong>Tools → Patch Enemy Prefab</strong>), inert unless one of its
+    keywords carries a transaction, so you normally don't touch it.</div>
+
+  <h2>2. Anatomy of a turn-in keyword</h2>
+  <p>In the <strong>Conversation Editor</strong>, every keyword has an expandable <strong>Quest transaction
+    (turn-in → reward)</strong> section at the bottom of its card. When any requirement or reward is filled in, the
+    summary shows an <span style="background:#1a73e8;color:#fff;border-radius:3px;padding:0 0.3rem;font-size:0.8em;">active</span>
+    badge. A keyword is a turn-in when that section has anything set; otherwise it's a plain talk keyword.</p>
+  <ul>
+    <li>The keyword still behaves like any other — it has a <strong>mode</strong> (Passive = always heard / Active =
+      only mid-conversation), an optional <strong>faction gate</strong>, and can <strong>unlock</strong> other
+      keywords. The transaction rides on top.</li>
+    <li>Most turn-in keywords should be <strong>Active</strong> (spoken during a conversation after hailing) and set
+      to <strong>not</strong> end the conversation, so the exchange completes before any closing line.</li>
+  </ul>
+
+  <h2>3. What a transaction can require and grant</h2>
+  <p>The panel has two columns:</p>
+  <table>
+    <tr><th>Column</th><th>Field</th><th>Meaning</th></tr>
+    <tr><td rowspan="2"><strong>Requirements</strong><br>(consumed on turn-in)</td>
+      <td>Coin (copper)</td><td>Copper the player must have and will spend. 0 = none.</td></tr>
+    <tr><td>Required item(s)</td><td>One row per item: pick the item id + quantity. All are consumed.</td></tr>
+    <tr><td rowspan="4"><strong>Reward</strong><br>(granted)</td>
+      <td>XP</td><td>Experience awarded to the player (drives leveling). 0 = none.</td></tr>
+    <tr><td>Coin (copper)</td><td>Copper added to the player's purse (auto-normalized to PP/GP/SP/CP).</td></tr>
+    <tr><td>Reward item(s)</td><td>One row per item + quantity, added to the player's inventory.</td></tr>
+    <tr><td>Faction hit(s)</td><td>One row per faction: pick the faction + a signed delta (e.g. <code>+50</code>
+      or <code>-100</code>) applied to the player's standing.</td></tr>
+  </table>
+  <p>Any combination is valid. A pure reward (no requirements) is a keyword that just gives something — a "gift".
+    A requirement with no reward is a hand-off that only takes (rare, but allowed). Coin is always in
+    <strong>copper</strong>; the game formats it up to silver/gold/platinum for display.</p>
+
+  <h2>4. The all-or-nothing rule</h2>
+  <p>The NPC validates the <strong>entire</strong> transaction before consuming anything, so a player can never lose
+    items without getting the reward. It refuses (System-channel chat, nothing consumed) if:</p>
+  <ul>
+    <li>The player is missing any <strong>required item</strong> → <em>"You don't have what I asked for."</em></li>
+    <li>The player lacks the <strong>required coin</strong> → <em>"You don't have the coin I asked for."</em></li>
+    <li>The reward <strong>won't fit</strong> after the hand-off — inventory full, or a LORE reward the player
+      already holds (§6) → <em>"You'll need to make room for the reward first."</em></li>
+  </ul>
+  <p>Only when all checks pass does it consume the requirements and grant the reward, each line reported on the
+    <strong>Reward</strong> channel ("You gain 100 experience.", "You receive Silver Ring.", "Your standing with
+    Villagers has improved.").</p>
+  <div class="note">The fit check simulates the full swap — turning in bag-filling items and receiving one reward
+    works even from a nearly full inventory, because the required items are removed before the reward is placed.</div>
+
+  <h2>5. Faction gating a quest</h2>
+  <p>A turn-in obeys the keyword's own <strong>faction gate</strong> (the <em>Required faction</em> + <em>Required
+    standing</em> fields on the keyword). If the player's standing is too low, the NPC never even acknowledges the
+    keyword — so the transaction never runs and nothing is consumed. This lets you lock a quest behind reputation:
+    only players the NPC likes can turn it in. Leave the gate empty for an open-to-all quest.</p>
+
+  <h2>6. Repeatable quests &amp; the LORE anti-farm lever</h2>
+  <p>Quests are <strong>repeatable</strong> — there's no completion tracking. Say the keyword again with the
+    requirements in hand and it fires again. That's intentional: XP and coin from a repeatable turn-in are farmable
+    by design (bounded by the effort of gathering the requirements, the classic EQ model).</p>
+  <p>To stop players stockpiling a specific <strong>reward item</strong>, mark that item <strong>LORE</strong> in the
+    <strong>Item Editor</strong>. A LORE item can be held at most once (inventory + equipped). The turn-in grants
+    reward items with LORE enforced, so a player who already holds the LORE reward is refused ("make room…") until
+    they no longer have one. Use LORE on unique quest rewards; leave ordinary rewards non-LORE so they stack
+    normally.</p>
+
+  <h2>7. Recipes (step-by-step)</h2>
+  <p>These assume Postgres + the web app are running, the <code>Enemy</code> prefab has been patched, and you'll
+    <strong>restart the Unity host</strong> after web edits before testing.</p>
+
+  <div class="recipe">
+    <h3>Recipe A — A classic collect-and-return quest</h3>
+    <p class="goal">Goal: "Bring the hunter 4 wolf pelts for 150 XP and 50 copper."</p>
+    <ol>
+      <li><strong>Make sure the item exists</strong> (Item Editor): an item id <code>wolf_pelt</code> that drops
+        from wolves. (Rewards can reference any item id too.)</li>
+      <li><strong>Open the hunter's conversation set</strong> (Conversation Editor) — or make a new set and point
+        the hunter mob's <code>conversationSetId</code> at it in the Mob Editor.</li>
+      <li><strong>Add a keyword</strong>, e.g. <code>pelts</code>, mode <strong>Active</strong>, <em>Ends
+        conversation</em> unchecked. Response: <em>"You've got them? The Hunters' Lodge thanks you."</em></li>
+      <li><strong>Open its Quest transaction</strong>: under Requirements add a required item
+        <code>wolf_pelt</code> × <strong>4</strong>. Under Reward set XP <code>150</code> and Coin
+        <code>50</code>. Save.</li>
+      <li>Add an <strong>opener</strong> keyword too (e.g. <code>hail</code>, marked <em>Opener</em>) plus a plain
+        keyword hinting at the task, so the player can start the conversation and learn what to bring.</li>
+      <li><strong>Restart the Unity host.</strong> In-game: hail the hunter, then say <code>pelts</code> with 4
+        pelts in your bag → they vanish, you gain XP + coin (Reward chat). Without 4, you're refused.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — A paid service (coin in → item out)</h3>
+    <p class="goal">Goal: "Pay the smith 5 silver and he forges you an Iron Key."</p>
+    <ol>
+      <li>Ensure the reward item <code>iron_key</code> exists in the Item Editor (mark it <strong>LORE</strong> if a
+        player should only ever hold one — §6).</li>
+      <li>On the smith's set add keyword <code>forge</code> (Active). Response: <em>"Here's your key."</em></li>
+      <li>Quest transaction: Requirements → Coin <strong>50</strong> (copper; 5 silver = 50 copper). Reward →
+        Reward item <code>iron_key</code> × 1. Save, restart host.</li>
+      <li>Test: say <code>forge</code> with ≥50 copper → coin spent, key received. Too poor → <em>"You don't have
+        the coin I asked for."</em> Already holding the LORE key → <em>"make room…"</em></li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — A reputation-gated reward that shifts faction</h3>
+    <p class="goal">Goal: only players the Villagers trust can turn in a relic, gaining Villager standing and losing
+      Bandit standing.</p>
+    <ol>
+      <li>Confirm the factions exist (Faction Editor): <code>villagers</code>, <code>bandits</code>.</li>
+      <li>On the elder's set add keyword <code>relic</code> (Active). Set the keyword's <strong>Required
+        faction</strong> = <code>villagers</code>, <strong>Required standing</strong> = e.g. <em>Amiable</em> (the
+        gate, §5).</li>
+      <li>Quest transaction: Requirements → required item <code>ancient_relic</code> × 1. Reward → XP
+        <code>300</code>, and two Faction hits: <code>villagers</code> <strong>+100</strong>,
+        <code>bandits</code> <strong>-100</strong>. Save, restart host.</li>
+      <li>Test: a player below Amiable with Villagers gets no response at all (gate blocks it). At/above Amiable, the
+        relic is consumed, XP granted, and both standings shift (Reward chat reports each).</li>
+    </ol>
+  </div>
+
+  <h2>8. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>NPC <strong>ignores the keyword entirely</strong></td><td>You're not in conversation and the keyword is
+      Active (hail first, or make it Passive); the keyword's faction gate is blocking you (§5); or the NPC's
+      <code>conversationSetId</code> doesn't point at this set.</td></tr>
+    <tr><td>NPC responds but <strong>gives no reward / takes nothing</strong></td><td>The Quest transaction is empty
+      (no "active" badge), or you edited the web app but didn't <strong>restart the Unity host</strong>. Also
+      confirm the API was restarted after the 3.2 changes so saves include the transaction fields.</td></tr>
+    <tr><td>Always refused with <strong>"make room for the reward"</strong></td><td>Inventory is full, or a
+      <strong>LORE</strong> reward item is one the player already holds (§6). Free a slot / drop the held LORE
+      copy.</td></tr>
+    <tr><td><strong>"You don't have what I asked for"</strong> though I have the items</td><td>The required
+      <code>itemId</code> or quantity is wrong, or the items are <strong>equipped</strong> not in the bag (only
+      inventory + equipped counts toward LORE, but requirements are consumed from inventory — unequip first).</td></tr>
+    <tr><td>Reward <strong>faction line doesn't appear</strong></td><td>The faction id doesn't resolve (typo, or the
+      faction isn't seeded/loaded), or the delta is 0. Pick the faction from the dropdown.</td></tr>
+    <tr><td>Turn-in <strong>fires but the item reward is missing</strong></td><td>The reward item id doesn't exist
+      in the DB, or it's LORE and already held (silently blocked by the fit check — you'd have been refused; confirm
+      via the "make room" line).</td></tr>
+    <tr><td>Players <strong>farm a reward I didn't want farmable</strong></td><td>Quests are repeatable by design.
+      Mark the reward item <strong>LORE</strong> to cap it at one held (§6); XP/coin farming is intended.</td></tr>
+  </table>
+
+  <h2>9. Quick reference</h2>
+  <h3>Quest transaction fields (Conversation Editor → keyword)</h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td>Requirements → Coin (copper)</td><td>Copper the player must have; spent on turn-in.</td></tr>
+    <tr><td>Requirements → Required item(s)</td><td>Item id + quantity, consumed from the bag.</td></tr>
+    <tr><td>Reward → XP</td><td>Experience granted.</td></tr>
+    <tr><td>Reward → Coin (copper)</td><td>Copper added to the purse.</td></tr>
+    <tr><td>Reward → Reward item(s)</td><td>Item id + quantity added (LORE enforced).</td></tr>
+    <tr><td>Reward → Faction hit(s)</td><td>Faction id + signed delta applied to standing.</td></tr>
+  </table>
+  <h3>Behavior rules</h3>
+  <ul>
+    <li><strong>All-or-nothing:</strong> validated fully before anything is consumed (§4).</li>
+    <li><strong>Faction-gated:</strong> obeys the keyword's own faction gate; blocked = no transaction (§5).</li>
+    <li><strong>Repeatable:</strong> no completion tracking; LORE items cap reward stockpiling (§6).</li>
+    <li><strong>Chat:</strong> refusals on the System channel; grants on the Reward channel.</li>
+  </ul>
+  <h3>Setup checklist</h3>
+  <ol>
+    <li>Referenced items exist (Item Editor); factions exist (Faction Editor).</li>
+    <li>Keyword + transaction authored (Conversation Editor); NPC's <code>conversationSetId</code> points at the
+      set (Mob Editor).</li>
+    <li><code>Enemy</code> prefab patched so the NPC has <strong>KeywordRewardApplicator</strong> (Tools → Patch
+      Enemy Prefab).</li>
+    <li>API restarted, migrations run, then <strong>Unity host restarted</strong> to load the content.</li>
+  </ol>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Networking/KeywordRewardApplicator.cs</code>,
+    <code>ConversationKeyword.cs</code>, and <code>PlayerInventory.CanExchange</code>; LORE enforcement in
+    <code>PlayerInventory.AddItem(enforceLore)</code>.</footer>
+</article>

@@ -17,7 +17,7 @@ public sealed class ItemRepository : IRepository
             "is_equippable, equip_slot, " +
             "bonus_str, bonus_sta, bonus_agi, bonus_dex, bonus_int, bonus_wis, bonus_cha, " +
             "weapon_base_damage, weapon_delay, weapon_range, weapon_category, " +
-            "buy_price, sell_price, icon_address " +
+            "buy_price, sell_price, icon_address, lore " +
             "FROM items ORDER BY item_id", conn, tx);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -44,6 +44,7 @@ public sealed class ItemRepository : IRepository
                 BuyPrice         = reader.GetInt32(17),
                 SellPrice        = reader.GetInt32(18),
                 IconAddress      = reader.IsDBNull(19) ? null : reader.GetString(19),
+                Lore             = reader.GetBoolean(20),
             });
         }
         return rows;

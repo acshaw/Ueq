@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 
@@ -30,12 +31,23 @@ public class PlayerInventory : NetworkBehaviour
 
     // ── Item API (server-only) ────────────────────────────────────────────────
 
+    // 3.2.1: <paramref name="enforceLore"/> is opt-in and defaults false so INTERNAL moves (equip/unequip/swap,
+    // which add an item the player already owns) are never blocked — TryUnequip adds while the item is still in
+    // the equip slot, so an unconditional LORE block would trap it. EXTERNAL acquires (loot / vendor buy / quest
+    // reward) pass true. A LORE item is capped at one in possession (inventory + equipped), regardless of stack.
     [Server]
-    public bool AddItem(string itemId, int quantity = 1)
+    public bool AddItem(string itemId, int quantity = 1, bool enforceLore = false)
     {
         if (string.IsNullOrEmpty(itemId) || quantity <= 0) return false;
 
         var def = ItemRegistry.Instance?.Get(itemId);
+
+        if (enforceLore && def != null && def.lore)
+        {
+            if (AlreadyHolds(itemId)) return false; // already have the one allowed copy
+            quantity = 1;                           // LORE = max one, overriding maxStackSize
+        }
+
         int maxStack = def != null ? def.maxStackSize : 1;
 
         int remaining = quantity;
@@ -96,6 +108,122 @@ public class PlayerInventory : NetworkBehaviour
         foreach (var s in _slots)
             if (s.itemId == itemId) total += s.quantity;
         return total >= quantity;
+    }
+
+    // ── 3.2.1 LORE acquire guard ──────────────────────────────────────────────
+
+    /// <summary>Does the player already hold this item anywhere — inventory OR an equipment slot?
+    /// (The possession test for the LORE "max one" rule.)</summary>
+    public bool AlreadyHolds(string itemId)
+    {
+        if (HasItem(itemId, 1)) return true;
+        var equip = GetComponent<PlayerEquipment>();
+        if (equip != null)
+            foreach (var slot in equip.Slots)
+                if (slot == itemId) return true;
+        return false;
+    }
+
+    /// <summary>Pre-check for external acquire paths that consume the source before adding (e.g. vendor buy):
+    /// true only if a LORE item isn't already held AND there's room. Lets a path refuse (and not charge/consume)
+    /// before calling <see cref="AddItem"/> with enforceLore.</summary>
+    public bool CanAcquire(string itemId, int quantity = 1)
+    {
+        if (string.IsNullOrEmpty(itemId) || quantity <= 0) return false;
+        var def = ItemRegistry.Instance?.Get(itemId);
+        if (def != null && def.lore)
+        {
+            if (AlreadyHolds(itemId)) return false;
+            quantity = 1; // LORE = one
+        }
+        return RemainingCapacityFor(itemId, def) >= quantity;
+    }
+
+    /// <summary>3.2: can the player hand over <paramref name="take"/> and receive <paramref name="give"/> in one
+    /// transaction? Simulates on a copy of the slots so a full bag can still turn-in-then-receive (the handed-over
+    /// items free room for the reward). Returns false if a required item is missing, a LORE reward is already held,
+    /// or the reward won't fit after the hand-off. Mutates nothing.</summary>
+    public bool CanExchange(List<KeywordItemAmount> take, List<KeywordItemAmount> give)
+    {
+        var work = new List<InventorySlot>(_slots.Count);
+        foreach (var s in _slots) work.Add(s);
+
+        if (take != null)
+            foreach (var t in take)
+                if (t.quantity > 0 && !SimRemove(work, t.itemId, t.quantity)) return false;
+
+        if (give != null)
+            foreach (var g in give)
+            {
+                if (g.quantity <= 0) continue;
+                var def = ItemRegistry.Instance?.Get(g.itemId);
+                int qty = g.quantity;
+                if (def != null && def.lore)
+                {
+                    if (AlreadyHolds(g.itemId)) return false; // can't grant a second LORE copy
+                    qty = 1;
+                }
+                if (!SimAdd(work, g.itemId, def, qty)) return false;
+            }
+
+        return true;
+    }
+
+    static bool SimRemove(List<InventorySlot> slots, string itemId, int qty)
+    {
+        int total = 0;
+        foreach (var s in slots) if (s.itemId == itemId) total += s.quantity;
+        if (total < qty) return false;
+
+        int remaining = qty;
+        for (int i = slots.Count - 1; i >= 0 && remaining > 0; i--)
+        {
+            if (slots[i].itemId != itemId) continue;
+            int take = Mathf.Min(remaining, slots[i].quantity);
+            int left = slots[i].quantity - take;
+            slots[i] = left > 0 ? new InventorySlot { itemId = itemId, quantity = left } : InventorySlot.Empty;
+            remaining -= take;
+        }
+        return true;
+    }
+
+    static bool SimAdd(List<InventorySlot> slots, string itemId, ItemDefinition def, int qty)
+    {
+        int maxStack = def != null ? def.maxStackSize : 1;
+        if (def != null && def.lore) maxStack = 1;
+
+        int remaining = qty;
+        if (maxStack > 1)
+            for (int i = 0; i < slots.Count && remaining > 0; i++)
+                if (slots[i].itemId == itemId && slots[i].quantity < maxStack)
+                {
+                    int add = Mathf.Min(remaining, maxStack - slots[i].quantity);
+                    slots[i] = new InventorySlot { itemId = itemId, quantity = slots[i].quantity + add };
+                    remaining -= add;
+                }
+        for (int i = 0; i < slots.Count && remaining > 0; i++)
+            if (slots[i].IsEmpty)
+            {
+                int add = Mathf.Min(remaining, maxStack);
+                slots[i] = new InventorySlot { itemId = itemId, quantity = add };
+                remaining -= add;
+            }
+        return remaining == 0;
+    }
+
+    // How many more of this item will fit (existing-stack room + empty slots × stack size). LORE caps stack to 1.
+    int RemainingCapacityFor(string itemId, ItemDefinition def)
+    {
+        int maxStack = def != null ? def.maxStackSize : 1;
+        if (def != null && def.lore) maxStack = 1;
+
+        int capacity = 0;
+        foreach (var s in _slots)
+        {
+            if (s.IsEmpty) capacity += maxStack;
+            else if (maxStack > 1 && s.itemId == itemId && s.quantity < maxStack) capacity += maxStack - s.quantity;
+        }
+        return capacity;
     }
 
     public bool IsFull()
