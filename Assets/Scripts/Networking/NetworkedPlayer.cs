@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -685,6 +686,86 @@ public class NetworkedPlayer : NetworkBehaviour
         ServerWarpTo(dest, yaw);
         ChatManager.Instance?.UpdatePosition(connectionToClient, dest);
         SendSystemMsg("You feel a tug as you are pulled back to safety.");
+    }
+
+    // ── Travel (dev/testing convenience) ────────────────────────────────────────
+
+    // Named fast-travel points for manual testing — zone portals, the mob spawner area, and the village
+    // hub. X/Z only; Y is resolved fresh on each use via ground/navmesh snap (ResolveGroundPosition,
+    // mirrors SpawnPoint.ResolveSpawnPosition) so these stay correct as zone terrain changes — e.g. once
+    // 3.5 replaces Thornwood's current flat scaffold with real terrain, `thornwood`/`grukmar` keep working
+    // without a code update.
+    static readonly (string name, string zoneId, float x, float z)[] TravelPoints =
+    {
+        ("creslins",  ZoneCatalog.DefaultStarterZoneId, 0f,      1395f),    // near the Thornwood portal
+        ("thornwood", "thornwood",                      5000f,   -8f),     // near both its portals
+        ("grukmar",   "grukmars_deep",                  10000f,  -8f),     // near the portal back to Thornwood
+        ("village",   ZoneCatalog.DefaultStarterZoneId, 200.41f, 1175.3f), // Trellis hub
+        ("mobs",      ZoneCatalog.DefaultStarterZoneId, 25f,     35f),     // wildlife encounter spawn point
+        ("crossroads",ZoneCatalog.DefaultStarterZoneId, -112.27f, 814.77f),// SM_Prop_Sign_03
+    };
+
+    /// <summary>`/travel &lt;name&gt;` — dev/testing fast travel to a named point (zone portals, the mob
+    /// spawner area, the village hub). Gated out of combat like `/unstuck` so it can't be used as an
+    /// escape. Unknown/blank name lists the options via chat instead of warping.</summary>
+    [Command]
+    public void CmdTravel(string destination)
+    {
+        var combat = GetComponent<CombatState>();
+        if (combat != null && combat.InCombat)
+        {
+            SendSystemMsg("You can't use /travel while in combat.");
+            return;
+        }
+
+        destination = (destination ?? "").Trim().ToLowerInvariant();
+        foreach (var p in TravelPoints)
+        {
+            if (p.name != destination) continue;
+
+            if (ZoneManager.Instance == null)
+            {
+                SendSystemMsg("Zones aren't active — /travel is unavailable.");
+                return;
+            }
+
+            Vector3 pos = ResolveGroundPosition(p.x, p.z);
+
+            // Same-zone hop: warp directly (mirrors /unstuck) instead of routing through
+            // ZoneManager.ServerPlaceInZone — its client scene-swap messaging assumes a genuine zone
+            // CHANGE, and a redundant additive-load for an already-loaded non-base zone isn't a path
+            // that's ever been exercised.
+            if (p.zoneId == _zoneId)
+            {
+                ServerWarpTo(pos, _yaw);
+                ChatManager.Instance?.UpdatePosition(connectionToClient, pos);
+            }
+            else
+            {
+                ZoneManager.Instance.ServerPlaceInZone(connectionToClient, p.zoneId, pos, _yaw);
+            }
+
+            SendSystemMsg($"You travel to {p.name}.");
+            return;
+        }
+
+        string names = string.Join(", ", System.Array.ConvertAll(TravelPoints, t => t.name));
+        SendSystemMsg($"Unknown travel point '{destination}'. Options: {names}.");
+    }
+
+    // Raycast down onto the ground + snap to the nearest navmesh point, given only X/Z — same pattern as
+    // SpawnPoint.ResolveSpawnPosition. A single shared physics scene + a single global navmesh spans every
+    // zone at its own world offset (3.0's zone architecture), so this resolves correctly regardless of
+    // which zone the X/Z falls in — no per-zone special-casing needed.
+    static Vector3 ResolveGroundPosition(float x, float z)
+    {
+        Vector3 origin = new Vector3(x, 1000f, z);
+        Vector3 pos    = new Vector3(x, 0f, z);
+        if (Physics.Raycast(origin, Vector3.down, out var hit, 2000f, ~0, QueryTriggerInteraction.Ignore))
+            pos = hit.point;
+        if (NavMesh.SamplePosition(pos, out var navHit, 15f, NavMesh.AllAreas))
+            pos = navHit.position;
+        return pos;
     }
 
     // ── Persistence (1.3) ───────────────────────────────────────────────────────

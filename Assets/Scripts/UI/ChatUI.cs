@@ -62,6 +62,7 @@ public class ChatUI : MonoBehaviour
         ("/camp",                 "Return to character select (10s, must be out of combat)"),
         ("/sit",                  "Sit / stand (also hotbar key 0); rest faster while seated"),
         ("/unstuck",              "Warp to a safe spot if stuck or falling (out of combat)"),
+        ("/travel <name>",        "Fast travel: creslins, thornwood, grukmar, village, mobs, crossroads"),
         ("/help",                 "List chat commands"),
         ("/font-size <1-5>",      "Set chat text size"),
     };
@@ -175,6 +176,23 @@ public class ChatUI : MonoBehaviour
         {
             var local = LocalPlayer.Current;
             if (local != null) local.CmdUnstuck();
+            else AppendLine("<i>[Not connected — start Host first]</i>");
+            return true;
+        }
+
+        if (raw.Equals("/travel", StringComparison.OrdinalIgnoreCase))
+        {
+            var local = LocalPlayer.Current;
+            if (local != null) local.CmdTravel(""); // server replies with the option list
+            else AppendLine("<i>[Not connected — start Host first]</i>");
+            return true;
+        }
+
+        if (raw.StartsWith("/travel ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(8).Trim();
+            var local = LocalPlayer.Current;
+            if (local != null) local.CmdTravel(arg);
             else AppendLine("<i>[Not connected — start Host first]</i>");
             return true;
         }

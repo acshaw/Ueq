@@ -81,7 +81,10 @@
       "Bash(grep \"\\\\.prefab$\")",
       "Bash(python3 -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(16\\).toString\\('hex'\\)\\)\")",
-      "Bash(powershell -Command \"[guid]::NewGuid\\(\\).ToString\\('N'\\)\")"
+      "Bash(powershell -Command \"[guid]::NewGuid\\(\\).ToString\\('N'\\)\")",
+      "Bash(grep -n \"m_Name: Village$\\\\|m_Name: SM_Bld_Well_01\\\\|m_Name: SM_Bld_Village_01\" Assets/Scenes/SampleScene.unity)",
+      "Bash(grep -n \"m_Name: SM_Bld_Well_01\\\\|m_Name: SM_Bld_Village_01\\(Clone\\)\\\\|m_Name: Village$\" Assets/Scenes/SampleScene.unity)",
+      "Bash(grep -v \"^C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\acsha\\\\\\\\\\\\\\\\source\\\\\\\\\\\\\\\\Ueq/Library\")"
     ]
   },
   "hooks": {
