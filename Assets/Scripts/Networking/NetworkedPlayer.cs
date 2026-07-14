@@ -42,6 +42,28 @@ public class NetworkedPlayer : NetworkBehaviour
     bool _isLooking; // true while RMB held
     bool _rmbIsLoot; // RMB press was consumed by loot — suppress look mode for that press
 
+    // ── 4.2 — client-side prediction + reconciliation ──────────────────────────
+    [Header("Prediction")]
+    [Tooltip("Reconciliation snaps + replays when the client's predicted position differs from the server's " +
+             "acked position by more than this (metres). Placeholder — tune from real MPPM/RTT testing.")]
+    [SerializeField] float reconciliationTolerance = 0.15f;
+
+    uint _inputSeq;
+    readonly System.Collections.Generic.List<PredictedInput> _pendingInputs = new();
+
+    // Server-side: last input this object has simulated. Not consumed anywhere yet — Mirror's reliable
+    // channel already delivers Commands in order — kept as the hook PR5 calls for, e.g. a future
+    // out-of-order/replay rejection check, without inventing that check speculatively now.
+    uint   _lastProcessedSeq;
+    double _lastAckTime; // server-side: AccurateInterval bookkeeping for RpcAckMovement throttling
+
+    struct PredictedInput
+    {
+        public PlayerInputCmd cmd;
+        public Vector3 resultingPosition;
+        public float   resultingVerticalVelocity;
+    }
+
     Targetable      _currentTarget;
     NetworkIdentity _serverTarget;
 
@@ -70,11 +92,11 @@ public class NetworkedPlayer : NetworkBehaviour
         {
             nt.coordinateSpace = CoordinateSpace.World;
 
-            // 3.1 — sync rotation so REMOTE players visibly turn (the server sets yaw in CmdSendInput; the
-            // prefab has syncRotation off). The body transform is yaw-only — pitch lives on the camera
-            // holder — so this syncs facing, not the camera. No cost to the owner: the local player's NT is
-            // disabled on clients (OnStartLocalPlayer) and the host renders its own transform, so this only
-            // affects how OTHER players see this one. (Overrides the prefab's serialized syncRotation:0.)
+            // 3.1 — sync rotation so REMOTE OBSERVERS visibly turn (the server sets yaw in CmdSendInput;
+            // the prefab has syncRotation off). The body transform is yaw-only — pitch lives on the camera
+            // holder — so this syncs facing, not the camera. (Overrides the prefab's serialized
+            // syncRotation:0.) The owner itself never consumes these snapshots (stock NetworkTransform
+            // behavior, restored in 4.2) — its own rotation is always driven locally by ApplyLook.
             nt.syncRotation = true;
         }
     }
@@ -110,17 +132,9 @@ public class NetworkedPlayer : NetworkBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        if (!isServer)
-        {
-            foreach (var b in GetComponents<Behaviour>())
-            {
-                if (b.GetType().Name.Contains("NetworkTransform"))
-                {
-                    b.enabled = false;
-                    break;
-                }
-            }
-        }
+        // 4.2 — the owner predicts locally again (Update()) and reconciles against the server's ack
+        // (RpcAckMovement). Its NetworkTransform is back to stock Mirror behavior, which already skips
+        // applying incoming snapshots to the owning connection — nothing to disable here.
     }
 
     public override void OnStartClient()
@@ -142,6 +156,21 @@ public class NetworkedPlayer : NetworkBehaviour
 
     // ── Per-frame ─────────────────────────────────────────────────────────────
 
+    // 4.2 — client-side prediction + reconciliation. The owner simulates its own movement locally,
+    // immediately (instant visual feedback, no round-trip wait), then sends the same input to the server as
+    // a sequence-numbered PlayerInputCmd. The server runs the IDENTICAL SimulateMovement step (see below)
+    // synchronously inside CmdSendInput — it's no longer driven by a per-Update() server loop like 4.1 — and
+    // periodically acks its result back to the owner (RpcAckMovement), which snaps + replays its buffered
+    // inputs if its own prediction disagreed (see PredictedInput/_pendingInputs). Movement is no longer run
+    // from `if (isServer)` in Update() at all; it only ever runs from an explicit SimulateMovement call
+    // (prediction, server authority, or reconciliation replay), all sharing this one code path so they can't
+    // drift apart on their own.
+    //
+    // Host is a special case: isLocalPlayer and isServer are both true on the SAME object instance (no
+    // separate client/server copies like a remote connection has), and CmdSendInput's Command handler runs
+    // synchronously against that same instance when called locally. So host must NOT also predict locally
+    // here — doing so would apply SimulateMovement twice to the same transform/CC in one frame. Host sees
+    // its own movement immediately anyway (zero self-RTT), so it doesn't need prediction.
     void Update()
     {
         if (isLocalPlayer)
@@ -155,13 +184,31 @@ public class NetworkedPlayer : NetworkBehaviour
 
             CollectInput();
             ApplyLook();
-            bool jumpThisFrame = _jumpQueued;
-            ApplyMovement();
-            CmdSendInput(_moveInput, _yaw, _sprint, jumpThisFrame);
-        }
-        else if (isServer)
-        {
-            ApplyMovement();
+
+            _inputSeq++;
+            var cmd = new PlayerInputCmd
+            {
+                move   = _moveInput,
+                yaw    = _yaw,
+                sprint = _sprint,
+                jump   = _jumpQueued,
+                seq    = _inputSeq,
+                dt     = Time.deltaTime,
+            };
+            _jumpQueued = false; // packaged into this frame's cmd; consumed synchronously either way below
+
+            if (!isServer)
+            {
+                SimulateMovement(cmd.move, cmd.yaw, cmd.sprint, cmd.jump, cmd.dt);
+                _pendingInputs.Add(new PredictedInput
+                {
+                    cmd = cmd,
+                    resultingPosition = transform.position,
+                    resultingVerticalVelocity = _verticalVelocity,
+                });
+            }
+
+            CmdSendInput(cmd);
         }
     }
 
@@ -308,37 +355,85 @@ public class NetworkedPlayer : NetworkBehaviour
 
     // ── Movement ──────────────────────────────────────────────────────────────
 
-    void ApplyMovement()
+    // 4.2 (PR2) — the single deterministic movement step, shared by local prediction, server authority, and
+    // reconciliation replay. Operates only on its parameters plus the persistent `_verticalVelocity`/CC
+    // state — no `Time.deltaTime` or mutable `_moveInput`/`_yaw`/`_sprint`/`_jumpQueued` reads — so replaying
+    // several historical inputs back-to-back in one frame reproduces exactly what happened originally.
+    // Direction is computed from the given `yaw` directly (not `transform.right`/`forward`), since replay
+    // doesn't touch `transform.rotation` at each step (only `ApplyLook`/CmdSendInput's explicit rotation
+    // writes do) — using the live transform rotation here would make replay depend on side effects instead
+    // of its own parameters.
+    //
+    // 4.2 hardening — CC.Move()'s own collision resolution against ANOTHER CharacterController isn't a pure
+    // function of net displacement: it's sensitive to the exact per-call step timing (e.g. `isGrounded`
+    // flickering on contact nudges the vertical component just enough to let one capsule ride over the
+    // other's rounded cap), and the client/server processes don't tick in lockstep, so the two independent
+    // simulations can occasionally disagree at the contact instant even with identical inputs (found
+    // 2026-07-13 testing 4.2: server let a push-through happen that the client's own prediction blocked).
+    // ResolvePlayerOverlap() runs an explicit post-move de-penetration check every step, on every caller
+    // (prediction/server/replay alike) — even if one step's sweep lets a sliver of interpenetration slip
+    // through, the very next call pushes it back out, converging reliably instead of relying purely on
+    // CC.Move()'s implicit (and here, unreliable) contact resolution.
+    void SimulateMovement(Vector2 move, float yaw, bool sprint, bool jump, float dt)
     {
         if (_cc.isGrounded) _verticalVelocity = -2f;
 
-        if (_jumpQueued && _cc.isGrounded)
+        if (jump && _cc.isGrounded)
             _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
-        _jumpQueued = false;
+        _verticalVelocity += gravity * dt;
 
-        _verticalVelocity += gravity * Time.deltaTime;
+        float speed = sprint ? sprintSpeed : moveSpeed;
+        Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * new Vector3(move.x, 0f, move.y);
+        if (dir.sqrMagnitude > 1f) dir.Normalize();
 
-        float speed = _sprint ? sprintSpeed : moveSpeed;
-        Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
-        if (move.sqrMagnitude > 1f) move.Normalize();
+        _cc.Move((dir * speed + Vector3.up * _verticalVelocity) * dt);
 
-        _cc.Move((move * speed + Vector3.up * _verticalVelocity) * Time.deltaTime);
+        ResolvePlayerOverlap();
+    }
+
+    // Explicit post-move de-penetration against other players' CharacterControllers (see SimulateMovement's
+    // hardening note above). Unity's CharacterController IS a Collider under the hood, so ComputePenetration
+    // works on it directly. Scoped to other NetworkedPlayers specifically (not mobs/geometry — CC.Move()'s
+    // own sweep already handles static world collision fine; this is only patching the CC-vs-CC contact
+    // case that proved unreliable).
+    void ResolvePlayerOverlap()
+    {
+        Vector3 center = transform.position + _cc.center;
+        var hits = Physics.OverlapSphere(center, _cc.radius + _cc.skinWidth + 0.1f, ~0, QueryTriggerInteraction.Ignore);
+        foreach (var hit in hits)
+        {
+            if (hit == _cc) continue;
+            var otherCc = hit as CharacterController;
+            if (otherCc == null) continue;
+            if (otherCc.GetComponent<NetworkedPlayer>() == null) continue; // players only, not mobs
+
+            if (Physics.ComputePenetration(
+                    _cc, transform.position, transform.rotation,
+                    otherCc, otherCc.transform.position, otherCc.transform.rotation,
+                    out Vector3 pushDir, out float pushDist) && pushDist > 0f)
+            {
+                transform.position += pushDir * pushDist;
+            }
+        }
     }
 
     // ── Server ────────────────────────────────────────────────────────────────
 
+    // 4.2 (PR3/PR5) — server processing. Runs SimulateMovement synchronously against this input the moment
+    // it arrives, using the CLIENT-reported dt (not the server's own frame delta) — that's what makes the
+    // owner's replay-on-correction reproduce the same result the server got. No longer driven by a
+    // per-Update() server loop (contrast 4.1) — each Command IS a discrete simulation step now.
     [Command]
-    void CmdSendInput(Vector2 move, float yaw, bool sprint, bool jump)
+    void CmdSendInput(PlayerInputCmd cmd)
     {
-        _moveInput = move;
-        _yaw       = yaw;
-        _sprint    = sprint;
-        if (jump && !isLocalPlayer) _jumpQueued = true;
+        SimulateMovement(cmd.move, cmd.yaw, cmd.sprint, cmd.jump, cmd.dt);
+        _lastProcessedSeq = cmd.seq;
+        _yaw = cmd.yaw; // authoritative facing — read by respawn/unstuck/bind elsewhere in this class
 
         // 3.1.7 — moving stands a seated player (server-authoritative). Pressing a move key stands you, then
-        // ApplyMovement carries you off — no need to block movement while seated.
-        if (move.sqrMagnitude > 0.01f) _sitting?.ServerStand();
+        // SimulateMovement carries you off — no need to block movement while seated.
+        if (cmd.move.sqrMagnitude > 0.01f) _sitting?.ServerStand();
 
         // Body yaw follows look only while standing; a seated player's body stays frozen (free-look moves the
         // camera, not the body) — this is the rotation observers see, so it must match the local ApplyLook.
@@ -351,6 +446,62 @@ public class NetworkedPlayer : NetworkBehaviour
             ChatManager.Instance.UpdatePosition(connectionToClient, transform.position);
             _lastChatPos = transform.position;
         }
+
+        // Ack back to the owner only, throttled to Mirror's own broadcast cadence rather than every single
+        // Command — observers already get position via the ordinary NetworkTransform sync path, this ack is
+        // purely for the owner's own reconciliation.
+        if (connectionToClient != null &&
+            AccurateInterval.Elapsed(NetworkTime.time, NetworkServer.sendInterval, ref _lastAckTime))
+        {
+            RpcAckMovement(connectionToClient, cmd.seq, transform.position, _yaw, _verticalVelocity);
+        }
+    }
+
+    // 4.2 (PR6) — reconciliation. Discards buffered inputs the server has now processed; if the client's own
+    // recorded prediction for the acked sequence disagrees with the server's result by more than
+    // `reconciliationTolerance`, snap to the server's state and replay every input still pending past that
+    // point (in order, each with its own recorded dt) to catch back up to "now." A visible pop on a large
+    // correction is accepted for this pass — smoothing is a follow-up if testing shows it's actually
+    // noticeable, not something to design speculatively now.
+    //
+    // Host never buffers anything (see Update()), so `matchIndex` is always -1 there and this is a no-op.
+    [TargetRpc]
+    void RpcAckMovement(NetworkConnectionToClient target, uint seq, Vector3 position, float yaw, float verticalVelocity)
+    {
+        int matchIndex = -1;
+        for (int i = 0; i < _pendingInputs.Count; i++)
+            if (_pendingInputs[i].cmd.seq == seq) { matchIndex = i; break; }
+
+        if (matchIndex >= 0)
+        {
+            var predicted = _pendingInputs[matchIndex];
+            if (Vector3.Distance(predicted.resultingPosition, position) > reconciliationTolerance)
+            {
+                transform.position = position;
+                _verticalVelocity  = verticalVelocity;
+
+                for (int i = matchIndex + 1; i < _pendingInputs.Count; i++)
+                {
+                    var pending = _pendingInputs[i];
+                    SimulateMovement(pending.cmd.move, pending.cmd.yaw, pending.cmd.sprint, pending.cmd.jump, pending.cmd.dt);
+                    pending.resultingPosition         = transform.position;
+                    pending.resultingVerticalVelocity = _verticalVelocity;
+                    _pendingInputs[i] = pending;
+                }
+            }
+        }
+
+        _pendingInputs.RemoveAll(p => p.cmd.seq <= seq);
+    }
+
+    // 4.2 (PR9) — any hard server-side position override (teleport/respawn/load) invalidates the owner's
+    // buffered prediction; replaying a stale pre-teleport input on top of the new position would send the
+    // player flying in a nonsense direction. Call alongside every such override.
+    [TargetRpc]
+    void TargetRpcResetPrediction(NetworkConnectionToClient target)
+    {
+        _pendingInputs.Clear();
+        _verticalVelocity = 0f;
     }
 
     [Command]
@@ -460,6 +611,7 @@ public class NetworkedPlayer : NetworkBehaviour
             transform.position = _bindPoint;
             cc.enabled = true;
             TargetRpcRespawn(connectionToClient, _bindPoint);
+            if (connectionToClient != null) TargetRpcResetPrediction(connectionToClient); // 4.2 (PR9)
         }
     }
 
@@ -507,6 +659,8 @@ public class NetworkedPlayer : NetworkBehaviour
         var nt = GetComponent<NetworkTransformBase>();
         if (nt != null) nt.ServerTeleport(position, rot);
         else            TargetRpcRespawn(connectionToClient, position);
+
+        if (connectionToClient != null) TargetRpcResetPrediction(connectionToClient); // 4.2 (PR9)
     }
 
     /// <summary>`/unstuck` — pull a stuck/falling player to a safe spot: the current zone's default entry
@@ -551,6 +705,7 @@ public class NetworkedPlayer : NetworkBehaviour
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         cc.enabled = true;
         TargetRpcRespawn(connectionToClient, position);
+        if (connectionToClient != null) TargetRpcResetPrediction(connectionToClient); // 4.2 (PR9)
     }
 
     // ── Loot commands ─────────────────────────────────────────────────────────

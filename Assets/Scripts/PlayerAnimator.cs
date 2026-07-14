@@ -5,9 +5,10 @@ using UnityEngine;
 /// actual movement, measured purely from world-space position deltas.
 ///
 /// Why this works across the network with zero extra code: the player root's
-/// transform is synced to every client by NetworkTransformReliable, so on every
-/// machine the character physically moves. Reading that movement locally gives
-/// correct animation for BOTH the local player and remote players — no
+/// transform physically moves on every machine — the owner via local
+/// prediction + server reconciliation (4.2), remote observers via
+/// NetworkTransformReliable's synced snapshots. Reading that movement locally
+/// gives correct animation for BOTH the local player and remote players — no
 /// NetworkAnimator, no Commands, no RPCs needed.
 ///
 /// Attach to the visual child that holds the Animator (the Synty character).

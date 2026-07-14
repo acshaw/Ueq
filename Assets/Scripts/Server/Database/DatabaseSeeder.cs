@@ -23,7 +23,8 @@ public static class DatabaseSeeder
         SeedMobs(conn);
         SeedMobFactionHits(conn);
         SeedSpawnTables(conn);
-        SeedExampleEncounters(conn); // 3.1.10 Stage 3 — running-start wilderness content
+        SeedExampleEncounters(conn);      // 3.1.10 Stage 3 — running-start wilderness content
+        SeedThornwoodEncounters(conn);    // 3.5 — Thornwood's goblin-patrol population
     }
 
     // ── Example wilderness encounters (3.1.10 Stage 3) ──────────────────────────────────────────
@@ -89,16 +90,37 @@ public static class DatabaseSeeder
         return cmd.ExecuteNonQuery() > 0;
     }
 
-    static void SeedSpawnEntry(NpgsqlConnection conn, string tableId, string mobId, int weight, int order)
+    static void SeedSpawnEntry(NpgsqlConnection conn, string tableId, string mobId, int weight, int order, int groupSize = 1)
     {
         using var cmd = new NpgsqlCommand(
             "INSERT INTO spawn_table_entries (spawn_table_id, mob_id, weight, group_size, sort_order) " +
-            "VALUES (@id, @mob, @w, 1, @o)", conn);
+            "VALUES (@id, @mob, @w, @grp, @o)", conn);
         cmd.Parameters.AddWithValue("id", tableId);
         cmd.Parameters.AddWithValue("mob", mobId);
         cmd.Parameters.AddWithValue("w", weight);
+        cmd.Parameters.AddWithValue("grp", groupSize);
         cmd.Parameters.AddWithValue("o", order);
         cmd.ExecuteNonQuery();
+    }
+
+    // ── Thornwood goblin patrols (3.5) — the second zone's signature encounter, per Zone 2 in
+    // trellis_zone_design.md: mixed scouts moving in groups near the southern treeline, an organized
+    // warrior patrol nearer the Grukmar's Deep entrance. Reuses "Goblin Scout" (shared with Creslin's
+    // Field — raise its level to 6-9 for Thornwood in the web Mob Editor; seeding never overwrites that).
+    static void SeedThornwoodEncounters(NpgsqlConnection conn)
+    {
+        SeedWildMob(conn, "Goblin Warrior", 7, 65, 6, 150);
+
+        if (SeedSpawnTableHeader(conn, "Thornwood Goblin Patrol", "Thornwood Goblin Patrol", 60, 20))
+        {
+            SeedSpawnEntry(conn, "Thornwood Goblin Patrol", "Goblin Scout", 1, 0, groupSize: 3);
+            Debug.Log("[DB] Seed: Thornwood Goblin Patrol (Goblin Scout, group of 3).");
+        }
+        if (SeedSpawnTableHeader(conn, "Thornwood Warrior Patrol", "Thornwood Warrior Patrol", 90, 20))
+        {
+            SeedSpawnEntry(conn, "Thornwood Warrior Patrol", "Goblin Warrior", 1, 0, groupSize: 2);
+            Debug.Log("[DB] Seed: Thornwood Warrior Patrol (Goblin Warrior, group of 2).");
+        }
     }
 
     // ── Spawn tables (M2.7.2) — migrate the existing SO spawn tables (all on the "Fast" 30s timer) ──

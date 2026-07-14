@@ -476,6 +476,10 @@ public static class SceneSetup
 #if MIRROR
         player.AddComponent<NetworkIdentity>();
 
+        // 4.2 — reverted to the stock Mirror component: the owner reconciles its own transform again
+        // (NetworkedPlayer's prediction/reconciliation), so the 4.1-era ServerAuthoritativeTransform
+        // subclass (which made the owner apply incoming server snapshots too) is no longer needed and has
+        // been deleted.
         var ntType = FindType("Mirror.NetworkTransformReliable") ?? FindType("Mirror.NetworkTransform");
         if (ntType != null)
         {

@@ -104,7 +104,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [ ] **2.9 — Abilities, tags & effects.** `ability_definitions` + `ability_tags` + cooldown links + the ordered effect list (effect-composition model preserved; effects referenced by type + params). Web **Ability Editor** + **Ability Tag Editor**. Uses the 2.1 convention for anim-trigger + prefab bindings.
 - [ ] **2.10 — Races & classes.** Stat tables, XP modifiers, HP/mana formula fields, starting-ability lists → DB + web **Race & Class Editor**. Feeds `SetRaceClass` and character creation (1.5) once migrated.
 - [ ] **2.11 — Seed / export / content versioning.** Reproducible DB seed, content export/import (sharing content between dev DBs / promoting to AWS), and a content-change audit trail as the library grows.
-- [ ] **2.12 — Skill system + Skill Editor** *(design-first; new system, not just an editor).* **EQ-style use-based skills** (chosen 2026-06-26): per-player skill values (1H Slash, Dodge, Parry, Block, Channeling, …) that rise with use and gate combat success rolls. **Two halves:** (a) *content* — `SkillDefinition` (id, category, per-class caps, rise-chance curve, governing stat) → DB + web **Skill Editor**, fits the M2 pattern; (b) *runtime* — per-player skill values (persisted, M1-style), rise-on-use, and wiring into the combat rolls (fills the deferred **Dodge/Parry/Block** + the `Critical → Solid until skill unlocked` hook in `PlayerAutoAttack`) — this half is **combat-depth work (M5-flavored)**. Needs a **design devplan** (the skill list, rise/cap math, how each gates a roll) before any editor or wiring. No skill scaffolding exists today.
+- [ ] **2.12 — Skill system + Skill Editor** *(design-first; new system, not just an editor).* **EQ-style use-based skills** (chosen 2026-06-26): per-player skill values (1H Slash, Dodge, Parry, Block, Channeling, …) that rise with use and gate combat success rolls. **Two halves:** (a) *content* — `SkillDefinition` (id, category, per-class caps, rise-chance curve, governing stat) → DB + web **Skill Editor**, fits the M2 pattern; (b) *runtime* — per-player skill values (persisted, M1-style), rise-on-use, and wiring into the combat rolls (fills the deferred **Dodge/Parry/Block** + the `Critical → Solid until skill unlocked` hook in `PlayerAutoAttack`) — this half's design input **comes from 5.1 (combat & threat overhaul)**, which decides the actual roll formulas this half gates; sequence 2.12's runtime design devplan after 5.1, not before. Needs a **design devplan** (the skill list, rise/cap math, how each gates a roll) before any editor or wiring. No skill scaffolding exists today.
 
 ## M3 — World & Content  *(depends on M1 + M2)*
 
@@ -112,6 +112,12 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > Sequencing (revised 2026-07-04): the **zone framework comes first (3.0)** so the starting zone is
 > built as a proper zone from day one (not retrofitted). The **full M1 regression is deferred to
 > pre-first-deployment** (2.x + 3.0 already re-covered most of it); light smoke is the interim bar.
+> Sequencing (revised 2026-07-12): **3.4 (real aggro/threat) is retired from this milestone and folded
+> into 5.1** — threat generation is currently a 1:1 mirror of raw damage dealt, so building it against
+> today's placeholder combat rolls would mean partially rebuilding it once the combat-roll rework lands;
+> it also genuinely depends on M4's trustworthy positions (perception/range checks), so it belongs after
+> M4 regardless. Content work here (3.5/3.6) is unaffected — it already gets by on today's placeholder
+> faction aggro.
 
 - [x] **3.0 — Zone integration.** ✅ Code-complete + Stages A/B/C all verified in-editor (2026-07-04). The real, production version of the 2.0 spike: made the world zone-aware — additive zone scenes, per-scene interest, player→zone assignment, transitions with relative placement, persisted zone id, and zone-aware spawn/chat/AI/regen. Scoped by the 2.0 findings. Two latent bugs found + fixed en route (see 3.0.1: mob NetworkTransform, thornwood navmesh persistence). *(The full zone-aware M1 regression is deferred to pre-first-deployment, not a blocker here — see the M3 sequencing note above.)*
 - [ ] **3.0.1 — Zone-integration bug follow-ups.** Bugs/gaps surfaced during 3.0 verification (see the Stage B log in `docs/devplans/3.0-zone-integration.md`). Not zone-specific; parked here because that's where they were found. Items:
@@ -139,9 +145,9 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   - [x] **3.1.11 — Mob wander regions (leashed / free-range / bounded).** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.1.11-mob-wander-regions.md` (WR1–WR7, all as recommended). Generalizes idle wandering from "always tethered to a `wanderRadius` sphere at the spawn point" into a **region-driven** model, so a mob can roam a spawn-anchored bubble (today, unchanged default), the whole **zone** (free-range), or an authored **box/sphere boundary** — chosen per encounter on `SpawnPoint`, not new spawn "types." Reframe: one `WanderBehavior` sampling a swappable `IWanderRegion` (leash = sphere at spawn / bounded = authored shape / free-range = zone bounds), reusing the 3.1.10 `INpcMovementBehavior` seam. **No chase leash — ever** (user); regions constrain idle wander only. Also tweaks `EnterReturn` so roamers reset in place instead of trudging home, and (**WR7**) makes a mob **disengage when its target zones out** — a zone-integration correctness gap (see 3.0.1) folded in here because it touches the same target-loss/return code; reuses the existing threat-list reassessment, no fresh perception scan (that's 3.4). Extends 3.1.10's `PatrolRoute` tooling with a `WanderRegion` marker/prefab. Reusable for 3.5/3.6.
 - [x] **3.2 — Quest turn-ins & rewards via keywords.** ✅ Verified in-editor 2026-07-12. Devplan `docs/devplans/3.2-quest-rewards-keywords.md` (Q1–Q7). A `KeywordRewardApplicator : IOnConversationKeyword` (sibling to `VendorApplicator`) grants a reward bundle (XP / items / currency / faction) when a faction-gated conversation keyword fires — the gate already runs before dispatch, so it's free. **Resolves the 2.8 dependency (Q1): the design has no objective-tracking entity, so a keyword-attached reward *is* the quest → fold the reward bundle into the conversation keyword (extend the web Conversation Editor) and ship 3.2 self-contained; reclassify 2.8 as a future dedicated multi-step Quest Editor only if quests outgrow single-keyword rewards.** **Includes the turn-in (Q4, revised):** a quest is "bring me X / pay me N coin → get Y," so the NPC **accepting items/coin** is the requirement side of the same keyword transaction (validate → consume → grant, all-or-nothing) — this absorbs the core of old 3.3. **Q2 decided: quests are repeatable** (no completion tracking / no migration) — anti-farm is EQ1-style item scarcity via the **LORE flag (3.2.1)**, which 3.2 inherits for free through `AddItem`; XP/coin repeatability is intentional (bounded by turn-in cost). No quest UI. *(Q1: consumes-from-2.8 folded in — ship self-contained.)*
   - [x] **3.2.1 — LORE item flag (anti-stockpile).** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.2.1-lore-item-flag.md` (L1–L6, all as recommended). `lore` flag on items (DB/migration 0019/sync/Item Editor) + `PlayerInventory` opt-in enforcement (`AddItem(…, enforceLore)` + `CanAcquire`/`AlreadyHolds`) wired into loot + vendor buy; internal equip moves deliberately unaffected. Item-system feature, not quest-specific: a `lore` flag on `ItemDefinition` (DB, migration 0019) + a "max one in possession" (inventory + equipped) guard on the external acquire paths (loot, vendor buy, quest reward; trade is future). EQ1-style — a LORE reward can't be stockpiled, which is how repeatable quests (3.2) stay balanced on the item side. **Key grounding: enforcement is opt-in (`CanAcquire` pre-check + `AddItem(…, enforceLore)` default false), NOT baked into `AddItem`** — because `TryUnequip` adds to inventory while the item is still equipped, so an unconditional LORE block would trap a LORE item on the character. 3.2's reward grant passes `enforceLore: true`, so quests inherit it. Not a hard blocker for 3.2, but wanted before authoring repeatable item-reward quests. (Sibling flags like NODROP can follow if needed.)
-- [ ] **3.3 — NPC item-giving (mostly absorbed into 3.2).** The player→NPC item/coin **hand-off as a quest turn-in** now lives in **3.2** (the requirement side of the reward transaction). What remains distinctly here: a **non-reward** item-give that only fires a **script event** (e.g. hand an item to open a door / advance a non-reward interaction) with no XP/item payout — a thin remainder to schedule only if a use case needs it.
-- [ ] **3.4 — Real aggro / threat.** Replace placeholder: faction-driven perception + social aggro + threat decay.
-- [ ] **3.5 — Second zone (content).** A real second zone built on the 3.0 framework (the transition architecture now lives in 3.0); proves the framework with actual content + defines what state crosses zone boundaries in practice.
+- [ ] **3.3 — NPC item-giving (item-triggered conversation keywords).** ⏸️ Devplan drafted + design held 2026-07-12 ([devplan](docs/devplans/3.3-npc-item-giving.md), G1–G8) — **implementation deferred until a concrete need arises.** The player→NPC item/coin hand-off *as a quest requirement* already lives in **3.2**; what's distinct here is the **hand-off itself as the trigger** (no keyword typed) — e.g. handing an NPC an item unlocks a dialogue thread the player had no way to ask for by name. Design: extend `ConversationKeyword` with `IsItemTrigger`/`TriggerItemId` so giving an item routes through the same `HandleMatch` a typed keyword does (response/unlocks/faction-gate/optional 3.2 reward, all reused free); client trigger extends `InventoryUI`'s existing held-item-click flow (click an NPC while holding an item); adds an `IOnItemGiven` hook for future non-dialogue listeners. Scoped to NPCs only (not arbitrary world props like doors — that's a lighter future extension). Re-open and implement directly off the devplan's decisions when a real item/NPC pairing needs it.
+- [x] **3.4 — Real aggro / threat.** ⏸️➡️ Retired from M3, folded into **5.1** 2026-07-12 (not implemented as a standalone item). Real threat generation is inherently downstream of the combat-roll rework (5.1) — today's threat is a 1:1 mirror of raw damage dealt, so it would need reworking again once the roll formulas change — and of M4 (perception/range checks need trustworthy positions). Scope (faction-driven perception, social aggro, threat decay) now lives inside 5.1's combined combat-and-threat overhaul; see that item.
+- [ ] **3.5 — Second zone (content).** 🟠 Implemented (code only) 2026-07-12 — pending in-editor verification. Devplan `docs/devplans/3.5-second-zone-content.md` (TW1–TW9, all as recommended). Turns Thornwood from the 280u flat 3.0.2 scaffold into a real shaped forest zone matching `trellis_zone_design.md`'s Zone 2 geography (east mountain wall carved with a walkable saddle for the Grukmar's Deep entrance, west sheer cliff/sea, dense south treeline transition, hard north wall) via a new `ThornwoodTerrainSetup.cs` (sibling to Creslin's Field's `TerrainZoneSetup`, sharing proven primitives via new `TerrainShapingUtil.cs`) — proving the 3.1.9–3.1.11 tooling generalizes past Creslin's Field. Populated with the doc's signature goblin-patrol encounter (new mob `Goblin Warrior`, two DB spawn tables with `groupSize`, two patrol routes + a wander-bounded solo scout) via new `ThornwoodEncounterSetup.cs`, replacing the placeholder `RatSpawn`. Explicitly out of scope (backlog/3.6): deeper difficulty bands, the wildlife/zone-sweeper (no owned predator art in any imported Synty pack), named encounters, atmosphere/lighting. The roadmap's original "what state crosses zone boundaries" question needed no new engineering — already answered by 3.0/3.0.2/3.1.11(WR7); this item just re-confirms it holds with real content in two zones at once.
 - [ ] **3.6 — Zone content & decoration pass.** (Was the original 3.1.) Decorate + populate the 3.0.2 scaffolds across all zones: hand-placed Synty dressing, mobs/spawns, named NPCs, points of interest — using the 3.0.2 tooling.
 
 ## M4 — Netcode: Server-Authoritative Movement
@@ -153,27 +159,60 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > player into another walks the pusher "into the distance" on observers' screens while their own screen shows
 > them blocked at the wall — and the authoritative (server) position is the wrong one, so targeting/range read
 > off a phantom position. This was the deliberate "easy path" taken early (chose predict-no-reconcile over a
-> proper authoritative model); combat refinement, real aggro perception (3.4), and any PvP all sit on
-> trustworthy positions, so the debt is paid here, before Gameplay Depth. **Needs its own devplan first.**
+> proper authoritative model); the combat-and-threat overhaul (5.1) and any PvP all sit on trustworthy
+> positions, so the debt is paid here, before Gameplay Depth. **Needs its own devplan first.**
 
-- [ ] **4.1 — Server-authoritative movement core.** Server simulates player movement from input as the single
-  source of truth (`NetworkTransform` → ServerToClient); retire the owner-NT-disable + the client-authoritative
-  `syncDirection: ClientToServer`. Move transform authority (incl. the 3.1.7 sitting yaw-freeze / auto-stand)
-  fully onto the server sim.
-- [ ] **4.2 — Client-side prediction.** The owner still predicts locally from input for responsive, lag-free
-  movement (no input→render round-trip while waiting on the server).
-- [ ] **4.3 — Reconciliation + smoothing.** Correct the owner's prediction to the authoritative server state
-  (replay unacknowledged inputs / smoothed correction) so a mispredicted collision snaps back cleanly instead
-  of diverging permanently. Mirror's stock `NetworkTransform` has no reconciliation — this is the real work.
-- [ ] **4.4 — Integration + regression.** Player-vs-player collision agrees on every screen; zone transitions
-  (`ServerWarpTo` / `NetworkTransform.ServerTeleport`), respawn, `/unstuck`, rotation sync, and the 3.1.7
-  sitting states all ride the new model. MPPM multi-client + host verification.
+- [x] **4.1 — Server-authoritative movement core.** ✅ Done — verified in-editor 2026-07-13 (owner movement is
+  noticeably laggier now, exactly the accepted RTT-bound tradeoff called out below; resolved by 4.2). Devplan
+  `docs/devplans/4.1-server-authoritative-movement-core.md` (SA1–SA9, all as
+  recommended). Server simulates player movement from input as the single source of truth (`NetworkTransform`
+  → ServerToClient); retires the owner-NT-disable + the client-authoritative `syncDirection: ClientToServer`.
+  **Key finding: a config flip alone wasn't enough** — Mirror's stock `NetworkTransformReliable.UpdateClient()`
+  unconditionally skips applying incoming snapshots for the connection that owns the object (regardless of
+  `syncDirection`), so the owner's own screen needed a new subclassed `ServerAuthoritativeTransform`
+  (mirroring the `ZoneInterestManagement` precedent of subclassing rather than editing the vendored Mirror
+  package) to actually render server-driven position like every other observer. `NetworkedPlayer.Update()`
+  now runs `ApplyMovement()` from a single unconditional `if (isServer)` check (host + every remote-owned
+  copy, replacing the old two-path branch); rotation/sitting/zone-teleports needed no change (already
+  server-driven or purely cosmetic). Accepted, temporary cost: the owner's own movement will feel laggier
+  (RTT-bound) until 4.2 (prediction) + 4.3 (reconciliation) land — by design, not a regression to chase here.
+- [x] **4.2 — Client-side prediction + reconciliation.** ✅ Done — verified in-editor 2026-07-13 (solo
+  responsiveness confirmed, no lagginess; push-collision test confirmed no permanent divergence; full PR10
+  regression pass — rotation/sitting/zone-teleport/`/unstuck`/respawn/jump — all clean). Devplan
+  `docs/devplans/4.2-client-prediction-reconciliation.md`. **Absorbs 4.3 and 4.4** — prediction without
+  reconciliation is meaningless (it's the bug 4.1 fixed), so they're designed as one wire format/protocol, not
+  planned separately; 4.4's regression scope is this devplan's test plan, not independent design content (same
+  posture as 2.8→3.2 and 3.4→5.1: closed as absorbed, not renumbered). The owner predicts locally again from
+  input (instant feedback, no round-trip wait) via a new `PlayerInputCmd` struct (`move,yaw,sprint,jump,seq,dt`
+  — **revised from a scalar-param recommendation to a struct** once the user confirmed swimming + levitation
+  are near-term, not hypothetical: both will need a vertical-control input + likely a movement-mode flag, so
+  reshaping the input model as a struct now avoids doing it twice), with a server ack (`RpcAckMovement`)
+  driving replay-based reconciliation on mismatch. **Also reverts 4.1's `ServerAuthoritativeTransform`
+  stopgap** — once the owner reconciles its own transform again, Mirror's stock owner-skip behavior in
+  `NetworkTransformReliable` is correct again, so the subclass and its Player prefab wiring go back to plain
+  `NetworkTransformReliable`. **Hardening found during verification (also fixed + verified):** the
+  push-collision test showed the SERVER's own CharacterController-vs-CharacterController contact resolution
+  losing to the predicting client's (opposite of the confidence you'd want from the authoritative side) —
+  root-caused to `isGrounded` flickering on contact nudging vertical velocity just enough to let one capsule
+  ride over another's rounded cap, worsened by the client/server not ticking in lockstep. Rather than the
+  full fixed-timestep rework (flagged as deferred/bigger-than-4.2 in the devplan's backlog), added a scoped
+  `NetworkedPlayer.ResolvePlayerOverlap()` — an explicit `Physics.ComputePenetration` de-penetration check
+  run every `SimulateMovement` step (prediction/server/replay alike), confirmed fixed on retest.
+- [x] **4.3 — Reconciliation + smoothing.** 🔀 Merged into **4.2** 2026-07-12 — planned together with
+  prediction rather than as a separate item; see 4.2's devplan.
+- [x] **4.4 — Integration + regression.** 🔀 Merged into **4.2** 2026-07-12 — no independent design content
+  (a regression/test pass), folded into 4.2's devplan as its test plan.
 
 ## M5 — Gameplay Depth
 
 > Goal: make the loop genuinely fun. *(Built on the M4 authoritative-movement foundation.)*
 
-- [ ] **5.1 — Combat refinement.** *(User-flagged as the next depth effort after the 3.1 onboarding vertical.)* Tighten the combat model and flesh out the 3.1 classes beyond their single signature ability — hit/avoidance/damage feel, ability kits, cooldown/resource tuning.
+- [ ] **5.1 — Combat & threat overhaul.** *(User-flagged as the next depth effort after the 3.1 onboarding vertical; absorbs retired 3.4 — see the M3 sequencing note.)* Replaces the placeholder combat rolls **and** the placeholder threat model in one pass, since the latter is currently just a 1:1 mirror of the former's damage output:
+  - **Combat rolls**, per the user's externally-designed 4-mechanism system: (1) **hit roll**, (2) **avoidance** (Dodge/Parry/Block — currently deferred, "no skill system yet"), (3) **damage calculation**, (4) **armor/absorption mitigation**. Reworks/replaces the existing `PlayerAutoAttack` bell-curve hit-tier formula.
+  - **Real threat/aggro** (was 3.4): faction-driven perception (extends the existing `EnemyAI.AddThreat`/threat-list API), social aggro (same-faction NPCs join a fight within radius), and threat decay — generated off the *real* per-hit damage numbers from the roll rework above, not the current 1:1 placeholder.
+  - Also flesh out the 3.1 classes beyond their single signature ability: ability kits, cooldown/resource tuning.
+  - **Feeds the skill system (2.12):** the avoidance/crit-tier rolls above are exactly what 2.12's runtime half (rise-on-use, Dodge/Parry/Block skill gating) needs to hook — 2.12's design devplan should follow this item, not precede it.
+  - Needs its own devplan first, grounded in the user's 4-mechanism design doc plus the existing `PlayerAutoAttack`/`EnemyAI`/`NpcFaction` code.
 - [ ] **5.2 — Level 1→2 polish round.** A focused vertical polishing the earliest gameplay progression (level 1 → 2) end to end: abilities, combat feel, feedback, pacing — the payoff of the combat refinement on the real starting experience.
 - [ ] **5.3 — Player grouping.** Parties (≤6), shared XP, group health frames, friendly-fire rules.
 - [ ] **5.4 — Group threat/aggro tuning.**

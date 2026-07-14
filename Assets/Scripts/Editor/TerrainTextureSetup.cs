@@ -62,10 +62,13 @@ public static class TerrainTextureSetup
                   "tiling values + re-run this if the ground reads too busy or too stretched.");
     }
 
-    /// <summary>Assign the Synty layers + default Terrain-Lit material + regenerate the auto splat. Returns false if the layers are missing.</summary>
-    public static bool ApplyToTerrain(Terrain terrain)
+    /// <summary>Assign the Synty layers + default Terrain-Lit material + regenerate the auto splat. Returns
+    /// false if the layers are missing. <paramref name="assetDir"/> defaults to the Creslin's Field path so
+    /// existing callers are unaffected — a second zone (3.5, Thornwood) passes its own directory so the two
+    /// zones don't share (and fight over) the same terrain-layer/material assets.</summary>
+    public static bool ApplyToTerrain(Terrain terrain, string assetDir = AssetDir)
     {
-        var layers = LoadLayers();
+        var layers = LoadLayers(assetDir);
         if (layers == null)
         {
             Debug.LogError("[TerrainTex] Missing Nature Biomes terrain layers under " + PnbTerrain +
@@ -75,7 +78,7 @@ public static class TerrainTextureSetup
 
         var td = terrain.terrainData;
         td.terrainLayers = layers;
-        terrain.materialTemplate = DefaultTerrainLitMaterial();
+        terrain.materialTemplate = DefaultTerrainLitMaterial(assetDir);
         terrain.drawInstanced = true; // standard terrain rendering (custom faceted shader path is retired)
         RegenerateSplat(terrain);
         return true;
@@ -120,13 +123,13 @@ public static class TerrainTextureSetup
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────────────────────────
-    static TerrainLayer[] LoadLayers()
+    static TerrainLayer[] LoadLayers(string assetDir)
     {
-        Directory.CreateDirectory(AssetDir);
+        Directory.CreateDirectory(assetDir);
         var layers = new TerrainLayer[LayerSpecs.Length];
         for (int i = 0; i < LayerSpecs.Length; i++)
         {
-            layers[i] = LoadLocalLayer(LayerSpecs[i].file, LayerSpecs[i].tiling);
+            layers[i] = LoadLocalLayer(assetDir, LayerSpecs[i].file, LayerSpecs[i].tiling);
             if (layers[i] == null)
             {
                 Debug.LogError("[TerrainTex] Missing terrain layer: " + LayerSpecs[i].file);
@@ -138,9 +141,9 @@ public static class TerrainTextureSetup
 
     // Get-or-create a scene-local copy of a Synty terrain layer at our tiling — keeps the vendored pack asset
     // pristine and lets us tune tileSize without editing it. Re-runnable: refreshes the tiling each Apply.
-    static TerrainLayer LoadLocalLayer(string file, float tiling)
+    static TerrainLayer LoadLocalLayer(string assetDir, string file, float tiling)
     {
-        string dstPath = AssetDir + "/" + file + ".terrainlayer";
+        string dstPath = assetDir + "/" + file + ".terrainlayer";
         var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(dstPath);
         if (layer == null)
         {
@@ -157,7 +160,7 @@ public static class TerrainTextureSetup
         return layer;
     }
 
-    static Material DefaultTerrainLitMaterial()
+    static Material DefaultTerrainLitMaterial(string assetDir)
     {
         var sh = Shader.Find("Universal Render Pipeline/Terrain/Lit");
         if (sh == null)
@@ -165,8 +168,8 @@ public static class TerrainTextureSetup
             Debug.LogWarning("[TerrainTex] URP Terrain/Lit shader not found — leaving the terrain's default material.");
             return null;
         }
-        Directory.CreateDirectory(AssetDir);
-        string path = AssetDir + "/SyntyTerrainLit.mat";
+        Directory.CreateDirectory(assetDir);
+        string path = assetDir + "/SyntyTerrainLit.mat";
         var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (mat == null)
         {

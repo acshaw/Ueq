@@ -76,7 +76,12 @@
       "Bash(cat Assets/Scripts/Combat/SpawnTable.cs)",
       "Bash(cat Assets/Scripts/Combat/SpawnTimer.cs)",
       "Bash(curl -s http://localhost:5144/api/items)",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('items:',len\\(d\\)\\); print\\('has lore field:', 'lore' in d[0] if d else 'no items'\\); print\\('sample keys:', list\\(d[0].keys\\(\\)\\) if d else []\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('items:',len\\(d\\)\\); print\\('has lore field:', 'lore' in d[0] if d else 'no items'\\); print\\('sample keys:', list\\(d[0].keys\\(\\)\\) if d else []\\)\")",
+      "Bash(grep -i \"3.3\\\\|3\\\\\\\\.3\")",
+      "Bash(grep \"\\\\.prefab$\")",
+      "Bash(python3 -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(16\\).toString\\('hex'\\)\\)\")",
+      "Bash(powershell -Command \"[guid]::NewGuid\\(\\).ToString\\('N'\\)\")"
     ]
   },
   "hooks": {
