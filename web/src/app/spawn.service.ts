@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's SpawnTableDto (M2.7.2) — a weighted table with an inlined respawn timer. */
 export interface SpawnEntry { mobId: string; weight: number; groupSize: number; }
@@ -15,6 +16,15 @@ export interface SpawnTable {
 export function emptySpawnTable(): SpawnTable {
   return { spawnTableId: '', displayName: '', timerBaseSeconds: 300, timerVariance: 0, entries: [] };
 }
+
+/** Grid columns for the Spawn Table index (2.1.1 AF5). */
+export const SPAWN_GRID_COLUMNS: GridColumn<SpawnTable>[] = [
+  { header: 'ID', accessor: t => t.spawnTableId },
+  { header: 'Name', accessor: t => t.displayName },
+  { header: 'Entries', accessor: t => t.entries.length },
+  { header: 'Timer (s)', accessor: t => t.timerBaseSeconds },
+];
+export const SPAWN_SEARCH_FIELDS: (keyof SpawnTable)[] = ['spawnTableId', 'displayName'];
 
 @Injectable({ providedIn: 'root' })
 export class SpawnService {

@@ -1,108 +1,82 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Vendor, VendorService, emptyVendor } from './vendor.service';
+import { Vendor, VendorService, emptyVendor, VENDOR_GRID_COLUMNS, VENDOR_SEARCH_FIELDS } from './vendor.service';
 import { Item, ItemService } from './item.service';
+import { ContentGrid } from './shared/content-grid';
+import { CrudModal } from './shared/crud-modal';
+import { ADMIN_STYLES } from './shared/admin-styles';
 
 /**
- * The web Vendor Editor (M2.3). A vendor is a display name + an ordered list of item ids it sells
- * (prices come from the items themselves). Item rows are dropdowns populated from the items endpoint,
- * so you can only stock items that exist in the DB (which is also what the game can resolve).
+ * The web Vendor Editor (M2.3, retrofitted onto the 2.1.1 admin framework). A vendor is a display
+ * name + an ordered list of item ids it sells (prices come from the items themselves). Item rows are
+ * dropdowns populated from the items endpoint, so you can only stock items that exist in the DB.
  */
 @Component({
   selector: 'app-vendor-editor',
-  imports: [FormsModule],
+  imports: [FormsModule, ContentGrid, CrudModal],
   template: `
-    <div class="wrap">
-      <aside>
-        <div class="head">
-          <h2>Vendors</h2>
-          <button (click)="newVendor()">+ New</button>
-        </div>
-        @if (error()) { <p class="error">{{ error() }}</p> }
-        <ul>
-          @for (v of vendors(); track v.vendorId) {
-            <li [class.active]="model?.vendorId === v.vendorId && !isNew" (click)="select(v)">
-              <span class="id">{{ v.vendorId }}</span>
-              <span class="muted">{{ v.displayName }} · {{ v.itemIds.length }} item(s)</span>
-            </li>
-          } @empty {
-            <li class="muted">No vendors — click “New”.</li>
-          }
-        </ul>
-      </aside>
-
-      <main>
-        @if (model) {
-          <h1>{{ isNew ? 'New vendor' : model.vendorId }}</h1>
-
-          <section>
-            <h3>Identity</h3>
-            <label>vendor_id <input [(ngModel)]="model.vendorId" name="vendorId" [disabled]="!isNew" placeholder="general_store" /></label>
-            <label>Display name <input [(ngModel)]="model.displayName" name="displayName" placeholder="General Store" /></label>
-          </section>
-
-          <section>
-            <div class="head">
-              <h3>Wares (sold to players)</h3>
-              <button (click)="addRow()" [disabled]="items().length === 0">+ Add item</button>
-            </div>
-            @if (items().length === 0) {
-              <p class="muted">No items exist yet — create some in the Items editor first.</p>
-            }
-            @for (id of model.itemIds; track $index; let i = $index) {
-              <div class="row">
-                <span class="rownum">{{ i + 1 }}</span>
-                <select [ngModel]="model.itemIds[i]" (ngModelChange)="setRow(i, $event)" [name]="'row' + i">
-                  @for (it of items(); track it.itemId) {
-                    <option [value]="it.itemId">{{ it.itemId }} — {{ it.displayName }} ({{ it.buyPrice }}c)</option>
-                  }
-                </select>
-                <button class="small" (click)="moveRow(i, -1)" [disabled]="i === 0">↑</button>
-                <button class="small" (click)="moveRow(i, 1)" [disabled]="i === model.itemIds.length - 1">↓</button>
-                <button class="small danger" (click)="removeRow(i)">✕</button>
-              </div>
-            } @empty {
-              <p class="muted">No wares yet.</p>
-            }
-          </section>
-
-          <div class="actions">
-            <button class="primary" (click)="save()" [disabled]="isNew && !model.vendorId.trim()">Save</button>
-            @if (!isNew) { <button class="danger" (click)="remove()">Delete</button> }
-          </div>
-        } @else {
-          <p class="muted">Select a vendor or create a new one.</p>
-        }
-      </main>
+    <div class="toolbar">
+      <h1>Vendors</h1>
+      <button class="primary" (click)="newVendor()">+ New</button>
     </div>
+    @if (error() && !modalOpen) { <p class="error">{{ error() }}</p> }
+
+    <app-content-grid
+      [rows]="vendors()"
+      [columns]="columns"
+      [searchFields]="searchFields"
+      (rowClick)="select($event)"
+    />
+
+    <app-crud-modal
+      [open]="modalOpen"
+      [title]="isNew ? 'New vendor' : (model?.vendorId ?? '')"
+      [isNew]="isNew"
+      [error]="modalOpen ? error() : null"
+      [saveDisabled]="isNew && !model?.vendorId?.trim()"
+      (save)="save()"
+      (delete)="remove()"
+      (close)="closeModal()"
+    >
+      @if (model) {
+        <section>
+          <h3>Identity</h3>
+          <label>vendor_id <input [(ngModel)]="model.vendorId" name="vendorId" [disabled]="!isNew" placeholder="general_store" /></label>
+          <label>Display name <input [(ngModel)]="model.displayName" name="displayName" placeholder="General Store" /></label>
+        </section>
+
+        <section>
+          <div class="rowhead">
+            <h3>Wares (sold to players)</h3>
+            <button (click)="addRow()" [disabled]="items().length === 0">+ Add item</button>
+          </div>
+          @if (items().length === 0) {
+            <p class="muted">No items exist yet — create some in the Items editor first.</p>
+          }
+          @for (id of model.itemIds; track $index; let i = $index) {
+            <div class="row">
+              <span class="rownum">{{ i + 1 }}</span>
+              <select [ngModel]="model.itemIds[i]" (ngModelChange)="setRow(i, $event)" [name]="'row' + i">
+                @for (it of items(); track it.itemId) {
+                  <option [value]="it.itemId">{{ it.itemId }} — {{ it.displayName }} ({{ it.buyPrice }}c)</option>
+                }
+              </select>
+              <button class="small" (click)="moveRow(i, -1)" [disabled]="i === 0">↑</button>
+              <button class="small" (click)="moveRow(i, 1)" [disabled]="i === model.itemIds.length - 1">↓</button>
+              <button class="small danger" (click)="removeRow(i)">✕</button>
+            </div>
+          } @empty {
+            <p class="muted">No wares yet.</p>
+          }
+        </section>
+      }
+    </app-crud-modal>
   `,
-  styles: [`
-    .wrap { display: flex; gap: 1rem; }
-    aside { width: 240px; flex-shrink: 0; border-right: 1px solid #eee; padding-right: 1rem; }
-    .head { display: flex; justify-content: space-between; align-items: center; }
-    aside ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-    aside li { padding: 0.4rem 0.5rem; cursor: pointer; border-radius: 4px; display: flex; flex-direction: column; }
-    aside li:hover { background: #f4f4f4; }
-    aside li.active { background: #e8f0fe; }
-    .id { font-weight: 600; font-size: 0.9rem; }
-    main { flex: 1; }
-    h1 { font-size: 1.2rem; }
-    section { border: 1px solid #eee; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
-    section h3 { margin: 0; font-size: 0.95rem; color: #444; }
-    label { display: block; margin: 0.35rem 0; font-size: 0.85rem; color: #555; }
-    input, select { padding: 0.35rem; box-sizing: border-box; }
-    label input { width: 100%; }
+  styles: [ADMIN_STYLES, `
     .row { display: flex; align-items: center; gap: 0.4rem; margin: 0.35rem 0; }
     .row select { flex: 1; }
     .rownum { width: 1.2rem; color: #999; font-size: 0.8rem; }
-    .actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    button { cursor: pointer; padding: 0.4rem 0.8rem; }
-    button.small { padding: 0.2rem 0.5rem; }
-    .primary { background: #1a73e8; color: #fff; border: none; border-radius: 4px; }
-    .danger { background: #fff; color: #c00; border: 1px solid #c00; border-radius: 4px; }
-    .muted { color: #999; }
-    .error { color: #c00; font-size: 0.85rem; }
-  `]
+  `],
 })
 export class VendorEditor implements OnInit {
   private readonly api = inject(VendorService);
@@ -113,6 +87,10 @@ export class VendorEditor implements OnInit {
   readonly error = signal<string | null>(null);
   model: Vendor | null = null;
   isNew = false;
+  modalOpen = false;
+
+  readonly columns = VENDOR_GRID_COLUMNS;
+  readonly searchFields = VENDOR_SEARCH_FIELDS;
 
   ngOnInit(): void {
     this.reload();
@@ -126,9 +104,11 @@ export class VendorEditor implements OnInit {
     });
   }
 
-  newVendor(): void { this.model = emptyVendor(); this.isNew = true; }
+  newVendor(): void { this.model = emptyVendor(); this.isNew = true; this.modalOpen = true; }
 
-  select(v: Vendor): void { this.model = { ...v, itemIds: [...v.itemIds] }; this.isNew = false; }
+  select(v: Vendor): void { this.model = { ...v, itemIds: [...v.itemIds] }; this.isNew = false; this.modalOpen = true; }
+
+  closeModal(): void { this.modalOpen = false; this.model = null; this.error.set(null); }
 
   addRow(): void {
     if (!this.model) return;
@@ -159,7 +139,7 @@ export class VendorEditor implements OnInit {
     if (!this.model) return;
     const call = this.isNew ? this.api.create(this.model) : this.api.update(this.model);
     call.subscribe({
-      next: saved => { this.isNew = false; this.model = saved; this.reload(); },
+      next: saved => { this.isNew = false; this.model = saved; this.modalOpen = false; this.reload(); },
       error: err => this.error.set(this.describe(err)),
     });
   }
@@ -167,7 +147,7 @@ export class VendorEditor implements OnInit {
   remove(): void {
     if (!this.model || this.isNew) return;
     this.api.delete(this.model.vendorId).subscribe({
-      next: () => { this.model = null; this.reload(); },
+      next: () => { this.model = null; this.modalOpen = false; this.reload(); },
       error: err => this.error.set(this.describe(err)),
     });
   }

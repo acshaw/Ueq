@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the `items` row / .NET API `Item` (M2.2). camelCase to match the API's JSON. */
 export interface Item {
@@ -44,6 +45,18 @@ export function emptyItem(): Item {
     buyPrice: 0, sellPrice: 0, lore: false, iconAddress: null,
   };
 }
+
+/** Grid columns for the Item index (2.1.1 AF5 — colocated with the type's own service). */
+export const ITEM_GRID_COLUMNS: GridColumn<Item>[] = [
+  { header: 'Icon', accessor: i => i.iconAddress ?? '', sortable: false, kind: 'icon' },
+  { header: 'ID', accessor: i => i.itemId },
+  { header: 'Name', accessor: i => i.displayName },
+  { header: 'Equippable', accessor: i => (i.isEquippable ? 'Yes' : 'No') },
+  { header: 'Lore', accessor: i => (i.lore ? 'Yes' : 'No') },
+  { header: 'Buy', accessor: i => i.buyPrice },
+  { header: 'Sell', accessor: i => i.sellPrice },
+];
+export const ITEM_SEARCH_FIELDS: (keyof Item)[] = ['itemId', 'displayName'];
 
 /** HTTP client for the items endpoints. The reference shape later content services copy. */
 @Injectable({ providedIn: 'root' })

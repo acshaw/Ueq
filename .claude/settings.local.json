@@ -84,7 +84,27 @@
       "Bash(powershell -Command \"[guid]::NewGuid\\(\\).ToString\\('N'\\)\")",
       "Bash(grep -n \"m_Name: Village$\\\\|m_Name: SM_Bld_Well_01\\\\|m_Name: SM_Bld_Village_01\" Assets/Scenes/SampleScene.unity)",
       "Bash(grep -n \"m_Name: SM_Bld_Well_01\\\\|m_Name: SM_Bld_Village_01\\(Clone\\)\\\\|m_Name: Village$\" Assets/Scenes/SampleScene.unity)",
-      "Bash(grep -v \"^C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\acsha\\\\\\\\\\\\\\\\source\\\\\\\\\\\\\\\\Ueq/Library\")"
+      "Bash(grep -v \"^C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\acsha\\\\\\\\\\\\\\\\source\\\\\\\\\\\\\\\\Ueq/Library\")",
+      "Skill(run)",
+      "Bash(chromium-cli --help)",
+      "Bash(command -v npx)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/Microsoft/Edge/Application/**)",
+      "Read(//c/Users/acsha/.cache/**)",
+      "Bash(npm ls *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4200 --max-time 3)",
+      "Bash(npm install *)",
+      "Bash(node \"C:/Users/acsha/AppData/Local/Temp/claude/C--Users-acsha-source-Ueq/983767ec-42b0-455d-a27e-6eaf27646074/scratchpad/verify-item-editor.mjs\")",
+      "Bash(node verify-item-crud.mjs)",
+      "Bash(node verify-all-editors.mjs)",
+      "Bash(node debug-spawns.mjs)",
+      "Bash(node debug-issues.mjs)",
+      "Bash(curl -s http://localhost:5144/api/mobs)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\('mobs:', a.map\\(m=>m.mobId\\).join\\(', '\\)\\)}\\)\")",
+      "Bash(curl -s http://localhost:5144/api/conversations)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\('conversations:', a.map\\(m=>m.setId\\).join\\(', '\\)\\)}\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\('items:', a.map\\(m=>m.itemId\\).join\\(', '\\)\\)}\\)\")",
+      "Bash(node -e ' *)"
     ]
   },
   "hooks": {

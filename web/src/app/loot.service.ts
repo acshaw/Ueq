@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's LootTableDto (M2.7) — a loot table with its three weighted child lists. */
 export interface LootItem { itemId: string; weight: number; }
@@ -18,6 +19,16 @@ export interface LootTable {
 export function emptyLootTable(): LootTable {
   return { lootTableId: '', displayName: '', items: [], dropCounts: [], coinTiers: [] };
 }
+
+/** Grid columns for the Loot Table index (2.1.1 AF5). */
+export const LOOT_GRID_COLUMNS: GridColumn<LootTable>[] = [
+  { header: 'ID', accessor: t => t.lootTableId },
+  { header: 'Name', accessor: t => t.displayName },
+  { header: 'Items', accessor: t => t.items.length },
+  { header: 'Drop counts', accessor: t => t.dropCounts.length },
+  { header: 'Coin tiers', accessor: t => t.coinTiers.length },
+];
+export const LOOT_SEARCH_FIELDS: (keyof LootTable)[] = ['lootTableId', 'displayName'];
 
 @Injectable({ providedIn: 'root' })
 export class LootService {

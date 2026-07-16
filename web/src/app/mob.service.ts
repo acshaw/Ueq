@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { GridColumn } from './shared/content-grid';
 
 /** One faction standing change applied to the killer when this mob dies (M2.7.1). */
 export interface MobFactionHit { factionId: string; delta: number; }
@@ -73,6 +74,16 @@ export function emptyMob(): Mob {
     attackIsParryable: true, avoidanceAgility: 20, avoidanceDexterity: 20,
   };
 }
+
+/** Grid columns for the Mob index (2.1.1 AF5). */
+export const MOB_GRID_COLUMNS: GridColumn<Mob>[] = [
+  { header: 'ID', accessor: m => m.mobId },
+  { header: 'Name', accessor: m => m.displayName },
+  { header: 'Level', accessor: m => m.mobLevel },
+  { header: 'Faction', accessor: m => m.factionId ?? '' },
+  { header: 'XP', accessor: m => m.xpReward },
+];
+export const MOB_SEARCH_FIELDS: (keyof Mob)[] = ['mobId', 'displayName'];
 
 @Injectable({ providedIn: 'root' })
 export class MobService {

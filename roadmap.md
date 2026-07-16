@@ -101,6 +101,24 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [x] **2.7.2 — Spawn tables + timers.** ✅ Done 2026-06-29 ([devplan](docs/devplans/2.7.2-spawn-tables.md)). Migrated `SpawnTable` (weighted mob entries + `groupSize`) and `SpawnTimer` (base + variance) to DB + a web **Spawn Editor**; `SpawnPoint` references a `spawn_table_id` (DB) so it keeps **weighted / timed / grouped** spawning instead of being forced onto single-mob `mobId`, with **group spawning** (DS3) via a live-set. Retired the `SpawnTable`/`SpawnTimer` SO path to a fallback. Verified in-editor: rat camp pointed at the DB "Mob Spawn Table" spawns the DB `Giant Rat` (closing the spawn-path gap that blocked 2.7/2.7.1 in-game verification).
 - [x] **2.7.1 — Mob faction hits on kill.** ✅ Done 2026-06-29 ([devplan](docs/devplans/2.7.1-mob-faction-hits.md)). *(Deferred from the 2.6/2.7 discussion.)* Per-mob `(faction_id, delta)` hit list (a `mob_faction_hits` child of `mobs`) authored in the Mob Editor; `MobKillReward` applies them via `PlayerFactionScores.ModifyScore` on death + chat feedback. `MobRepository` restructured flat→header-children. Verified in-editor: killing a Giant Rat moves Vermin −10 / CityGuards +2, persists across relog on the re-keyed `faction_id` column — which **also closes 2.6's deferred aggro/gate/round-trip verification** (this is the first in-game lever to change a standing).
 - [x] **2.8 — Quests (new content type).** ✅ Closed 2026-07-12 — **superseded by 3.2, not built as originally scoped.** Original plan was a standalone quest data model + Quest Editor (objectives, trigger keywords, reward bundle) that 3.2 would consume. **3.2's Q1 decision found the design has no objective-tracking entity** (emergent/inferred quests, no quest log), so a keyword-attached reward transaction *is* the quest — 3.2 folded the reward bundle straight into the Conversation Editor and shipped self-contained, leaving nothing left for a separate 2.8 to deliver. Reopen only if quests outgrow single-keyword transactions (multi-step objectives, a quest log) — see the 3.3 remnant note.
+- [x] **2.1.1 — Generic admin CRUD framework.** ✅ Done 2026-07-16 — all 7 editors (Item, Mob, Vendor,
+  Loot, Faction, Conversation, Spawn) retrofitted onto the shared `ContentGrid`/`CrudModal` and fully
+  browser-verified against the live API/DB (real create/edit/delete round-trips, including Mob's
+  6-section form and Conversation's nested quest-transaction sub-panel; zero console errors)
+  ([devplan](docs/devplans/2.1.1-admin-crud-framework.md), AF1–AF10 all as recommended, AF2 decided with
+  the user: **full-width grid + modal form**, no new routing). XP stays a standalone page and Faction's
+  shared-thresholds ladder got its own small modal (AF9/AF10 — neither is a per-row entity). **2.9/2.10/
+  2.11 are now unblocked to build directly on the framework.** *(User-flagged as needed to make the project
+  presentable; sequenced here, before 2.9–2.11, on the user's call.)* Eight bespoke Angular editors exist
+  today (Item / Vendor / Conversation / Faction / Loot / Mob / Spawn / XP), each hand-built to the same
+  left-index-list + right-detail-form shape, no search/filter/sort. Replace with a reusable generic
+  `ContentGrid` (full-width, searchable/sortable index table) + shared `CrudModal` form shell, and retrofit
+  seven of the eight onto it (**XP stays a standalone page — it's a single shared table with no id-keyed
+  rows to grid, not an oversight**) **before** building 2.9 (Abilities), 2.10 (Races & Classes), or 2.11
+  (Seed/export), so those (and anything after) get the framework for free instead of becoming three more
+  one-off components. Also the natural home for an icon-thumbnail column — Item already has an unused
+  `iconAddress` field from 2.2, so this doesn't even wait on 5.9.1 (that's about in-game icon display, a
+  separate concern).
 - [ ] **2.9 — Abilities, tags & effects.** `ability_definitions` + `ability_tags` + cooldown links + the ordered effect list (effect-composition model preserved; effects referenced by type + params). Web **Ability Editor** + **Ability Tag Editor**. Uses the 2.1 convention for anim-trigger + prefab bindings.
 - [ ] **2.10 — Races & classes.** Stat tables, XP modifiers, HP/mana formula fields, starting-ability lists → DB + web **Race & Class Editor**. Feeds `SetRaceClass` and character creation (1.5) once migrated.
 - [ ] **2.11 — Seed / export / content versioning.** Reproducible DB seed, content export/import (sharing content between dev DBs / promoting to AWS), and a content-change audit trail as the library grows.
@@ -268,6 +286,45 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [ ] **5.6 — Goals / win-lose conditions.**
 - [ ] **5.7 — Balance pass** against real play data.
 - [ ] **5.8 — Character appearance & visible equipment (modular / Sidekick).** *(Future — logged 2026-07-04.)* Target ~**classic-EQ level** of customization: selectable **faces/hair** at character creation, **visible weapons** in hand, and **visible armor** that changes with equipped gear (tier/look swaps, not deep morphs). **Foundation = Synty's Sidekick modular character system** (part-based, one shared skeleton, runtime part-swap) — the pre-made packs used for the 3.1 onboarding vertical (POLYGON Fantasy Characters / PolygonAdventure / Fantasy Rivals) are **single-mesh** and can't swap armor pieces or faces, so players migrate to Sidekick here (those pre-made models stay as **NPCs/mobs**). User already owns **Fantasy Knights – Sidekick**; would expand Sidekick part libraries to cover the races (Human/Dwarf/…) + caster looks (Wizard/Cleric robes). **Weapon-swap is the cheap first slice** (attach a weapon mesh to the hand socket — works on any Synty rig, could land earlier as a small standalone win); armor-piece + face swapping is the modular part. Depends on: 3.1 onboarding done + the equipment system (M2, done) to drive which armor shows.
+
+- [ ] **5.9 — Presentation & economy polish vertical.** *(Added 2026-07-16, user-flagged as "what's needed
+  to make this presentable.")* A themed vertical (mirrors 3.1's onboarding-vertical pattern) covering
+  inventory/NPC-interaction polish plus two new economy systems. Unlike 5.2–5.8's gameplay-depth focus, this
+  is about the game *reading* as finished to someone watching it — worth considering running it ahead of
+  5.2–5.7 if "presentable soon" matters more than deepening combat further right now, though that's a
+  priority call, not a technical dependency. Each sub-item gets its own devplan.
+  - [ ] **5.9.1 — Item icons.** Foundation for the rest of this vertical — `ItemDefinition` has no icon field
+    today (name/description text only, everywhere). Add an icon reference (string id → sprite, following
+    2.1's Resources/Addressables asset-binding convention) + client display across inventory, loot, vendor,
+    and equipment UIs. Do this first; 5.9.2/5.9.3 both read much better with it, though neither is hard-
+    blocked without it.
+  - [ ] **5.9.2 — Inventory item inspection + loot quick-take.** Right-click on an inventory or
+    equipped-item slot opens a description window (name/stats/flags) instead of equipping —
+    **equip moves to a new trigger** (double-click, or a button inside the description window), since RMB is
+    currently wired straight to Equip (`InventorySlotUI`/`InventoryUI.OnSlotRightClicked`). Right-click on a
+    **loot window** slot takes that item directly into inventory (a shortcut alongside the existing per-slot
+    Take button / Take All). Closes the long-standing "Inventory UI polish" backlog line.
+  - [ ] **5.9.3 — Bags / backpacks (inventory capacity).** `PlayerInventory` is a flat, fixed
+    `SlotCount = 8` today — no container concept exists. Add a container item type (equips into a new Bag
+    slot or slots) that grants additional inventory slots while worn; `PlayerInventory` needs a real rework
+    from a fixed array to a capacity model driven by what's equipped. The biggest lift in this vertical —
+    needs its own careful devplan (persistence shape, what happens to overflow items if a bag is unequipped
+    while full, etc.).
+  - [ ] **5.9.4 — Weapon grip alignment.** Quick offset/rotation tuning pass on the existing per-class
+    cosmetic weapon prop (Warrior sword / Wizard staff / Cleric sceptre, attached to the right-hand bone
+    since 3.1.6) so it sits correctly in-hand. Scoped narrow on purpose — the deeper "weapon reflects
+    whatever's actually equipped" version is 5.8's own "cheap first slice," left there rather than
+    duplicated here.
+  - [ ] **5.9.5 — Right-click to open a vendor's shop.** Today a vendor's shop only opens via the
+    conversation system (saying the "wares" keyword in chat — `VendorApplicator.OnConversationKeyword`) —
+    add a direct right-click-to-open path (mirrors the existing RMB-on-corpse loot pattern) so shopping
+    doesn't require typing a keyword.
+  - [ ] **5.9.6 — Player-to-player trading.** No trade code exists today. A two-sided offer/accept window
+    with an atomic item+currency swap — the same shape of problem as grouping (5.3): a new social/economy
+    system, not an extension of anything already built.
+  - [ ] **5.9.7 — Banks.** No bank code exists today. Per-character persisted storage (own DB table + slots,
+    similar shape to inventory/equipment persistence) with an NPC interaction to open it (a conversation
+    keyword and/or the 5.9.5 right-click pattern, once that lands).
 
 ## M6 — Deploy & Scale  *(AWS)*
 

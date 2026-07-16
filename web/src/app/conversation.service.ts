@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { GridColumn } from './shared/content-grid';
 
 export interface ItemAmount { itemId: string; quantity: number; }
 export interface FactionHit { factionId: string; delta: number; }
@@ -42,6 +43,14 @@ export function emptyKeyword(): ConversationKeyword {
 export function emptySet(): ConversationSet {
   return { setId: '', displayName: '', keywords: [] };
 }
+
+/** Grid columns for the Conversation Set index (2.1.1 AF5). */
+export const CONVERSATION_GRID_COLUMNS: GridColumn<ConversationSet>[] = [
+  { header: 'ID', accessor: s => s.setId },
+  { header: 'Name', accessor: s => s.displayName },
+  { header: 'Keywords', accessor: s => s.keywords.length },
+];
+export const CONVERSATION_SEARCH_FIELDS: (keyof ConversationSet)[] = ['setId', 'displayName'];
 
 @Injectable({ providedIn: 'root' })
 export class ConversationService {

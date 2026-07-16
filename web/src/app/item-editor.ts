@@ -1,140 +1,112 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Item, ItemService, emptyItem } from './item.service';
+import { Item, ItemService, emptyItem, ITEM_GRID_COLUMNS, ITEM_SEARCH_FIELDS } from './item.service';
+import { ContentGrid } from './shared/content-grid';
+import { CrudModal } from './shared/crud-modal';
+import { ADMIN_STYLES } from './shared/admin-styles';
 
 /**
- * The web Item Editor (M2.2). Master/detail: pick an item on the left, edit its sections on the right.
- * The reference editor shape every later content editor copies.
+ * The web Item Editor (M2.2, retrofitted onto the 2.1.1 admin framework). A full-width searchable/
+ * sortable grid is the index; "+ New" or clicking a row opens the same form content as before,
+ * inside the shared CRUD modal.
  */
 @Component({
   selector: 'app-item-editor',
-  imports: [FormsModule],
+  imports: [FormsModule, ContentGrid, CrudModal],
   template: `
-    <div class="wrap">
-      <aside>
-        <div class="head">
-          <h2>Items</h2>
-          <button (click)="newItem()">+ New</button>
-        </div>
-        @if (error()) { <p class="error">{{ error() }}</p> }
-        <ul>
-          @for (it of items(); track it.itemId) {
-            <li [class.active]="model?.itemId === it.itemId && !isNew" (click)="select(it)">
-              <span class="id">{{ it.itemId }}</span>
-              <span class="muted">{{ it.displayName }}</span>
-            </li>
-          } @empty {
-            <li class="muted">No items — click “New”.</li>
-          }
-        </ul>
-      </aside>
+    <div class="toolbar">
+      <h1>Items</h1>
+      <button class="primary" (click)="newItem()">+ New</button>
+    </div>
+    @if (error() && !modalOpen) { <p class="error">{{ error() }}</p> }
 
-      <main>
-        @if (model) {
-          <h1>{{ isNew ? 'New item' : model.itemId }}</h1>
+    <app-content-grid
+      [rows]="items()"
+      [columns]="columns"
+      [searchFields]="searchFields"
+      (rowClick)="select($event)"
+    />
 
-          <section>
-            <h3>Identity</h3>
-            <label>item_id <input [(ngModel)]="model.itemId" name="itemId" [disabled]="!isNew" placeholder="iron_sword" /></label>
-            <label>Display name <input [(ngModel)]="model.displayName" name="displayName" /></label>
-            <label>Description <textarea [(ngModel)]="model.description" name="description" rows="2"></textarea></label>
-            <label>Max stack size <input type="number" [(ngModel)]="model.maxStackSize" name="maxStackSize" min="1" /></label>
-          </section>
+    <app-crud-modal
+      [open]="modalOpen"
+      [title]="isNew ? 'New item' : (model?.itemId ?? '')"
+      [isNew]="isNew"
+      [error]="modalOpen ? error() : null"
+      [saveDisabled]="isNew && !model?.itemId?.trim()"
+      (save)="save()"
+      (delete)="remove()"
+      (close)="closeModal()"
+    >
+      @if (model) {
+        <section>
+          <h3>Identity</h3>
+          <label>item_id <input [(ngModel)]="model.itemId" name="itemId" [disabled]="!isNew" placeholder="iron_sword" /></label>
+          <label>Display name <input [(ngModel)]="model.displayName" name="displayName" /></label>
+          <label>Description <textarea [(ngModel)]="model.description" name="description" rows="2"></textarea></label>
+          <label>Max stack size <input type="number" [(ngModel)]="model.maxStackSize" name="maxStackSize" min="1" /></label>
+        </section>
 
-          <section>
-            <h3>Equipment</h3>
-            <label class="check"><input type="checkbox" [(ngModel)]="model.isEquippable" name="isEquippable" /> Equippable</label>
-            <label>Equip slot
-              <select [(ngModel)]="model.equipSlot" name="equipSlot" [disabled]="!model.isEquippable">
-                @for (s of equipSlots; track s.v) { <option [ngValue]="s.v">{{ s.n }}</option> }
+        <section>
+          <h3>Equipment</h3>
+          <label class="check"><input type="checkbox" [(ngModel)]="model.isEquippable" name="isEquippable" /> Equippable</label>
+          <label>Equip slot
+            <select [(ngModel)]="model.equipSlot" name="equipSlot" [disabled]="!model.isEquippable">
+              @for (s of equipSlots; track s.v) { <option [ngValue]="s.v">{{ s.n }}</option> }
+            </select>
+          </label>
+        </section>
+
+        <section>
+          <h3>Stat Bonuses</h3>
+          <div class="grid">
+            <label>STR <input type="number" [(ngModel)]="model.bonusStr" name="bonusStr" /></label>
+            <label>STA <input type="number" [(ngModel)]="model.bonusSta" name="bonusSta" /></label>
+            <label>AGI <input type="number" [(ngModel)]="model.bonusAgi" name="bonusAgi" /></label>
+            <label>DEX <input type="number" [(ngModel)]="model.bonusDex" name="bonusDex" /></label>
+            <label>INT <input type="number" [(ngModel)]="model.bonusInt" name="bonusInt" /></label>
+            <label>WIS <input type="number" [(ngModel)]="model.bonusWis" name="bonusWis" /></label>
+            <label>CHA <input type="number" [(ngModel)]="model.bonusCha" name="bonusCha" /></label>
+          </div>
+        </section>
+
+        <section>
+          <h3>Weapon Stats</h3>
+          <div class="grid">
+            <label>Base damage <input type="number" [(ngModel)]="model.weaponBaseDamage" name="weaponBaseDamage" /></label>
+            <label>Delay (s) <input type="number" step="0.1" [(ngModel)]="model.weaponDelay" name="weaponDelay" /></label>
+            <label>Range <input type="number" step="0.1" [(ngModel)]="model.weaponRange" name="weaponRange" /></label>
+            <label>Category
+              <select [(ngModel)]="model.weaponCategory" name="weaponCategory">
+                @for (c of weaponCategories; track c.v) { <option [ngValue]="c.v">{{ c.n }}</option> }
               </select>
             </label>
-          </section>
-
-          <section>
-            <h3>Stat Bonuses</h3>
-            <div class="grid">
-              <label>STR <input type="number" [(ngModel)]="model.bonusStr" name="bonusStr" /></label>
-              <label>STA <input type="number" [(ngModel)]="model.bonusSta" name="bonusSta" /></label>
-              <label>AGI <input type="number" [(ngModel)]="model.bonusAgi" name="bonusAgi" /></label>
-              <label>DEX <input type="number" [(ngModel)]="model.bonusDex" name="bonusDex" /></label>
-              <label>INT <input type="number" [(ngModel)]="model.bonusInt" name="bonusInt" /></label>
-              <label>WIS <input type="number" [(ngModel)]="model.bonusWis" name="bonusWis" /></label>
-              <label>CHA <input type="number" [(ngModel)]="model.bonusCha" name="bonusCha" /></label>
-            </div>
-          </section>
-
-          <section>
-            <h3>Weapon Stats</h3>
-            <div class="grid">
-              <label>Base damage <input type="number" [(ngModel)]="model.weaponBaseDamage" name="weaponBaseDamage" /></label>
-              <label>Delay (s) <input type="number" step="0.1" [(ngModel)]="model.weaponDelay" name="weaponDelay" /></label>
-              <label>Range <input type="number" step="0.1" [(ngModel)]="model.weaponRange" name="weaponRange" /></label>
-              <label>Category
-                <select [(ngModel)]="model.weaponCategory" name="weaponCategory">
-                  @for (c of weaponCategories; track c.v) { <option [ngValue]="c.v">{{ c.n }}</option> }
-                </select>
-              </label>
-            </div>
-          </section>
-
-          <section>
-            <h3>Economy</h3>
-            <div class="grid">
-              <label>Buy price (copper) <input type="number" [(ngModel)]="model.buyPrice" name="buyPrice" /></label>
-              <label>Sell price (copper) <input type="number" [(ngModel)]="model.sellPrice" name="sellPrice" /></label>
-            </div>
-          </section>
-
-          <section>
-            <h3>Flags</h3>
-            <label class="check"><input type="checkbox" [(ngModel)]="model.lore" name="lore" (ngModelChange)="onLoreChange()" /> LORE — can only carry one</label>
-            @if (model.lore && model.maxStackSize > 1) {
-              <p class="warn">LORE items are limited to one in possession — stack size is treated as 1.</p>
-            }
-          </section>
-
-          <section>
-            <h3>Icon</h3>
-            <label>Addressables address <input [(ngModel)]="model.iconAddress" name="iconAddress" placeholder="icon_iron_sword" /></label>
-          </section>
-
-          <div class="actions">
-            <button class="primary" (click)="save()" [disabled]="isNew && !model.itemId.trim()">Save</button>
-            @if (!isNew) { <button class="danger" (click)="remove()">Delete</button> }
           </div>
-        } @else {
-          <p class="muted">Select an item or create a new one.</p>
-        }
-      </main>
-    </div>
+        </section>
+
+        <section>
+          <h3>Economy</h3>
+          <div class="grid">
+            <label>Buy price (copper) <input type="number" [(ngModel)]="model.buyPrice" name="buyPrice" /></label>
+            <label>Sell price (copper) <input type="number" [(ngModel)]="model.sellPrice" name="sellPrice" /></label>
+          </div>
+        </section>
+
+        <section>
+          <h3>Flags</h3>
+          <label class="check"><input type="checkbox" [(ngModel)]="model.lore" name="lore" (ngModelChange)="onLoreChange()" /> LORE — can only carry one</label>
+          @if (model.lore && model.maxStackSize > 1) {
+            <p class="warn">LORE items are limited to one in possession — stack size is treated as 1.</p>
+          }
+        </section>
+
+        <section>
+          <h3>Icon</h3>
+          <label>Addressables address <input [(ngModel)]="model.iconAddress" name="iconAddress" placeholder="icon_iron_sword" /></label>
+        </section>
+      }
+    </app-crud-modal>
   `,
-  styles: [`
-    .wrap { display: flex; gap: 1rem; }
-    aside { width: 240px; flex-shrink: 0; border-right: 1px solid #eee; padding-right: 1rem; }
-    .head { display: flex; justify-content: space-between; align-items: center; }
-    aside ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-    aside li { padding: 0.4rem 0.5rem; cursor: pointer; border-radius: 4px; display: flex; flex-direction: column; }
-    aside li:hover { background: #f4f4f4; }
-    aside li.active { background: #e8f0fe; }
-    .id { font-weight: 600; font-size: 0.9rem; }
-    main { flex: 1; }
-    h1 { font-size: 1.2rem; }
-    section { border: 1px solid #eee; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
-    section h3 { margin: 0 0 0.5rem; font-size: 0.95rem; color: #444; }
-    label { display: block; margin: 0.35rem 0; font-size: 0.85rem; color: #555; }
-    label.check { display: flex; gap: 0.4rem; align-items: center; }
-    input, textarea, select { width: 100%; padding: 0.35rem; box-sizing: border-box; }
-    label.check input { width: auto; }
-    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 0.75rem; }
-    .actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    button { cursor: pointer; padding: 0.4rem 0.8rem; }
-    .primary { background: #1a73e8; color: #fff; border: none; border-radius: 4px; }
-    .danger { background: #fff; color: #c00; border: 1px solid #c00; border-radius: 4px; }
-    .muted { color: #999; }
-    .error { color: #c00; font-size: 0.85rem; }
-    .warn { color: #b8860b; font-size: 0.8rem; margin: 0.25rem 0 0; }
-  `]
+  styles: [ADMIN_STYLES],
 })
 export class ItemEditor implements OnInit {
   private readonly api = inject(ItemService);
@@ -143,6 +115,10 @@ export class ItemEditor implements OnInit {
   readonly error = signal<string | null>(null);
   model: Item | null = null;
   isNew = false;
+  modalOpen = false;
+
+  readonly columns = ITEM_GRID_COLUMNS;
+  readonly searchFields = ITEM_SEARCH_FIELDS;
 
   readonly equipSlots = [
     { v: 0, n: 'Head' }, { v: 1, n: 'Chest' }, { v: 2, n: 'Legs' }, { v: 3, n: 'Hands' },
@@ -161,20 +137,22 @@ export class ItemEditor implements OnInit {
     });
   }
 
-  newItem(): void { this.model = emptyItem(); this.isNew = true; }
+  newItem(): void { this.model = emptyItem(); this.isNew = true; this.modalOpen = true; }
 
   // 3.2.1: LORE implies max-one — collapse stack size when it's toggled on (guard for decision L4).
   onLoreChange(): void {
     if (this.model?.lore && this.model.maxStackSize > 1) this.model.maxStackSize = 1;
   }
 
-  select(it: Item): void { this.model = { ...it }; this.isNew = false; }
+  select(it: Item): void { this.model = { ...it }; this.isNew = false; this.modalOpen = true; }
+
+  closeModal(): void { this.modalOpen = false; this.model = null; this.error.set(null); }
 
   save(): void {
     if (!this.model) return;
     const call = this.isNew ? this.api.create(this.model) : this.api.update(this.model);
     call.subscribe({
-      next: saved => { this.isNew = false; this.model = saved; this.reload(); },
+      next: saved => { this.isNew = false; this.model = saved; this.modalOpen = false; this.reload(); },
       error: err => this.error.set(this.describe(err)),
     });
   }
@@ -182,7 +160,7 @@ export class ItemEditor implements OnInit {
   remove(): void {
     if (!this.model || this.isNew) return;
     this.api.delete(this.model.itemId).subscribe({
-      next: () => { this.model = null; this.reload(); },
+      next: () => { this.model = null; this.modalOpen = false; this.reload(); },
       error: err => this.error.set(this.describe(err)),
     });
   }
