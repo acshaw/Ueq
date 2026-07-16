@@ -75,6 +75,18 @@ public class MobsController : ControllerBase
         m.XpReward = input.XpReward;
         m.VendorId = input.VendorId;
         m.VendorOpenKeyword = input.VendorOpenKeyword;
+        m.WeaponCategory = input.WeaponCategory;
+        m.WeaponSkill = input.WeaponSkill;
+        m.TierMiss = input.TierMiss;
+        m.TierGlancing = input.TierGlancing;
+        m.TierHit = input.TierHit;
+        m.TierSolid = input.TierSolid;
+        m.TierGood = input.TierGood;
+        m.TierCritical = input.TierCritical;
+        m.TierCrippling = input.TierCrippling;
+        m.AttackIsParryable = input.AttackIsParryable;
+        m.AvoidanceAgility = input.AvoidanceAgility;
+        m.AvoidanceDexterity = input.AvoidanceDexterity;
         Normalize(m);
         m.UpdatedAt = DateTime.UtcNow;
 

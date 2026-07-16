@@ -32,6 +32,22 @@ MonoBehaviour:
   manaCap: 0
   baseManaRatio: 0.23
   manaGrowthRate: 0
+  combatTierTableLevel1:
+    Miss: 17.5
+    Glancing: 40
+    Hit: 30
+    SolidHit: 10
+    GoodHit: 2.5
+    Critical: 0
+    Crippling: 0
+  combatTierTableLevel20:
+    Miss: 2
+    Glancing: 13
+    Hit: 20
+    SolidHit: 35
+    GoodHit: 25
+    Critical: 3
+    Crippling: 2
   startingAbilities:
   - {fileID: 11400000, guid: 018d9675a820cdf47a56561cca9a040f, type: 2}
   - {fileID: 11400000, guid: f30cc044a195e3f4a9f010ce8fcf22a3, type: 2}

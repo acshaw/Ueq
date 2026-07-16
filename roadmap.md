@@ -104,7 +104,18 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [ ] **2.9 — Abilities, tags & effects.** `ability_definitions` + `ability_tags` + cooldown links + the ordered effect list (effect-composition model preserved; effects referenced by type + params). Web **Ability Editor** + **Ability Tag Editor**. Uses the 2.1 convention for anim-trigger + prefab bindings.
 - [ ] **2.10 — Races & classes.** Stat tables, XP modifiers, HP/mana formula fields, starting-ability lists → DB + web **Race & Class Editor**. Feeds `SetRaceClass` and character creation (1.5) once migrated.
 - [ ] **2.11 — Seed / export / content versioning.** Reproducible DB seed, content export/import (sharing content between dev DBs / promoting to AWS), and a content-change audit trail as the library grows.
-- [ ] **2.12 — Skill system + Skill Editor** *(design-first; new system, not just an editor).* **EQ-style use-based skills** (chosen 2026-06-26): per-player skill values (1H Slash, Dodge, Parry, Block, Channeling, …) that rise with use and gate combat success rolls. **Two halves:** (a) *content* — `SkillDefinition` (id, category, per-class caps, rise-chance curve, governing stat) → DB + web **Skill Editor**, fits the M2 pattern; (b) *runtime* — per-player skill values (persisted, M1-style), rise-on-use, and wiring into the combat rolls (fills the deferred **Dodge/Parry/Block** + the `Critical → Solid until skill unlocked` hook in `PlayerAutoAttack`) — this half's design input **comes from 5.1 (combat & threat overhaul)**, which decides the actual roll formulas this half gates; sequence 2.12's runtime design devplan after 5.1, not before. Needs a **design devplan** (the skill list, rise/cap math, how each gates a roll) before any editor or wiring. No skill scaffolding exists today.
+- [x] **2.12 — Weapon skill system.** ✅ Verified in-editor 2026-07-15 (SK1–SK7, implemented 2026-07-14). Devplan
+  `docs/devplans/2.12-skill-system.md`. **Revised scope, written in tandem with 5.1** once the
+  `docs/eventide_combat_pipeline.md` design doc landed: avoidance (Dodge/Parry/Riposte) turned out to be
+  **stat-driven** (Agility/Dexterity curves), not skill-gated, so the original "EQ-style use-based skill list
+  incl. Dodge/Parry/Block + a dedicated Skill Editor" scope no longer applies. What's left and genuinely
+  needed: a **weapon skill** value (Might/Finesse — 2 skills, matching the existing `WeaponCategory` enum,
+  not a granular per-weapon-type tree) that 5.1.1's Hit Roll Skill Differential modifier consumes. New
+  `PlayerWeaponSkills` component (2 persisted ints, flat columns on `characters`, migration 0021), a
+  level-scaled cap (`5 + 5×(level−1)`), and a simple flat-chance rise-on-use mechanic (designed fresh — the
+  source doc doesn't specify one). Mobs get an authored (not trained) `weaponSkill` value in the Mob Editor
+  (5.1.1's HR5). No dedicated Skill Editor — the Race & Class / Mob Editors already cover the authoring
+  surface for data this small.
 
 ## M3 — World & Content  *(depends on M1 + M2)*
 
@@ -207,12 +218,49 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 
 > Goal: make the loop genuinely fun. *(Built on the M4 authoritative-movement foundation.)*
 
-- [ ] **5.1 — Combat & threat overhaul.** *(User-flagged as the next depth effort after the 3.1 onboarding vertical; absorbs retired 3.4 — see the M3 sequencing note.)* Replaces the placeholder combat rolls **and** the placeholder threat model in one pass, since the latter is currently just a 1:1 mirror of the former's damage output:
-  - **Combat rolls**, per the user's externally-designed 4-mechanism system: (1) **hit roll**, (2) **avoidance** (Dodge/Parry/Block — currently deferred, "no skill system yet"), (3) **damage calculation**, (4) **armor/absorption mitigation**. Reworks/replaces the existing `PlayerAutoAttack` bell-curve hit-tier formula.
-  - **Real threat/aggro** (was 3.4): faction-driven perception (extends the existing `EnemyAI.AddThreat`/threat-list API), social aggro (same-faction NPCs join a fight within radius), and threat decay — generated off the *real* per-hit damage numbers from the roll rework above, not the current 1:1 placeholder.
-  - Also flesh out the 3.1 classes beyond their single signature ability: ability kits, cooldown/resource tuning.
-  - **Feeds the skill system (2.12):** the avoidance/crit-tier rolls above are exactly what 2.12's runtime half (rise-on-use, Dodge/Parry/Block skill gating) needs to hook — 2.12's design devplan should follow this item, not precede it.
-  - Needs its own devplan first, grounded in the user's 4-mechanism design doc plus the existing `PlayerAutoAttack`/`EnemyAI`/`NpcFaction` code.
+- [x] **5.1 — Combat & threat overhaul.** ✅ All four pipeline steps (5.1.1–5.1.4) verified in-editor 2026-07-15
+  — tier-differentiated hits, avoidance, and mob auto-attack all confirmed working through the shared
+  `CombatResolver`. Real threat/aggro (retired 3.4) and ability-kit expansion remain separate follow-on
+  devplans, not yet scheduled — see below. *(User-flagged as the next depth effort after the 3.1 onboarding
+  vertical; absorbs retired 3.4 — see the M3 sequencing note.)* Replaces the placeholder combat rolls **and**
+  the placeholder threat model, since the latter is currently just a 1:1 mirror of the former's damage
+  output. Grounded in `docs/eventide_combat_pipeline.md` (the user's externally-designed 4-step pipeline,
+  dropped in 2026-07-13) — **split into four sibling devplans, one per pipeline step**, numbered to match the
+  doc's own Step 1/2/3/4 labels; **build order deliberately deviates from that numbering** (5.1.1 → **5.1.3**
+  → **5.1.2** → 5.1.4), per the doc's own §6.3 recommendation (validate Hit Roll + Damage end-to-end before
+  the more complex Avoidance waterfall goes in; Mitigation ships as an explicit zero-op stub last, since the
+  doc's own Step 4 has no formula yet — "requires a dedicated design session"). Scoped to melee/physical
+  auto-attack only for this pass (spells/abilities keep their current formula), symmetric — mobs get the full
+  pipeline too, with combat data **authored per-mob in the Mob Editor** (not derived from level). **Written in
+  tandem with 2.12** (weapon skill) — 5.1.1's Skill Differential modifier consumes 2.12 directly, so the two
+  devplans should be reviewed together. Real threat/aggro (was 3.4: faction-driven perception, social aggro,
+  decay) and ability-kit expansion (fleshing out the 3.1 classes beyond one signature ability) are explicitly
+  **out of scope for 5.1.1–5.1.4** — both are separate follow-on devplans sequenced after all four land, so
+  threat generates off *real* post-rework damage numbers instead of the current placeholder.
+  - [x] **5.1.1 — Hit Roll.** ✅ Verified in-editor 2026-07-15 (HR1–HR6, implemented 2026-07-14). Devplan
+    `docs/devplans/5.1.1-hit-roll.md`. Weighted-table system (`CombatTierTable`) replacing
+    `PlayerAutoAttack`'s bell-curve formula; class/level starting tables (`ClassDefinition`, Race & Class
+    Editor); Level Differential (Fibonacci futility bands) + Skill Differential (perfect-square scaling, via
+    2.12) + Position (rear-attack reliability) modifiers; mob combat data authored in the Mob Editor
+    (`weaponCategory`/`weaponSkill`/7-weight hit-tier table, migration). **Flagged data gap:** the design doc
+    only gives a full Level 1→20 target table for Warrior — other classes scale proportionally from the same
+    curve shape until real per-class tables exist.
+  - [x] **5.1.3 — Damage Application.** ✅ Verified in-editor 2026-07-15 (DM1–DM2, implemented 2026-07-14). Devplan
+    `docs/devplans/5.1.3-damage.md`. Built second (before Avoidance) so Hit Roll + Damage can be tested end-
+    to-end first. Tier→damage percentages (Solid Hit = 100% base, locked; others approximate/tunable) +
+    variance; base-damage-to-stat formula kept as the current informally-tuned placeholder pending a real
+    design pass (the source doc explicitly leaves this open).
+  - [x] **5.1.2 — Avoidance Roll.** ✅ Verified in-editor 2026-07-15 (AV1–AV4, implemented 2026-07-14). Devplan
+    `docs/devplans/5.1.2-avoidance.md`. Riposte→Parry→Dodge waterfall (binary outcomes); Dodge's Agility
+    curve built as a piecewise-linear approximation of the doc's 6 given breakpoints (**flagged data gap** —
+    the doc references a fuller per-point table not included in it); Parry/Riposte reuse the identical curve
+    as a first-pass placeholder (doc: "will be differentiated through playtesting"); a binary parryable
+    filter (mob-authored); Riposte's automatic reduced-damage counter-attack.
+  - [x] **5.1.4 — Mitigation.** ✅ Verified in-editor 2026-07-15 (MT1, implemented 2026-07-14). Devplan
+    `docs/devplans/5.1.4-mitigation.md`. Deliberately minimal — the source doc's Step 4 has only design
+    principles, no formula ("requires a dedicated design session"). Ships as a named `ApplyMitigation` seam
+    that's a pure pass-through (final damage = raw damage), so the full 4-step pipeline is wired end-to-end
+    and shippable well before armor design happens.
 - [ ] **5.2 — Level 1→2 polish round.** A focused vertical polishing the earliest gameplay progression (level 1 → 2) end to end: abilities, combat feel, feedback, pacing — the payoff of the combat refinement on the real starting experience.
 - [ ] **5.3 — Player grouping.** Parties (≤6), shared XP, group health frames, friendly-fire rules.
 - [ ] **5.4 — Group threat/aggro tuning.**

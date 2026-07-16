@@ -179,9 +179,51 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
                 yield break;
             }
 
-            _currentTarget.GetComponent<Health>()?.TakeDamage(_attackDamage, netIdentity);
+            ResolveAttack();
 
             yield return new WaitForSeconds(_attackInterval);
+        }
+    }
+
+    // 5.1.1-5.1.4: mob → player swing through the shared combat pipeline (symmetric with
+    // PlayerAutoAttack's player → mob swing — same CombatResolver, same four steps).
+    void ResolveAttack()
+    {
+        var targetHealth = _currentTarget.GetComponent<Health>();
+        if (targetHealth == null || targetHealth.IsDead) return;
+
+        var def = GetComponent<MobApplicator>()?.Definition;
+        var cat = def != null ? def.weaponCategory : WeaponCategory.Might;
+
+        var ctx = new CombatResolver.AttackContext
+        {
+            Attacker         = CombatResolver.BuildCombatant(gameObject, cat),
+            Defender         = CombatResolver.BuildCombatant(_currentTarget.gameObject, cat),
+            IsRearAttack     = CombatResolver.IsRearAttack(transform, _currentTarget.transform),
+            IsParryable      = def == null || def.attackIsParryable,
+            WeaponBaseDamage = _attackDamage,
+            RelevantStat     = 0f, // mobs have no CharacterStats — attackDamage already represents full power
+        };
+        var result = CombatResolver.ResolveAttack(ctx);
+
+        var playerConn = _currentTarget.connectionToClient;
+        if (result.Tier == HitTier.Miss)
+        {
+            if (result.Riposted)
+            {
+                _health.TakeDamage(result.RiposteDamage, _currentTarget);
+                ChatManager.Instance?.SendDirect(
+                    new ChatMessage(ChatChannel.Combat, "", $"You riposte {name}'s attack!"), playerConn);
+            }
+            else
+            {
+                ChatManager.Instance?.SendDirect(
+                    new ChatMessage(ChatChannel.Combat, "", $"{name}'s attack misses you."), playerConn);
+            }
+        }
+        else
+        {
+            targetHealth.TakeDamage(result.Damage, netIdentity);
         }
     }
 

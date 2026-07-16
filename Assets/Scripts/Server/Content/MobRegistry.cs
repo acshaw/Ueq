@@ -64,6 +64,18 @@ public static class MobRegistry
         def.vendorId           = s.VendorId;                         // VendorApplicator resolves via VendorRegistry
         def.vendorOpenKeyword  = s.VendorOpenKeyword;
 
+        // 5.1.1/5.1.2/2.12(SK5) — combat pipeline data.
+        def.weaponCategory     = (WeaponCategory)s.WeaponCategory;
+        def.weaponSkill        = s.WeaponSkill;
+        def.combatTable        = new CombatTierTable
+        {
+            Miss = s.TierMiss, Glancing = s.TierGlancing, Hit = s.TierHit, SolidHit = s.TierSolid,
+            GoodHit = s.TierGood, Critical = s.TierCritical, Crippling = s.TierCrippling,
+        };
+        def.attackIsParryable  = s.AttackIsParryable;
+        def.avoidanceAgility   = s.AvoidanceAgility;
+        def.avoidanceDexterity = s.AvoidanceDexterity;
+
         // M2.7.1: faction hits on kill — resolve each faction by id (factions load before mobs).
         def.factionHits = new List<MobDefinition.FactionHit>();
         if (s.FactionHits != null)

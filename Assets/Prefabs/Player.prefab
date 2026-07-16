@@ -190,6 +190,7 @@ GameObject:
   - component: {fileID: 7876102208471881478}
   - component: {fileID: 195297009008590989}
   - component: {fileID: 3924168027244488984}
+  - component: {fileID: 4682708417519488209}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -322,7 +323,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8ff3ba0becae47b8b9381191598957c8, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkTransformReliable
   syncDirection: 0
   syncMode: 0
@@ -451,6 +452,9 @@ MonoBehaviour:
   gravity: -12
   lookSensitivity: 0.15
   maxPitch: 80
+  sitCameraDrop: 0.85
+  sitCameraLerp: 8
+  reconciliationTolerance: 0.15
 --- !u!114 &7584801410044477905
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -470,7 +474,6 @@ MonoBehaviour:
   _weaponDelay: 2
   _attackRange: 3
   _weaponCategory: 0
-  _shiftFactor: 0.15
 --- !u!114 &5968564934687898391
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -607,3 +610,21 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &4682708417519488209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8017854748638574047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbeafc2f100644042a1c9d206f8689a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponSkills
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _capBase: 5
+  _capPerLevel: 5
+  _riseChance: 0.08

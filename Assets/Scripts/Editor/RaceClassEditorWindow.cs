@@ -284,6 +284,17 @@ public class RaceClassEditorWindow : EditorWindow
         EditorGUI.indentLevel--;
         GUILayout.Space(4);
 
+        SectionHeader("Combat Tier Table (5.1.1)");
+        EditorGUI.indentLevel++;
+        EditorGUILayout.HelpBox(
+            "Level 1 and Level 20 hit-tier weighted tables (design doc §2.5/§2.11). CombatResolver " +
+            "interpolates between them by character level. Seed/reset via Tools/Combat/Seed Class Combat Tables.",
+            MessageType.None);
+        EditorGUILayout.PropertyField(_classSO.FindProperty("combatTierTableLevel1"), new GUIContent("Level 1"), true);
+        EditorGUILayout.PropertyField(_classSO.FindProperty("combatTierTableLevel20"), new GUIContent("Level 20"), true);
+        EditorGUI.indentLevel--;
+        GUILayout.Space(4);
+
         SectionHeader("Known Abilities");
         EditorGUI.indentLevel++;
         EditorGUILayout.PropertyField(_classSO.FindProperty("startingAbilities"),

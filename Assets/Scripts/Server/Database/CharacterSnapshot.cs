@@ -23,6 +23,7 @@ public sealed class CharacterSnapshot
     public int    TotalXp;
     public int    Copper, Silver, Gold, Platinum;
     public int    CurrentHealth, CurrentMana;
+    public int    MightSkill, FinesseSkill;   // 2.12 — earned weapon proficiency, persisted like XP
 
     public float  PosX, PosY, PosZ, Yaw;
     public float  BindX, BindY, BindZ;

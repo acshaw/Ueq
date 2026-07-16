@@ -35,6 +35,13 @@ public struct MobSnapshot
     public string VendorOpenKeyword;
 
     public List<MobFactionHitSnapshot> FactionHits;   // M2.7.1
+
+    // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob.
+    public int   WeaponCategory;
+    public int   WeaponSkill;
+    public float TierMiss, TierGlancing, TierHit, TierSolid, TierGood, TierCritical, TierCrippling;
+    public bool  AttackIsParryable;
+    public float AvoidanceAgility, AvoidanceDexterity;
 }
 
 /// <summary>One faction adjustment applied to the killer on this mob's death (M2.7.1).</summary>
@@ -65,7 +72,10 @@ public sealed class MobRepository : IRepository
             "perception_radius, base_aggro_threat, " +
             "faction_id, aggro_max_standing, warning_max_standing, " +
             "conversation_set_id, loot_table_id, xp_reward, " +
-            "vendor_id, vendor_open_keyword " +
+            "vendor_id, vendor_open_keyword, " +
+            "weapon_category, weapon_skill, " +
+            "tier_miss, tier_glancing, tier_hit, tier_solid, tier_good, tier_critical, tier_crippling, " +
+            "attack_is_parryable, avoidance_agility, avoidance_dexterity " +
             "FROM mobs ORDER BY mob_id", conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
@@ -97,6 +107,18 @@ public sealed class MobRepository : IRepository
                     XpReward           = reader.GetInt32(20),
                     VendorId           = reader.IsDBNull(21) ? null : reader.GetString(21),
                     VendorOpenKeyword  = reader.GetString(22),
+                    WeaponCategory     = reader.GetInt32(23),
+                    WeaponSkill        = reader.GetInt32(24),
+                    TierMiss           = reader.GetFloat(25),
+                    TierGlancing       = reader.GetFloat(26),
+                    TierHit            = reader.GetFloat(27),
+                    TierSolid          = reader.GetFloat(28),
+                    TierGood           = reader.GetFloat(29),
+                    TierCritical       = reader.GetFloat(30),
+                    TierCrippling      = reader.GetFloat(31),
+                    AttackIsParryable  = reader.GetBoolean(32),
+                    AvoidanceAgility   = reader.GetFloat(33),
+                    AvoidanceDexterity = reader.GetFloat(34),
                     FactionHits        = new List<MobFactionHitSnapshot>(),
                 };
                 order.Add(id);

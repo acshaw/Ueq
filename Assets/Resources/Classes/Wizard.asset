@@ -32,6 +32,22 @@ MonoBehaviour:
   manaCap: 200
   baseManaRatio: 0.23
   manaGrowthRate: 0.18
+  combatTierTableLevel1:
+    Miss: 25
+    Glancing: 40
+    Hit: 25
+    SolidHit: 7.5
+    GoodHit: 2.5
+    Critical: 0
+    Crippling: 0
+  combatTierTableLevel20:
+    Miss: 15.53
+    Glancing: 23.5
+    Hit: 18.89
+    SolidHit: 22.78
+    GoodHit: 16.25
+    Critical: 1.83
+    Crippling: 1.22
   startingAbilities:
   - {fileID: 11400000, guid: cbac09c8b982365499cde6b21b4a9c95, type: 2}
   weaponPropPrefab: {fileID: 100508, guid: 1006941873f215d46b09517732f49978, type: 3}

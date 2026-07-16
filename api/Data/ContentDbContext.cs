@@ -188,6 +188,18 @@ public class ContentDbContext : DbContext
             e.Property(m => m.VendorId).HasColumnName("vendor_id");
             e.Property(m => m.VendorOpenKeyword).HasColumnName("vendor_open_keyword");
             e.Property(m => m.UpdatedAt).HasColumnName("updated_at");
+            e.Property(m => m.WeaponCategory).HasColumnName("weapon_category");
+            e.Property(m => m.WeaponSkill).HasColumnName("weapon_skill");
+            e.Property(m => m.TierMiss).HasColumnName("tier_miss");
+            e.Property(m => m.TierGlancing).HasColumnName("tier_glancing");
+            e.Property(m => m.TierHit).HasColumnName("tier_hit");
+            e.Property(m => m.TierSolid).HasColumnName("tier_solid");
+            e.Property(m => m.TierGood).HasColumnName("tier_good");
+            e.Property(m => m.TierCritical).HasColumnName("tier_critical");
+            e.Property(m => m.TierCrippling).HasColumnName("tier_crippling");
+            e.Property(m => m.AttackIsParryable).HasColumnName("attack_is_parryable");
+            e.Property(m => m.AvoidanceAgility).HasColumnName("avoidance_agility");
+            e.Property(m => m.AvoidanceDexterity).HasColumnName("avoidance_dexterity");
             e.HasMany(m => m.FactionHits).WithOne().HasForeignKey(h => h.MobId).OnDelete(DeleteBehavior.Cascade);
         });
 

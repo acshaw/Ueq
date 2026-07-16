@@ -39,6 +39,20 @@ export interface Mob {
 
   factionHits: MobFactionHit[];
 
+  // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob.
+  weaponCategory: number; // WeaponCategory: 0 Might, 1 Finesse
+  weaponSkill: number;
+  tierMiss: number;
+  tierGlancing: number;
+  tierHit: number;
+  tierSolid: number;
+  tierGood: number;
+  tierCritical: number;
+  tierCrippling: number;
+  attackIsParryable: boolean;
+  avoidanceAgility: number;
+  avoidanceDexterity: number;
+
   updatedAt?: string;
 }
 
@@ -52,6 +66,11 @@ export function emptyMob(): Mob {
     conversationSetId: null, lootTableId: null, xpReward: 0,
     vendorId: null, vendorOpenKeyword: 'wares',
     factionHits: [],
+    // Defaults mirror the Warrior Level 1 starting table (design doc §2.5) — a new mob starts from a
+    // valid, non-degenerate hit-tier table.
+    weaponCategory: 0, weaponSkill: 0,
+    tierMiss: 17.5, tierGlancing: 40, tierHit: 30, tierSolid: 10, tierGood: 2.5, tierCritical: 0, tierCrippling: 0,
+    attackIsParryable: true, avoidanceAgility: 20, avoidanceDexterity: 20,
   };
 }
 

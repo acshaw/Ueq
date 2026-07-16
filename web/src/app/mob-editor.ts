@@ -122,6 +122,37 @@ import { LootService } from './loot.service';
           </section>
 
           <section>
+            <h3>Combat Pipeline (5.1)</h3>
+            <div class="grid">
+              <label>Weapon category
+                <select [(ngModel)]="model.weaponCategory" name="weaponCategory">
+                  <option [ngValue]="0">Might</option>
+                  <option [ngValue]="1">Finesse</option>
+                </select>
+              </label>
+              <label>Weapon skill <input type="number" [(ngModel)]="model.weaponSkill" name="weaponSkill" /></label>
+              <label>Attack parryable
+                <select [(ngModel)]="model.attackIsParryable" name="attackIsParryable">
+                  <option [ngValue]="true">Yes (weapon-style)</option>
+                  <option [ngValue]="false">No (beast/unarmed-style)</option>
+                </select>
+              </label>
+              <label>Avoidance Agility <input type="number" step="0.1" [(ngModel)]="model.avoidanceAgility" name="avoidanceAgility" /></label>
+              <label>Avoidance Dexterity <input type="number" step="0.1" [(ngModel)]="model.avoidanceDexterity" name="avoidanceDexterity" /></label>
+            </div>
+            <p class="soon">Hit-tier weighted table (design doc §2.2) — this mob's own weights, not derived from level.</p>
+            <div class="grid">
+              <label>Miss <input type="number" step="0.1" [(ngModel)]="model.tierMiss" name="tierMiss" /></label>
+              <label>Glancing <input type="number" step="0.1" [(ngModel)]="model.tierGlancing" name="tierGlancing" /></label>
+              <label>Hit <input type="number" step="0.1" [(ngModel)]="model.tierHit" name="tierHit" /></label>
+              <label>Solid Hit <input type="number" step="0.1" [(ngModel)]="model.tierSolid" name="tierSolid" /></label>
+              <label>Good Hit <input type="number" step="0.1" [(ngModel)]="model.tierGood" name="tierGood" /></label>
+              <label>Critical <input type="number" step="0.1" [(ngModel)]="model.tierCritical" name="tierCritical" /></label>
+              <label>Crippling <input type="number" step="0.1" [(ngModel)]="model.tierCrippling" name="tierCrippling" /></label>
+            </div>
+          </section>
+
+          <section>
             <div class="rowhead"><h3>Faction hits on kill</h3>
               <span>
                 <button (click)="addOwnFactionHit()" [disabled]="!model.factionId">+ Own faction</button>

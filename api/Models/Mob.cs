@@ -39,6 +39,23 @@ public class Mob
     public DateTime UpdatedAt { get; set; }
 
     public List<MobFactionHit> FactionHits { get; set; } = new();   // M2.7.1
+
+    // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob.
+    public int WeaponCategory { get; set; } // WeaponCategory: 0 Might, 1 Finesse
+    public int WeaponSkill { get; set; }
+
+    public float TierMiss { get; set; } = 17.5f;
+    public float TierGlancing { get; set; } = 40f;
+    public float TierHit { get; set; } = 30f;
+    public float TierSolid { get; set; } = 10f;
+    public float TierGood { get; set; } = 2.5f;
+    public float TierCritical { get; set; }
+    public float TierCrippling { get; set; }
+
+    public bool AttackIsParryable { get; set; } = true;
+
+    public float AvoidanceAgility { get; set; } = 20f;
+    public float AvoidanceDexterity { get; set; } = 20f;
 }
 
 /// <summary>EF entity for <c>mob_faction_hits</c> (M2.7.1) — a standing change applied to the killer.</summary>

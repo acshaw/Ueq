@@ -27,20 +27,22 @@ public class CharacterPersistence : NetworkBehaviour
     PlayerAbilities     _abilities;
     Health              _health;
     PlayerMana          _mana;
+    PlayerWeaponSkills  _weaponSkills;
     NetworkedPlayer     _player;
     Nameplate           _nameplate;
 
     void Awake()
     {
-        _exp       = GetComponent<PlayerExperience>();
-        _inv       = GetComponent<PlayerInventory>();
-        _equip     = GetComponent<PlayerEquipment>();
-        _faction   = GetComponent<PlayerFactionScores>();
-        _abilities = GetComponent<PlayerAbilities>();
-        _health    = GetComponent<Health>();
-        _mana      = GetComponent<PlayerMana>();
-        _player    = GetComponent<NetworkedPlayer>();
-        _nameplate = GetComponent<Nameplate>();
+        _exp          = GetComponent<PlayerExperience>();
+        _inv          = GetComponent<PlayerInventory>();
+        _equip        = GetComponent<PlayerEquipment>();
+        _faction      = GetComponent<PlayerFactionScores>();
+        _abilities    = GetComponent<PlayerAbilities>();
+        _health       = GetComponent<Health>();
+        _mana         = GetComponent<PlayerMana>();
+        _weaponSkills = GetComponent<PlayerWeaponSkills>();
+        _player       = GetComponent<NetworkedPlayer>();
+        _nameplate    = GetComponent<Nameplate>();
     }
 
     // ── Load on spawn ────────────────────────────────────────────────────────────
@@ -176,6 +178,7 @@ public class CharacterPersistence : NetworkBehaviour
         if (s.CurrentHealth <= 0) _health?.ResetToFull();
         else                      _health?.SetCurrent(s.CurrentHealth);
         _mana?.SetCurrent(s.CurrentMana);
+        _weaponSkills?.LoadState(s.MightSkill, s.FinesseSkill);
 
         // M3.0 Stage C: place the player into their persisted zone at their saved position. When ZoneManager
         // is active it owns scene assignment + the client's additive scene load + the warp, so we set the
@@ -253,6 +256,11 @@ public class CharacterPersistence : NetworkBehaviour
 
         if (_health != null) s.CurrentHealth = _health.Current;
         if (_mana   != null) s.CurrentMana   = _mana.Current;
+        if (_weaponSkills != null)
+        {
+            s.MightSkill   = _weaponSkills.Might;
+            s.FinesseSkill = _weaponSkills.Finesse;
+        }
 
         var pos  = transform.position;
         var bind = _player != null ? _player.BindPoint : pos;

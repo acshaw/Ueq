@@ -11,22 +11,23 @@ public class PlayerAutoAttack : NetworkBehaviour
     [SerializeField] float          _weaponDelay      = 2f;
     [SerializeField] float          _attackRange      = 3f;
     [SerializeField] WeaponCategory _weaponCategory   = WeaponCategory.Might;
-    [SerializeField] float          _shiftFactor      = 0.15f;
 
     [SyncVar] bool _on;
 
-    float           _nextAttack;
-    NetworkedPlayer _player;
-    CharacterStats  _stats;
-    PlayerEquipment _equipment;
-    PlayerAnimator  _animator;
+    float              _nextAttack;
+    NetworkedPlayer    _player;
+    CharacterStats     _stats;
+    PlayerEquipment    _equipment;
+    PlayerAnimator     _animator;
+    PlayerWeaponSkills _weaponSkills;
 
     void Awake()
     {
-        _player    = GetComponent<NetworkedPlayer>();
-        _stats     = GetComponent<CharacterStats>();
-        _equipment = GetComponent<PlayerEquipment>();
-        _animator  = GetComponentInChildren<PlayerAnimator>();
+        _player       = GetComponent<NetworkedPlayer>();
+        _stats        = GetComponent<CharacterStats>();
+        _equipment    = GetComponent<PlayerEquipment>();
+        _animator     = GetComponentInChildren<PlayerAnimator>();
+        _weaponSkills = GetComponent<PlayerWeaponSkills>();
     }
 
     // Read weapon stats from equipped weapon; fall back to serialized inspector values
@@ -81,20 +82,42 @@ public class PlayerAutoAttack : NetworkBehaviour
         }
 
         // Swing resolves (in range + LOS) — play the animation on every client,
-        // hit or miss, then resolve damage.
+        // hit or miss, then resolve damage via the combat pipeline (5.1.1-5.1.4).
         RpcPlayAttack();
 
-        int damage = ComputeDamage();
-        if (damage == 0)
+        var cat = EffectiveCat;
+        var ctx = new CombatResolver.AttackContext
         {
-            string targetName = target.GetComponent<Nameplate>()?.Label ?? target.gameObject.name;
-            ChatManager.Instance?.SendDirect(
-                new ChatMessage(ChatChannel.Combat, "", $"Your attack misses {targetName}."),
-                connectionToClient);
+            Attacker         = CombatResolver.BuildCombatant(gameObject, cat),
+            Defender         = CombatResolver.BuildCombatant(target.gameObject, cat),
+            IsRearAttack     = CombatResolver.IsRearAttack(transform, target.transform),
+            IsParryable      = true, // player weapon auto-attack is always parryable (AV3)
+            WeaponBaseDamage = EffectiveDamage,
+            RelevantStat     = cat == WeaponCategory.Might ? (_stats?.Str ?? 0) : (_stats?.Dex ?? 0),
+        };
+        var result = CombatResolver.ResolveAttack(ctx);
+        _weaponSkills?.RollSkillUp(cat); // SK4 — chance to rise on every swing, regardless of outcome
+
+        string targetName = target.GetComponent<Nameplate>()?.Label ?? target.gameObject.name;
+        if (result.Tier == HitTier.Miss)
+        {
+            if (result.Riposted)
+            {
+                GetComponent<Health>()?.TakeDamage(result.RiposteDamage, target);
+                ChatManager.Instance?.SendDirect(
+                    new ChatMessage(ChatChannel.Combat, "", $"{targetName} ripostes your attack!"),
+                    connectionToClient);
+            }
+            else
+            {
+                ChatManager.Instance?.SendDirect(
+                    new ChatMessage(ChatChannel.Combat, "", $"Your attack misses {targetName}."),
+                    connectionToClient);
+            }
         }
         else
         {
-            health.TakeDamage(damage, netIdentity);
+            health.TakeDamage(result.Damage, netIdentity);
         }
         _nextAttack = Time.time + EffectiveDelay;
     }
@@ -124,35 +147,6 @@ public class PlayerAutoAttack : NetworkBehaviour
         }
         ChatManager.Instance?.SendDirect(
             new ChatMessage(ChatChannel.System, "System", msg), connectionToClient);
-    }
-
-    int ComputeDamage()
-    {
-        int   baseDmg = EffectiveDamage;
-        var   cat     = EffectiveCat;
-
-        if (_stats == null) return baseDmg;
-
-        float atk = cat == WeaponCategory.Might
-            ? _stats.Str * 0.75f + _stats.Dex * 0.25f
-            : _stats.Dex * 0.75f + _stats.Str * 0.25f;
-
-        float relevantStat = cat == WeaponCategory.Might ? _stats.Str : _stats.Dex;
-
-        float hitRoll = Mathf.Clamp(
-            Random.Range(0f, 100f) + (atk - _stats.Agi) * _shiftFactor,
-            0f, 100f);
-
-        if (hitRoll < 2.5f) return 0; // Miss
-
-        float multiplier, variance;
-        if      (hitRoll < 25f) { multiplier = 0.5f;  variance = 0.1f; }   // Glancing
-        else if (hitRoll < 75f) { multiplier = 1.0f;  variance = 0.15f; }  // Normal
-        else                    { multiplier = 1.5f;  variance = 0.15f; }  // Solid (Critical → Solid until skill unlocked)
-
-        float typeMultiplier = multiplier + Random.Range(-variance, variance);
-        float rawDamage = baseDmg * (1f + relevantStat / 400f) * typeMultiplier;
-        return Mathf.Max(1, Mathf.RoundToInt(rawDamage));
     }
 
     bool HasLineOfSight(Transform target)

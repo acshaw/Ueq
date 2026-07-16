@@ -100,6 +100,8 @@ public class MobEditorWindow : EditorWindow
         DrawMovementSection();
         DrawSection("AI",        "perceptionRadius", "baseAggroThreat");
         DrawSection("Faction",   "faction", "aggroMaxStanding", "warningMaxStanding");
+        DrawSection("Combat Pipeline (5.1)", "weaponCategory", "weaponSkill", "combatTable",
+                     "attackIsParryable", "avoidanceAgility", "avoidanceDexterity");
         DrawSection("Loot",      "lootTable");
         DrawSection("Rewards",   "xpReward");
         DrawSection("Vendor",       "vendorId", "vendorOpenKeyword");

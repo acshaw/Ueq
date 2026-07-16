@@ -26,6 +26,24 @@ public class MobDefinition : ScriptableObject
     public float attackInterval = 2f;
     public float attackRange    = 2f;
 
+    // 5.1.1 (HR5) / 2.12 (SK5): mobs get the full symmetric combat pipeline, authored per-mob rather
+    // than derived from mobLevel. weaponCategory/weaponSkill feed Step 1's Skill Differential the same
+    // way a player's PlayerWeaponSkills does; combatTable is this mob's own hit-tier weighted table
+    // (not interpolated by level — a flat authored value, unlike a player's class-table interpolation).
+    public WeaponCategory  weaponCategory = WeaponCategory.Might;
+    public int             weaponSkill    = 0;
+    public CombatTierTable combatTable    = CombatTierTable.WarriorLevel1;
+
+    // 5.1.2 (AV3): whether this mob's attack can be Parried — false for beast/unarmed-style attacks
+    // (a lion bite cannot be parried; a sword swing can). Riposte/Dodge are unaffected by this flag.
+    public bool attackIsParryable = true;
+
+    // 5.1.2: mobs have no CharacterStats, so their Dodge/Parry/Riposte avoidance rolls read these
+    // authored stand-ins instead of Agility/Dexterity. Defaults to a low, generic baseline — bump per
+    // mob for anything meant to read as more evasive.
+    public float avoidanceAgility   = 20f;
+    public float avoidanceDexterity = 20f;
+
     [Header("Movement")]
     public MovementType movementType   = MovementType.Wander;
     public float        moveSpeed      = 3.5f;

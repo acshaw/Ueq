@@ -1,0 +1,275 @@
+<article class="doc">
+  <h1>Combat Pipeline — Mob Author Guide</h1>
+  <p class="lead">How to fill in a mob's <strong>Combat Pipeline (5.1)</strong> section in the Mob Editor — the fields
+    that drive its hit rolls, avoidance, and damage. Mobs run the <strong>exact same four-step resolver</strong> as
+    players; nothing here is derived from Level automatically, so every mob's numbers are whatever you type.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>The four steps, in plain language</li>
+      <li>Where each piece lives</li>
+      <li>Anatomy of the Combat Pipeline section</li>
+      <li>The seven tier weights, in depth</li>
+      <li>What's computed automatically at runtime</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Known gaps — what's still placeholder or unimplemented</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>Every swing — player-vs-mob or mob-vs-player — resolves through the same static
+    <code>CombatResolver.ResolveAttack(...)</code> call, in four steps: <strong>Hit Roll</strong> →
+    <strong>Avoidance</strong> → <strong>Damage</strong> → <strong>Mitigation</strong>. A player's Hit Roll table
+    comes from interpolating their class's Level 1→20 table; a <strong>mob's Hit Roll table is authored directly on
+    the mob</strong> — a flat set of numbers you type in, not derived from its Level. That's the entire point of the
+    Combat Pipeline section: it's the mob-side equivalent of a player's class + stats + weapon skill, all in one
+    place.</p>
+  <div class="note"><strong>Mental model:</strong> the 7 tier weights you enter are this mob's hit-tier distribution
+    <em>at parity</em> — as if it were fighting an opponent of the same level with comparable skill. Level and skill
+    <em>differences</em> from the actual opponent shift that table automatically at runtime (§6) — you don't author
+    those shifts, only the starting point.</div>
+
+  <h2>2. The four steps, in plain language</h2>
+  <table>
+    <tr><th>Step</th><th>What happens</th><th>Status</th></tr>
+    <tr><td><strong>1. Hit Roll</strong></td><td>Roll against a weighted table of 7 outcomes (Miss → Crippling),
+      after Level/Skill/Position modifiers reshape it.</td><td>Fully implemented</td></tr>
+    <tr><td><strong>2. Avoidance</strong></td><td>Riposte → Parry → Dodge, checked in that order against the
+      <em>defender's</em> stats. Any success turns the whole swing into a Miss (Riposte also counter-attacks).</td>
+      <td>Fully implemented</td></tr>
+    <tr><td><strong>3. Damage</strong></td><td>The surviving tier converts to a number: weapon base damage × a
+      per-tier percentage × random variance.</td><td>Fully implemented</td></tr>
+    <tr><td><strong>4. Mitigation</strong></td><td>Would apply armor/buffs to reduce the Step 3 number.</td>
+      <td><strong>No-op stub</strong> — whatever Step 3 computes is final (§8)</td></tr>
+  </table>
+
+  <h2>3. Where each piece lives</h2>
+  <table>
+    <tr><th>Piece</th><th>What it is</th><th>Authored in</th><th>Stored in</th></tr>
+    <tr><td>Combat Pipeline fields</td><td>Weapon category/skill, parryable flag, avoidance stand-ins, 7 tier
+      weights</td><td>Web <strong>Mob Editor</strong> → Combat Pipeline (5.1) section</td><td>Database</td></tr>
+    <tr><td>Attack damage / interval / range</td><td>The mob's swing cadence and Step 3 weapon-base-damage input
+      (§8)</td><td>Web <strong>Mob Editor</strong> → Combat section</td><td>Database</td></tr>
+    <tr><td>Level/Skill/Position modifiers</td><td>Automatic weight shifts applied at roll time</td><td>Not
+      authored — fixed in <code>CombatResolver.cs</code></td><td>Unity project</td></tr>
+    <tr><td>Damage variance / tier percentages</td><td>Step 3's global tuning knobs (shared by every mob and
+      player)</td><td><strong>Not per-mob</strong> — one shared <code>CombatTierDamageConfig</code> asset (§8)</td>
+      <td>Unity project</td></tr>
+    <tr><td>Mitigation (armor)</td><td>Would reduce Step 3's output</td><td>Not built (§8)</td><td>—</td></tr>
+  </table>
+
+  <h2>4. Anatomy of the Combat Pipeline section</h2>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><strong>Weapon category</strong> (Might / Finesse)</td><td>Which of the <em>opponent's</em> two
+      per-category weapon skills gets compared against this mob's <strong>Weapon skill</strong> for the Skill
+      Differential roll below. It has <strong>no effect on this mob's own damage</strong> — mobs have no
+      Strength/Dexterity to scale with (that's what Might/Finesse scale for a player); a mob's damage always comes
+      from its flat <strong>Attack damage</strong> field. Pick whichever matches the mob's fluff (blunt/heavy →
+      Might, claws/blades → Finesse) — it only matters in fights against players, since only players track
+      per-category skill.</td></tr>
+    <tr><td><strong>Weapon skill</strong> (number)</td><td>This mob's own trained proficiency. Compared against the
+      opponent's weapon skill for the <strong>Skill Differential</strong> modifier (perfect-square scaling, capped
+      at ±5 net difference: ±1→1 weight unit, ±2→4, ±3→9, ±4→16, ±5 or more→25, moved toward/away from the top
+      tiers). A player's own skill cap at level <em>L</em> is <code>5 + 5×(L−1)</code> — nothing enforces a
+      matching value here, but authoring roughly <code>5 + 5×(mobLevel−1)</code> keeps a same-level fight
+      even.</td></tr>
+    <tr><td><strong>Attack parryable</strong> (Yes/No)</td><td><strong>Yes</strong> = a weapon-style swing a
+      defender can Parry. <strong>No</strong> = beast/unarmed-style (bite, claw, ram) — skips the Parry check
+      entirely and falls straight to Dodge. Has no effect on Riposte or Dodge.</td></tr>
+    <tr><td><strong>Avoidance Agility</strong> / <strong>Avoidance Dexterity</strong> (numbers)</td><td>Stand-ins
+      for the Agility/Dexterity a player would use — mobs have no <code>CharacterStats</code>. Same numeric scale
+      as a player stat: the dodge curve sits near-flat (~0.1%) below 50, ramps to ~5% around 100, and asymptotes
+      near 15% past ~210 (most players gear to 60–150; Monks higher). <strong>Dexterity currently drives both
+      Riposte and Parry</strong> — they reuse the identical curve shape (not yet differentiated), so raising it
+      raises both by the same amount. Low defaults (20/20) sit in the curve's flat near-zero floor.</td></tr>
+    <tr><td><strong>The 7 tier weights</strong> (Miss → Crippling)</td><td>This mob's hit-tier distribution at
+      parity. See §5 — read this before typing numbers, the total matters more than it looks like it should.</td>
+      </tr>
+  </table>
+
+  <h2>5. The seven tier weights, in depth</h2>
+  <p>These are <strong>relative weights</strong>, not literal percentages — the roll is
+    <code>Random.Range(0, total)</code> against the cumulative sum, so only the <em>ratios</em> between the seven
+    numbers decide the odds. A freshly-created mob defaults to the Warrior Level 1 table (17.5 / 40 / 30 / 10 / 2.5
+    / 0 / 0), which happens to total 100 — that's a convention, not a requirement.</p>
+  <div class="note">⚠️ <strong>But the total isn't free to ignore.</strong> The automatic modifiers in §6 move
+    <em>fixed</em> weight units, not fixed percentages: a rear attack always pulls up to <strong>50</strong> units
+    into Solid Hit; Level Differential can move up to <strong>100</strong>; Skill Differential up to
+    <strong>25</strong>. Those magnitudes were tuned assuming a table totaling roughly 100 (the seeded default). If
+    you author a mob with a much smaller total — say <code>1/1/1/0/0/0/0</code> — a single rear attack (50 units)
+    completely swamps it and every rear hit lands as a guaranteed Solid Hit. Keep your total in the same ballpark as
+    the default unless you deliberately want the modifiers to dominate or barely register.</div>
+  <p><strong>Crippling is different for mobs than for players.</strong> A player's Crippling weight always stays at
+    0 until a passive-unlock system (which doesn't exist yet) — the design intentionally redistributes those points
+    into Critical instead. A mob has no such restriction: type a nonzero Crippling weight and it rolls normally.
+    Useful for an intentionally terrifying boss-tier hit.</p>
+
+  <h2>6. What's computed automatically at runtime</h2>
+  <p>These are <strong>not</strong> fields you set — they shift your authored table on every swing, on top of
+    whatever you typed:</p>
+  <table>
+    <tr><th>Modifier</th><th>When</th><th>Effect</th></tr>
+    <tr><td><strong>Level Differential</strong></td><td>Every swing, this mob's Level vs. the opponent's</td>
+      <td>Under-level shifts weight toward Miss/Glancing at full strength; over-level shifts toward Solid/Good/
+      Critical at <em>half</em> strength (advantage helps less than disadvantage hurts). The same absolute level
+      gap swings harder at low levels than at high levels (Fibonacci band structure, §2.7 of the design doc).</td>
+    </tr>
+    <tr><td><strong>Skill Differential</strong></td><td>Every swing, this mob's Weapon skill vs. the opponent's
+      (category picked by Weapon category)</td><td>See §4's Weapon skill row.</td></tr>
+    <tr><td><strong>Position (rear attack)</strong></td><td>Only when the attacker is behind the defender's facing
+      </td><td>Pulls up to 50 weight units into Solid Hit only — doesn't touch Good Hit/Critical/Crippling.
+      Reliability, not explosiveness. Works both ways: a player attacking a mob from behind gets it, and so does a
+      mob that manages to circle behind a player.</td></tr>
+    <tr><td><strong>Damage variance</strong></td><td>Every non-Miss hit</td><td>± a shared variance band (12.5% by
+      default) so identical tier rolls don't produce identical numbers. Not per-mob — one shared config (§8).</td>
+    </tr>
+    <tr><td><strong>Avoidance waterfall</strong></td><td>Every non-Miss hit, against the <em>defender's</em>
+      stand-ins</td><td>Riposte (Dexterity) → Parry (Dexterity, skipped if not parryable) → Dodge (Agility) — first
+      success wins, binary (full Miss, or nothing). Riposte additionally fires a counter-attack (§8).</td></tr>
+  </table>
+
+  <h2>7. Recipes (step-by-step)</h2>
+  <p>All of this is <strong>entirely web-authored</strong> — no Unity Inspector editing needed once the mob has a
+    body and Spawn Point (see the <strong>Spawn System</strong> guide). Restart the Unity host after any web edit
+    before testing.</p>
+  <div class="legend">
+    <span><span class="tag web">Web app</span> in this browser UI</span>
+    <span><span class="tag unity">Unity</span> in the Unity editor</span>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe A — A straightforward brute (weapon-style, average evasion)</h3>
+    <p class="goal">Goal: a level-appropriate melee mob that fights roughly like a same-level Warrior.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Mob Editor → open or create the mob. Set <strong>Level</strong> and
+        <strong>Attack damage</strong> in the Combat section as usual.</li>
+      <li><span class="tag web">Web app</span> Combat Pipeline section: <strong>Weapon category</strong> = Might
+        (or Finesse, per fluff), <strong>Weapon skill</strong> ≈ <code>5 + 5×(Level−1)</code>,
+        <strong>Attack parryable</strong> = Yes.</li>
+      <li><span class="tag web">Web app</span> Leave <strong>Avoidance Agility/Dexterity</strong> at the default
+        (20/20) for an average, not-especially-evasive defender.</li>
+      <li><span class="tag web">Web app</span> Leave the 7 tier weights at the seeded default (17.5/40/30/10/2.5/0/
+        0) unless you want this mob noticeably tougher or weaker than baseline. Save.</li>
+      <li><span class="tag unity">Unity</span> Restart the host. Fight it — expect the usual Miss/Glancing/Hit/
+        Solid/Good spread, shifted by your relative level and weapon skill.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — An evasive, unparryable beast</h3>
+    <p class="goal">Goal: a wolf/wildcat-style mob that dodges often and can't be Parried (it has no weapon).</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Combat Pipeline section: <strong>Attack parryable</strong> = No
+        (bites/claws skip Parry, going straight to Dodge).</li>
+      <li><span class="tag web">Web app</span> Raise <strong>Avoidance Agility</strong> well above default —
+        e.g. 100 lands around 5% dodge, 150+ starts approaching the higher end of the curve (§4). Dexterity can
+        stay low if you don't want it to also Riposte/Parry-shaped-dodge often (Parry is moot here since it's
+        unparryable, but Dexterity still drives Riposte).</li>
+      <li><span class="tag web">Web app</span> Optionally shift the 7 tier weights toward Glancing/Hit and away
+        from Solid/Good — a beast that's hard to pin down but doesn't hit as hard when it lands. Save.</li>
+      <li><span class="tag unity">Unity</span> Restart the host. Fight it — expect more frequent "you miss" than
+        Recipe A, from Dodge succeeding rather than a low Hit Roll tier.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — A dangerous high-level boss</h3>
+    <p class="goal">Goal: a mob that can land a genuinely scary hit, including a Crippling tier players don't get
+      to see from other mobs.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Set a high <strong>Level</strong> and <strong>Attack damage</strong>
+        — remember Attack damage is the Step 3 <em>input</em>, not the final number that lands (§8); a Solid Hit
+        (100%) is closest to it, other tiers scale it up or down.</li>
+      <li><span class="tag web">Web app</span> Give the 7 tier weights a small explicit <strong>Crippling</strong>
+        value (e.g. 2–3) — unlike a player, nothing blocks this. Shift some weight out of Miss/Glancing into
+        Solid/Good/Critical to make the boss feel dangerous even before Level Differential kicks in.</li>
+      <li><span class="tag web">Web app</span> Consider raising <strong>Avoidance Agility/Dexterity</strong> too,
+        if you want the boss to be hard to land clean hits on as well as hard to survive.</li>
+      <li><span class="tag unity">Unity</span> Restart the host and fight it at the intended player level — the
+        Level Differential modifier does a lot of the "this fight is dangerous" work on its own once there's a
+        real level gap.</li>
+    </ol>
+  </div>
+
+  <h2>8. Known gaps — what's still placeholder or unimplemented</h2>
+  <ul>
+    <li><strong>Mitigation (Step 4 — armor) is a complete no-op today.</strong> Whatever Step 3 computes is the
+      final damage applied to HP, full stop. There is currently no way to give a mob "high armor" that reduces
+      incoming damage after a hit lands — the only levers that make a mob harder to damage are the Step 1/2 levers
+      above (a tougher tier table, higher avoidance) plus raw Max health.</li>
+    <li><strong>Attack damage's meaning changed with 5.1.</strong> Before this pipeline existed it was a flat,
+      guaranteed per-hit number. Now it's the Step 3 <em>weapon base damage input</em>: the number actually applied
+      is <code>Attack damage × tier% × variance</code>. A Glancing hit does far less than the raw field value; a
+      Good/Critical hit does somewhat more; only a Solid Hit (100%, the locked reference point) is close to the raw
+      number.</li>
+    <li><strong>A mob's Riposte counter-hit uses the original attacker's weapon numbers, not this mob's own Attack
+      damage.</strong> If a player attacks this mob and it Riposte-succeeds, the counter-attack damage is calculated
+      from <em>the player's</em> weapon base damage and stat (at a reduced multiplier) — so a heavily-geared player
+      takes a proportionally harder counter-hit back, regardless of what this mob's own Attack damage is set to.
+      </li>
+    <li><strong>Parry and Riposte reuse the identical Dodge curve shape.</strong> The design doc treats their real
+      curve values as an open tuning question — until that's differentiated, Avoidance Dexterity controls both at
+      the same rate.</li>
+    <li><strong>The Agility 1–250 dodge curve is a piecewise-linear approximation across ~11 control points</strong>
+      (<code>AvoidanceCurve.cs</code>), not the design doc's full per-point table (referenced there but not
+      included). Values between control points are linearly interpolated — close, not exact.</li>
+    <li><strong>Damage variance and the per-tier damage percentages are shared, not per-mob.</strong> One
+      <code>CombatTierDamageConfig</code> asset (Resources-optional; placeholder defaults if absent) applies to
+      every mob and player alike — there's no way to give one mob "less variance" or "a bigger Critical bonus"
+      than another from the Mob Editor today.</li>
+    <li><strong>Player-side class tables are themselves still placeholder for Cleric/Wizard</strong> (a
+      budget-ratio-scaled stand-in, seeded via <code>Tools → Combat → Seed Class Combat Tables</code> in Unity) —
+      only Warrior's Level 1→20 table is the design doc's real numbers. Keep that in mind if you're tuning a mob
+      "to feel fair against a level-20 Wizard" — the Wizard side of that comparison is a placeholder too.</li>
+  </ul>
+
+  <h2>9. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>A rear attack against this mob (or by it) <strong>always lands as a guaranteed Solid Hit</strong></td>
+      <td>Your 7 tier weights total far less than ~100 — the 50-unit rear-attack shift dominates a small table
+      (§5). Scale your weights up, keeping the same ratios.</td></tr>
+    <tr><td>This mob's hit distribution feels <strong>much harsher or softer than intended</strong> against a
+      specific opponent</td><td>Check the Level and Weapon skill gap — both modifiers are large relative to a
+      ~100-total table (up to 100 and 25 weight units respectively) and apply on <em>every</em> swing.</td></tr>
+    <tr><td>This mob <strong>never lands a Critical, even when clearly favored</strong></td><td>Critical can gain
+      weight from Level/Skill advantage even starting from 0 — check the opponent's actual level/skill first.
+      <strong>Crippling never gains weight from any modifier</strong> — it only appears if you typed a nonzero
+      value directly (§5, §8).</td></tr>
+    <tr><td>My web edit to the Combat Pipeline section <strong>didn't change in-game behavior</strong></td><td>Unity
+      loads mob content at host start — restart the Unity host. Also confirm Postgres + the API are running.</td>
+    </tr>
+    <tr><td>A mob's Riposte counter-hit seems to scale with <strong>the player</strong>, not the mob</td><td>Expected
+      — see §8. The counter uses the original attacker's weapon numbers, not this mob's Attack damage.</td></tr>
+    <tr><td>An "Attack parryable = No" mob still gets <strong>Riposted or Dodged</strong> against</td><td>Expected —
+      the parryable flag only skips the <em>Parry</em> check; Riposte and Dodge still run normally (§6).</td></tr>
+  </table>
+
+  <h2>10. Quick reference</h2>
+  <h3>Combat Pipeline section (Mob Editor)</h3>
+  <table>
+    <tr><th>Field</th><th>One-liner</th></tr>
+    <tr><td>Weapon category</td><td>Which opponent weapon-skill line (Might/Finesse) this mob's Skill Differential
+      compares against. No effect on this mob's own damage.</td></tr>
+    <tr><td>Weapon skill</td><td>This mob's trained proficiency; ~<code>5 + 5×(Level−1)</code> matches a same-level
+      player's cap.</td></tr>
+    <tr><td>Attack parryable</td><td>No = beast/unarmed, skips Parry only.</td></tr>
+    <tr><td>Avoidance Agility / Dexterity</td><td>Player-stat-scale stand-ins for Dodge / Riposte+Parry. Default
+      20/20 = near-zero.</td></tr>
+    <tr><td>7 tier weights</td><td>Relative weights at parity — keep the total near 100 or the fixed-unit modifiers
+      (§6) dominate or vanish.</td></tr>
+  </table>
+  <h3>Fixed in Unity, not per-mob (§8)</h3>
+  <p>Damage variance band and per-tier damage percentages (<code>CombatTierDamageConfig</code>) · the Agility
+    1–250 dodge curve's control points (<code>AvoidanceCurve</code>) · Mitigation, currently a no-op
+    (<code>CombatResolver.ApplyMitigation</code>).</p>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/CombatResolver.cs</code>,
+    <code>CombatTierTable.cs</code>, <code>AvoidanceCurve.cs</code>, <code>CombatTierDamageConfig.cs</code>,
+    <code>MobDefinition.cs</code>, and <code>Docs/eventide_combat_pipeline.md</code> (the design source).</footer>
+</article>
