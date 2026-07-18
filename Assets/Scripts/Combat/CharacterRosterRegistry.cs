@@ -29,6 +29,15 @@ public static class CharacterRosterRegistry
     /// <summary>The shared locomotion controller (3.1.6 preview + in-world bodies), or null if unassigned.</summary>
     public static RuntimeAnimatorController LocomotionController => Roster != null ? Roster.locomotionController : null;
 
+    /// <summary>The class weapon prop wiring for a class (M2.10, RC4), or a default (prop == null) if unauthored.</summary>
+    public static ClassWeaponProp GetWeaponProp(string cls)
+    {
+        if (Roster != null && Roster.classWeaponProps != null)
+            foreach (var w in Roster.classWeaponProps)
+                if (w.className == cls) return w;
+        return default;
+    }
+
     /// <summary>Distinct genders offered, in enum order.</summary>
     public static Gender[] Genders()
     {

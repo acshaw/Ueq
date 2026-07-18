@@ -1,0 +1,217 @@
+<article class="doc">
+  <h1>Abilities — Author Guide</h1>
+  <p class="lead">How to build an ability in the web <strong>Ability Editor</strong> (and its companion
+    <strong>Ability Tag Editor</strong>) — targeting, resource cost, animation, cooldowns, and the effects
+    it applies when cast.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>Anatomy of an ability</li>
+      <li>Tags vs. cooldown links — the part that trips people up</li>
+      <li>Effects, in depth</li>
+      <li>The Ability Tag Editor</li>
+      <li>Getting an ability onto a character</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Known gaps — what's still placeholder or unimplemented</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>An ability is a header (identity/targeting/resource/animation) plus three ordered lists:
+    <strong>tags</strong> (semantic labels), <strong>cooldown links</strong> (which shared timer this
+    ability starts on cast), and <strong>effects</strong> (what actually happens, applied in order). The
+    whole system is data-driven — a new ability is a row in the web editor, not new code. A genuinely new
+    <em>kind</em> of effect (a DoT, a stun, a buff) is the one thing that still needs a code change (§8).
+  </p>
+  <div class="note"><strong>Everything here is entirely web-authored.</strong> Once an ability exists,
+    assign it to a class's <strong>Starting Abilities</strong> list in the <strong>Class Editor</strong>
+    (see the Races &amp; Classes guide) to put it on a character's hotbar at creation. Restart the Unity
+    host after any web edit before testing — content loads once at host start.</div>
+
+  <h2>2. Anatomy of an ability</h2>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><strong>ability_id</strong></td><td>The permanent identifier — referenced by class starting-
+      ability lists and by any already-saved character's hotbar. Set once at creation; don't rename an id
+      that's in use, or existing hotbars will silently lose that slot (they store the id, not a
+      reference).</td></tr>
+    <tr><td><strong>Display name / Description</strong></td><td>Player-facing text.</td></tr>
+    <tr><td><strong>Targeting</strong> (Self / Single Target)</td><td>Self skips the range check entirely
+      and always resolves against the caster. Single Target requires a target within range.</td></tr>
+    <tr><td><strong>Range</strong></td><td>Ignored for Self abilities.</td></tr>
+    <tr><td><strong>Cast time</strong></td><td>0 = instant. (Cast-time channeling/interruption isn't built
+      yet — this field is stored but not currently enforced client-side beyond the animation.)</td></tr>
+    <tr><td><strong>Mana cost</strong></td><td>0 = free (e.g. Warrior abilities, by design — see the
+      Combat Pipeline guide's note on Warrior's cooldown-gated kit).</td></tr>
+    <tr><td><strong>Anim trigger</strong></td><td>Must exactly match a Trigger parameter + state already
+      built into <code>PlayerLocomotion.controller</code> (e.g. <code>Cast</code>, <code>Kick</code>).
+      Typing a trigger that doesn't exist in the controller is silent — no error, the animation just
+      doesn't play. Leave blank for no animation.</td></tr>
+    <tr><td><strong>Tags</strong></td><td>Semantic labels — see §3.</td></tr>
+    <tr><td><strong>Cooldown links</strong></td><td>See §3.</td></tr>
+    <tr><td><strong>Effects</strong></td><td>See §4.</td></tr>
+  </table>
+
+  <h2>3. Tags vs. cooldown links — the part that trips people up</h2>
+  <p>A <strong>tag</strong> (from the Ability Tag Editor) is just an id + display name — on its own it
+    does nothing. It's used two different ways on an ability, and they're easy to conflate:</p>
+  <ul>
+    <li>An ability's own <strong>Tags</strong> list is pure flavor/classification (e.g. "this is a martial
+      ability") — nothing reads it at runtime today. It exists for future systems (combo chains, elemental
+      typing) referenced in the original design, not yet built.</li>
+    <li>A <strong>cooldown link</strong> pairs a tag with a duration and means: <em>casting this ability
+      starts (or checks) a shared timer keyed by that tag</em>. The tag here is a <strong>timer key</strong>,
+      not flavor — if two different abilities both have a cooldown link on the same tag, casting either one
+      starts <strong>one shared timer</strong> that blocks both until it expires. This is how you'd build
+      "these three abilities share one cooldown" (a stance-dance kit, a shared "special attack" pool, …).
+    </li>
+  </ul>
+  <div class="note">You can reuse the exact same tag for both purposes on one ability — e.g. Kick tags
+    itself with <code>MartialAbility</code> <em>and</em> has a cooldown link on <code>MartialAbility</code>
+    (10s) — but they're independent lists; adding a tag doesn't add a cooldown link, and vice versa.</div>
+  <p><strong>Empty cooldown links = uses the shared Global Cooldown (GCD, 1.5s)</strong> instead of a
+    dedicated timer. This is the default for most simple abilities (Fire Bolt, Minor Heal both have zero
+    cooldown links today). Add a cooldown link only when an ability needs its own longer, independent
+    timer.</p>
+
+  <h2>4. Effects, in depth</h2>
+  <p>Effects apply <strong>in order</strong> when the ability successfully casts (after the range/mana/
+    cooldown checks all pass). Each effect row is one of two types today:</p>
+  <table>
+    <tr><th>Type</th><th>Formula</th><th>Notes</th></tr>
+    <tr><td><strong>damage</strong></td><td><code>baseAmount + scalingStat × scalingFactor</code>, minimum
+      1, applied via <code>Health.TakeDamage</code></td><td>Ignores the target's mitigation/avoidance
+      pipeline entirely — an ability's damage always lands if the ability resolves (no Dodge/Parry/Miss
+      roll like auto-attack). This is a real, intentional gap from the design doc's original scope (see
+      the Combat Pipeline guide) — abilities/spells were explicitly left on the old formula, not migrated
+      to the 4-step resolver.</td></tr>
+    <tr><td><strong>heal</strong></td><td><code>baseAmount + scalingStat × scalingFactor</code>, minimum
+      1, applied via <code>Health.Heal</code></td><td>No overheal cap beyond max HP (Health clamps
+      internally).</td></tr>
+  </table>
+  <p><strong>Scaling stat</strong> is one of None/Str/Sta/Agi/Dex/Int/Wis/Cha, read off the
+    <em>caster's</em> <code>CharacterStats</code> at cast time (not the target's). None means the effect is
+    a flat number regardless of stats.</p>
+  <p>Multiple effects on one ability all apply, in list order, to the same resolved target (Self or the
+    selected target) — there's no per-effect target override. A "damage + apply a debuff" ability would
+    need a Debuff effect type, which doesn't exist yet (§8).</p>
+
+  <h2>5. The Ability Tag Editor</h2>
+  <p>A separate, much simpler editor — just <strong>tag_id</strong> + <strong>display name</strong>, no
+    children. Create a tag here first, then reference it from an ability's Tags or Cooldown Links section
+    (both pull their dropdown options from this list). Deleting a tag that's still referenced by an
+    ability's cooldown link or tag list will fail at the database level (a foreign-key error) — remove the
+    reference from the ability first.</p>
+
+  <h2>6. Getting an ability onto a character</h2>
+  <p>Creating an ability doesn't put it anywhere by itself. Two ways it reaches a player:</p>
+  <ol>
+    <li><strong>Starting abilities</strong> — add the ability's id to a class's Starting Abilities list in
+      the <strong>Class Editor</strong> (see the Races &amp; Classes guide). New characters of that class
+      get it auto-filled onto the hotbar at creation.</li>
+    <li>There is currently <strong>no in-game way to grant an ability after creation</strong> (no
+      "learn ability" flow, no trainer NPC, no levelup unlocks) — that's future scope, not built.</li>
+  </ol>
+
+  <h2>7. Recipes (step-by-step)</h2>
+  <div class="legend">
+    <span><span class="tag web">Web app</span> in this browser UI</span>
+    <span><span class="tag unity">Unity</span> in the Unity editor</span>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe A — A simple instant-damage attack</h3>
+    <p class="goal">Goal: a Fire-Bolt-style single-target nuke, no dedicated cooldown (just the GCD).</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Ability Editor → + New. Set <strong>ability_id</strong>
+        (e.g. <code>ice_shard</code>), display name, targeting = Single Target, a range, a mana cost, and
+        an anim trigger that already exists in the controller (e.g. <code>Cast</code>).</li>
+      <li><span class="tag web">Web app</span> Leave Tags and Cooldown Links empty (uses the GCD).</li>
+      <li><span class="tag web">Web app</span> Effects → + Effect → type <strong>damage</strong>, set a
+        base amount and a scaling stat/factor. Save.</li>
+      <li><span class="tag web">Web app</span> Class Editor → open the target class → Starting Abilities →
+        add the new ability id (or wire it in later via whatever future ability-grant path exists).</li>
+      <li><span class="tag unity">Unity</span> Restart the host, create/relog a character of that class,
+        confirm it's on the hotbar and casts correctly.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — A self-heal</h3>
+    <p class="goal">Goal: Minor-Heal-style self-target restoration.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Ability Editor → + New. Targeting = <strong>Self</strong>
+        (range is ignored). Set mana cost and an anim trigger.</li>
+      <li><span class="tag web">Web app</span> Effects → + Effect → type <strong>heal</strong>, set base
+        amount + scaling stat (typically Wis).</li>
+      <li><span class="tag web">Web app</span> Wire into a class's Starting Abilities as in Recipe A.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — Two abilities sharing one cooldown</h3>
+    <p class="goal">Goal: a "stance" pair where using either one locks out both for 15s.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Ability Tag Editor → + New → create a tag, e.g.
+        <code>stance</code>.</li>
+      <li><span class="tag web">Web app</span> On <strong>both</strong> abilities: Cooldown Links → + Link
+        → select <code>stance</code>, duration 15.</li>
+      <li><span class="tag unity">Unity</span> Restart the host and confirm: casting either one starts a
+        single 15s timer that also blocks the other (check the hotbar cooldown overlay on both slots).</li>
+    </ol>
+  </div>
+
+  <h2>8. Known gaps — what's still placeholder or unimplemented</h2>
+  <ul>
+    <li><strong>Only two effect types exist: damage and heal.</strong> The original design named several
+      more (Dot, Hot, Buff, Debuff, Snare, Root, Stun, FactionHit) — none are built. Adding one is a real
+      code change (a new <code>effect_type</code> value, a new branch in <code>AbilityRegistry.
+      BuildEffect</code>, and if it needs fields beyond the shared amount/scaling-stat/scaling-factor
+      shape, a schema migration) — not something the web editor alone can add.</li>
+    <li><strong>Ability damage/healing bypasses the 4-step combat resolver entirely.</strong> No Dodge/
+      Parry/Riposte/Miss roll, no mitigation — an ability that successfully casts always lands its full
+      effect. This is a known, intentional-for-now scope gap (see the Combat Pipeline guide).</li>
+    <li><strong>Cast time is stored but not enforced.</strong> A nonzero cast time doesn't currently block
+      movement or add a visible cast bar beyond the trigger animation.</li>
+    <li><strong>No post-creation ability-grant flow.</strong> Starting Abilities at character creation is
+      the only way an ability reaches a player today.</li>
+  </ul>
+
+  <h2>9. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>An ability's animation <strong>never plays</strong></td><td>The Anim Trigger text doesn't
+      exactly match a Trigger parameter in <code>PlayerLocomotion.controller</code> — this fails silently,
+      no error logged.</td></tr>
+    <tr><td>Casting one ability also puts an <strong>unrelated ability on cooldown</strong></td><td>They
+      share a cooldown-link tag (§3) — check both abilities' Cooldown Links sections.</td></tr>
+    <tr><td>An ability I just created <strong>isn't on any character's hotbar</strong></td><td>It needs to
+      be added to a class's Starting Abilities in the Class Editor, and that only applies to
+      <em>newly created</em> characters (§6) — nothing retroactively grants it to existing ones.</td></tr>
+    <tr><td>Deleting a tag <strong>fails</strong></td><td>It's still referenced by an ability's Tags or
+      Cooldown Links list — remove the reference there first (§5).</td></tr>
+    <tr><td>My web edit to an ability <strong>didn't change in-game behavior</strong></td><td>Unity loads
+      ability content at host start — restart the Unity host. Also confirm Postgres + the API are
+      running.</td></tr>
+  </table>
+
+  <h2>10. Quick reference</h2>
+  <table>
+    <tr><th>Concept</th><th>One-liner</th></tr>
+    <tr><td>Tag (on the ability)</td><td>Flavor/classification only — nothing reads it yet.</td></tr>
+    <tr><td>Cooldown link</td><td>Tag = shared timer key. Same tag on two abilities = one shared cooldown.
+      Empty list = uses the 1.5s GCD instead.</td></tr>
+    <tr><td>Effect</td><td>damage or heal, applied in list order, ignores the combat resolver entirely.
+      </td></tr>
+    <tr><td>Getting an ability onto a character</td><td>Class Editor → Starting Abilities (creation-time
+      only, no post-creation grant).</td></tr>
+  </table>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/AbilityRegistry.cs</code>,
+    <code>PlayerAbilities.cs</code>, <code>AbilityEffect.cs</code>, <code>DamageEffect.cs</code>,
+    <code>HealEffect.cs</code>, and <code>docs/devplans/2.9-abilities-content-type.md</code>.</footer>
+</article>

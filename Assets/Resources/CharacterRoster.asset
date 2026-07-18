@@ -42,3 +42,16 @@ MonoBehaviour:
     cls: Cleric
     modelPrefab: {fileID: 1188022232007446, guid: 63c8d29e2141cad4d8cb0b3c8294778e, type: 3}
   locomotionController: {fileID: 9100000, guid: 1f50137d0853cba47932c31914e41051, type: 2}
+  classWeaponProps:
+  - className: Warrior
+    prop: {fileID: 181534, guid: 13af847dfa6dbe844ba4b7c902f98f67, type: 3}
+    gripPositionOffset: {x: 0, y: 0, z: 0}
+    gripEulerOffset: {x: 0, y: 0, z: 0}
+  - className: Wizard
+    prop: {fileID: 100508, guid: 1006941873f215d46b09517732f49978, type: 3}
+    gripPositionOffset: {x: 0, y: 0, z: 0}
+    gripEulerOffset: {x: 0, y: 0, z: 0}
+  - className: Cleric
+    prop: {fileID: 124988, guid: 24438bb8ac649ea46b56ab6b0404db1a, type: 3}
+    gripPositionOffset: {x: 0, y: 0, z: 0}
+    gripEulerOffset: {x: 0, y: 0, z: 0}

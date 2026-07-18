@@ -3,7 +3,12 @@ using UnityEngine;
 
 public enum ManaStatType { None, Intellect, Wisdom }
 
-[CreateAssetMenu(menuName = "Ueq/Class Definition")]
+/// <summary>
+/// Runtime-only since M2.10 — built by <see cref="RaceClassRegistry"/> from a DB-backed
+/// <see cref="ClassSnapshot"/> (server load or client catalog sync). No longer authored as an asset;
+/// author classes in the web Class Editor. The weapon-prop cosmetic fields (3.1.6) live on
+/// <see cref="CharacterRoster"/> instead (RC4) — pure Unity-asset wiring, not DB content.
+/// </summary>
 public class ClassDefinition : ScriptableObject
 {
     public string className  = "Warrior";
@@ -49,14 +54,4 @@ public class ClassDefinition : ScriptableObject
     [Tooltip("Ability ids granted at character creation (PlayerAbilities.SetRaceClass populates the " +
              "hotbar from these). Ability ids, not asset refs, since M2.9 moved abilities to the DB.")]
     public List<string> startingAbilities = new();
-
-    [Header("Weapon Prop (3.1.6)")]
-    [Tooltip("Cosmetic weapon attached to the body's right-hand bone (Warrior sword / Wizard staff / " +
-             "Cleric sceptre). Shown in the create preview and in-world. Leave empty for no prop, or for a " +
-             "body that already ships a held weapon.")]
-    public GameObject weaponPropPrefab;
-    [Tooltip("Local position offset of the prop relative to the right-hand bone (tune live in the 3.1.6 preview).")]
-    public Vector3 gripPositionOffset;
-    [Tooltip("Local euler-angle offset of the prop relative to the right-hand bone (tune live in the preview).")]
-    public Vector3 gripEulerOffset;
 }

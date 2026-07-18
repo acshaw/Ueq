@@ -16,6 +16,8 @@ public static class DatabaseSeeder
         SeedDevAccount(conn);
         SeedStarterItems(conn);
         SeedAbilities(conn);
+        SeedRaces(conn);
+        SeedClasses(conn);   // after abilities — class_starting_abilities FKs to abilities
         SeedStarterVendors(conn);
         SeedConversations(conn);
         SeedFactions(conn);
@@ -595,6 +597,139 @@ public static class DatabaseSeeder
         cmd.Parameters.AddWithValue("amt", baseAmount);
         cmd.Parameters.AddWithValue("stat", scalingStat);
         cmd.Parameters.AddWithValue("factor", scalingFactor);
+        cmd.Parameters.AddWithValue("o", order);
+        cmd.ExecuteNonQuery();
+    }
+
+    // Idempotent bootstrap of the races that used to live as Resources/Races SO assets (M2.10). Faithfully
+    // migrated from those assets' YAML — exact values preserved. ON CONFLICT DO NOTHING so web edits stick.
+    static void SeedRaces(NpgsqlConnection conn)
+    {
+        SeedRace(conn, "Human", "Human", 1f, 0, 0, 0, 0, 0, 0, 0);
+        SeedRace(conn, "Dwarf", "Dwarf", 1f, 2, 3, -2, 0, -2, 1, 0);
+        Debug.Log("[DB] Seed: races ready (Human, Dwarf).");
+    }
+
+    static void SeedRace(NpgsqlConnection conn, string id, string name, float xpMod,
+                         int str, int sta, int agi, int dex, int intl, int wis, int cha)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO races (race_id, race_name, xp_modifier, str_mod, sta_mod, agi_mod, dex_mod, int_mod, wis_mod, cha_mod) " +
+            "VALUES (@id, @name, @xp, @str, @sta, @agi, @dex, @int, @wis, @cha) " +
+            "ON CONFLICT (race_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", name);
+        cmd.Parameters.AddWithValue("xp", xpMod);
+        cmd.Parameters.AddWithValue("str", str);
+        cmd.Parameters.AddWithValue("sta", sta);
+        cmd.Parameters.AddWithValue("agi", agi);
+        cmd.Parameters.AddWithValue("dex", dex);
+        cmd.Parameters.AddWithValue("int", intl);
+        cmd.Parameters.AddWithValue("wis", wis);
+        cmd.Parameters.AddWithValue("cha", cha);
+        cmd.ExecuteNonQuery();
+    }
+
+    // Idempotent bootstrap of the classes that used to live as Resources/Classes SO assets (M2.10).
+    // Faithfully migrated — exact values preserved (incl. Warrior's base stats all sitting at 75, notably
+    // different from Wizard/Cleric's ~10 baseline; not "fixed" here, this is a pure data migration).
+    // Requires SeedAbilities to have already run (class_starting_abilities FKs to abilities).
+    static void SeedClasses(NpgsqlConnection conn)
+    {
+        if (SeedClass(conn, "Warrior", "Warrior", 1f,
+                75, 75, 75, 75, 75, 75, 75,
+                15, 4, 255, 0.23f, 0.15f,
+                0, 0, 0, 0, 0.23f, 0f,
+                17.5f, 40f, 30f, 10f, 2.5f, 0f, 0f,
+                2f, 13f, 20f, 35f, 25f, 3f, 2f))
+        {
+            SeedClassStartingAbility(conn, "Warrior", "kick", 0);
+            SeedClassStartingAbility(conn, "Warrior", "Taunt", 1);
+        }
+
+        if (SeedClass(conn, "Wizard", "Wizard", 1f,
+                10, 10, 10, 10, 14, 10, 10,
+                12, 1, 100, 0.23f, 0.12f,
+                1, 40, 5, 200, 0.23f, 0.18f,
+                25f, 40f, 25f, 7.5f, 2.5f, 0f, 0f,
+                15.53f, 23.5f, 18.89f, 22.78f, 16.25f, 1.83f, 1.22f))
+            SeedClassStartingAbility(conn, "Wizard", "fire_bolt", 0);
+
+        if (SeedClass(conn, "Cleric", "Cleric", 1f,
+                10, 10, 10, 10, 10, 14, 10,
+                13, 2, 140, 0.23f, 0.12f,
+                2, 35, 4, 200, 0.23f, 0.16f,
+                20f, 40f, 30f, 7.5f, 2.5f, 0f, 0f,
+                7.08f, 17.5f, 21.67f, 28.33f, 21.25f, 2.5f, 1.67f))
+            SeedClassStartingAbility(conn, "Cleric", "minor_heal", 0);
+
+        Debug.Log("[DB] Seed: classes ready (Warrior, Wizard, Cleric).");
+    }
+
+    static bool SeedClass(NpgsqlConnection conn, string id, string name, float xpMod,
+        int str, int sta, int agi, int dex, int intl, int wis, int cha,
+        int baseHp, int hpPerLevel, int staCap, float baseStaRatio, float staGrowthRate,
+        int manaStatType, int baseMana, int manaPerLevel, int manaCap, float baseManaRatio, float manaGrowthRate,
+        float l1Miss, float l1Glancing, float l1Hit, float l1Solid, float l1Good, float l1Critical, float l1Crippling,
+        float l20Miss, float l20Glancing, float l20Hit, float l20Solid, float l20Good, float l20Critical, float l20Crippling)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO classes (class_id, class_name, xp_modifier, " +
+            "base_str, base_sta, base_agi, base_dex, base_int, base_wis, base_cha, " +
+            "class_base_hp, hp_per_level, sta_cap, base_sta_ratio, sta_growth_rate, " +
+            "mana_stat_type, class_base_mana, mana_per_level, mana_cap, base_mana_ratio, mana_growth_rate, " +
+            "tier_l1_miss, tier_l1_glancing, tier_l1_hit, tier_l1_solid, tier_l1_good, tier_l1_critical, tier_l1_crippling, " +
+            "tier_l20_miss, tier_l20_glancing, tier_l20_hit, tier_l20_solid, tier_l20_good, tier_l20_critical, tier_l20_crippling) " +
+            "VALUES (@id, @name, @xp, @str, @sta, @agi, @dex, @int, @wis, @cha, " +
+            "@bhp, @hpl, @stacap, @bstaratio, @stagrow, " +
+            "@mst, @bmana, @manal, @manacap, @bmanaratio, @managrow, " +
+            "@l1mi, @l1gl, @l1hi, @l1so, @l1go, @l1cr, @l1cp, " +
+            "@l20mi, @l20gl, @l20hi, @l20so, @l20go, @l20cr, @l20cp) " +
+            "ON CONFLICT (class_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", name);
+        cmd.Parameters.AddWithValue("xp", xpMod);
+        cmd.Parameters.AddWithValue("str", str);
+        cmd.Parameters.AddWithValue("sta", sta);
+        cmd.Parameters.AddWithValue("agi", agi);
+        cmd.Parameters.AddWithValue("dex", dex);
+        cmd.Parameters.AddWithValue("int", intl);
+        cmd.Parameters.AddWithValue("wis", wis);
+        cmd.Parameters.AddWithValue("cha", cha);
+        cmd.Parameters.AddWithValue("bhp", baseHp);
+        cmd.Parameters.AddWithValue("hpl", hpPerLevel);
+        cmd.Parameters.AddWithValue("stacap", staCap);
+        cmd.Parameters.AddWithValue("bstaratio", baseStaRatio);
+        cmd.Parameters.AddWithValue("stagrow", staGrowthRate);
+        cmd.Parameters.AddWithValue("mst", manaStatType);
+        cmd.Parameters.AddWithValue("bmana", baseMana);
+        cmd.Parameters.AddWithValue("manal", manaPerLevel);
+        cmd.Parameters.AddWithValue("manacap", manaCap);
+        cmd.Parameters.AddWithValue("bmanaratio", baseManaRatio);
+        cmd.Parameters.AddWithValue("managrow", manaGrowthRate);
+        cmd.Parameters.AddWithValue("l1mi", l1Miss);
+        cmd.Parameters.AddWithValue("l1gl", l1Glancing);
+        cmd.Parameters.AddWithValue("l1hi", l1Hit);
+        cmd.Parameters.AddWithValue("l1so", l1Solid);
+        cmd.Parameters.AddWithValue("l1go", l1Good);
+        cmd.Parameters.AddWithValue("l1cr", l1Critical);
+        cmd.Parameters.AddWithValue("l1cp", l1Crippling);
+        cmd.Parameters.AddWithValue("l20mi", l20Miss);
+        cmd.Parameters.AddWithValue("l20gl", l20Glancing);
+        cmd.Parameters.AddWithValue("l20hi", l20Hit);
+        cmd.Parameters.AddWithValue("l20so", l20Solid);
+        cmd.Parameters.AddWithValue("l20go", l20Good);
+        cmd.Parameters.AddWithValue("l20cr", l20Critical);
+        cmd.Parameters.AddWithValue("l20cp", l20Crippling);
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    static void SeedClassStartingAbility(NpgsqlConnection conn, string classId, string abilityId, int order)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO class_starting_abilities (class_id, ability_id, sort_order) VALUES (@c, @a, @o)", conn);
+        cmd.Parameters.AddWithValue("c", classId);
+        cmd.Parameters.AddWithValue("a", abilityId);
         cmd.Parameters.AddWithValue("o", order);
         cmd.ExecuteNonQuery();
     }

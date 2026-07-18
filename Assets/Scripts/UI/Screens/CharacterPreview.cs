@@ -21,9 +21,8 @@ public class CharacterPreview : MonoBehaviour
     Camera        _camera;
     Light         _light;
     Transform     _stage;
-    GameObject    _body;
-    Transform       _weapon;   // the attached prop, re-aligned each frame for live grip tuning
-    ClassDefinition _classDef;
+    GameObject _body;
+    Transform  _weapon;   // the attached prop, re-aligned each frame for live grip tuning
 
     float  _yaw;
     bool   _active;
@@ -88,10 +87,9 @@ public class CharacterPreview : MonoBehaviour
             CharacterRosterRegistry.LocomotionController, driveLocomotion: false);
         if (_body != null) _body.transform.localRotation = Quaternion.Euler(0f, _yaw, 0f);
 
-        // Cache the attached weapon + its class def so Update can re-apply the grip offsets live (so tuning
-        // gripPositionOffset/gripEulerOffset on the ClassDefinition in the Inspector reflects immediately).
-        _classDef = RaceClassRegistry.GetClass(cls);
-        _weapon   = FindWeapon(_body);
+        // Cache the attached weapon transform; Update re-reads its grip offsets from CharacterRoster each
+        // frame (M2.10, RC4 — moved off ClassDefinition) so tuning them in the Inspector reflects immediately.
+        _weapon = FindWeapon(_body);
     }
 
     static Transform FindWeapon(GameObject body)
@@ -119,10 +117,14 @@ public class CharacterPreview : MonoBehaviour
 
         // Live grip tuning: re-apply the class's offsets each frame so editing them in the Inspector during
         // Play updates the held weapon immediately (that's the point of aligning them in the preview).
-        if (_weapon != null && _classDef != null)
+        if (_weapon != null)
         {
-            _weapon.localPosition = _classDef.gripPositionOffset;
-            _weapon.localRotation = Quaternion.Euler(_classDef.gripEulerOffset);
+            var weapon = CharacterRosterRegistry.GetWeaponProp(_cls);
+            if (weapon.prop != null)
+            {
+                _weapon.localPosition = weapon.gripPositionOffset;
+                _weapon.localRotation = Quaternion.Euler(weapon.gripEulerOffset);
+            }
         }
     }
 

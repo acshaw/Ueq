@@ -20,6 +20,10 @@ public static class ContentLoader
     /// <summary>Ability snapshots loaded at startup — the source for both the server registry and the client catalog sync (M2.9).</summary>
     public static IReadOnlyList<AbilitySnapshot> Abilities { get; private set; } = new List<AbilitySnapshot>();
 
+    /// <summary>Race/class snapshots loaded at startup — the source for both the server registry and the client catalog sync (M2.10).</summary>
+    public static IReadOnlyList<RaceSnapshot>  Races  { get; private set; } = new List<RaceSnapshot>();
+    public static IReadOnlyList<ClassSnapshot> Classes { get; private set; } = new List<ClassSnapshot>();
+
     /// <summary>Load every DB-backed content type into its registry. Add a step per type as it migrates.</summary>
     public static void LoadAll()
     {
@@ -42,6 +46,17 @@ public static class ContentLoader
         else
             Debug.LogWarning("[Content] AbilityRegistry.Instance is null at load — abilities not registered on the server.");
         Debug.Log($"[Content] Loaded {abilities.Count} ability(ies) from the database.");
+
+        // ── Races + classes (M2.10 — needs client sync like items/abilities; classes reference abilities) ──
+        var races = new RaceRepository().LoadAll(conn);
+        Races = races;
+        RaceClassRegistry.LoadRaces(races);
+        Debug.Log($"[Content] Loaded {races.Count} race(s) from the database.");
+
+        var classes = new ClassRepository().LoadAll(conn);
+        Classes = classes;
+        RaceClassRegistry.LoadClasses(classes);
+        Debug.Log($"[Content] Loaded {classes.Count} class(es) from the database.");
 
         // ── Vendor inventories (M2.3 — server-only, no client sync) ─────────────────────
         var vendors = new VendorInventoryRepository().LoadAll(conn);

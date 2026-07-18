@@ -9,6 +9,8 @@ import { XpEditor } from './xp-editor';
 import { SpawnEditor } from './spawn-editor';
 import { AbilityEditor } from './ability-editor';
 import { AbilityTagEditor } from './ability-tag-editor';
+import { RaceEditor } from './race-editor';
+import { ClassEditor } from './class-editor';
 import { Documentation } from './documentation';
 
 /**
@@ -17,7 +19,7 @@ import { Documentation } from './documentation';
  */
 @Component({
   selector: 'app-root',
-  imports: [ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, Documentation],
+  imports: [ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation],
   template: `
     <header>
       <strong>Ueq Content</strong>
@@ -32,6 +34,8 @@ import { Documentation } from './documentation';
         <button [class.active]="view() === 'spawns'" (click)="view.set('spawns')">Spawns</button>
         <button [class.active]="view() === 'abilities'" (click)="view.set('abilities')">Abilities</button>
         <button [class.active]="view() === 'abilityTags'" (click)="view.set('abilityTags')">Ability Tags</button>
+        <button [class.active]="view() === 'races'" (click)="view.set('races')">Races</button>
+        <button [class.active]="view() === 'classes'" (click)="view.set('classes')">Classes</button>
         <button class="docs" [class.active]="view() === 'docs'" (click)="view.set('docs')">Documentation</button>
       </nav>
     </header>
@@ -48,6 +52,8 @@ import { Documentation } from './documentation';
         @case ('spawns')        { <app-spawn-editor /> }
         @case ('abilities')     { <app-ability-editor /> }
         @case ('abilityTags')   { <app-ability-tag-editor /> }
+        @case ('races')         { <app-race-editor /> }
+        @case ('classes')       { <app-class-editor /> }
         @case ('docs')          { <app-documentation /> }
       }
     </div>
@@ -66,5 +72,5 @@ import { Documentation } from './documentation';
   `]
 })
 export class App {
-  readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'abilities' | 'abilityTags' | 'docs'>('items');
+  readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'docs'>('items');
 }

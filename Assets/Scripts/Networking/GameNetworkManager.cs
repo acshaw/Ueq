@@ -104,6 +104,9 @@ public class GameNetworkManager : NetworkManager
         NetworkClient.RegisterHandler<ContentCatalog.ItemCatalogMessage>(ContentCatalog.ApplyItems);
         // 2.9 — abilities need client sync too (HotbarUI reads AbilityRegistry to label slots).
         NetworkClient.RegisterHandler<ContentCatalog.AbilityCatalogMessage>(ContentCatalog.ApplyAbilities);
+        // 2.10 — races/classes need client sync too (CharacterModelFactory/CharacterPreview read RaceClassRegistry).
+        NetworkClient.RegisterHandler<ContentCatalog.RaceCatalogMessage>(ContentCatalog.ApplyRaces);
+        NetworkClient.RegisterHandler<ContentCatalog.ClassCatalogMessage>(ContentCatalog.ApplyClasses);
         // 3.0 — chat is delivered via a NetworkMessage (not an RPC) so it survives zone/scene interest
         // partitioning. Register the client-side receiver.
         NetworkClient.RegisterHandler<ChatDeliverMessage>(ChatManager.HandleDeliver);
@@ -113,6 +116,8 @@ public class GameNetworkManager : NetworkManager
     {
         NetworkClient.UnregisterHandler<ContentCatalog.ItemCatalogMessage>();
         NetworkClient.UnregisterHandler<ContentCatalog.AbilityCatalogMessage>();
+        NetworkClient.UnregisterHandler<ContentCatalog.RaceCatalogMessage>();
+        NetworkClient.UnregisterHandler<ContentCatalog.ClassCatalogMessage>();
         NetworkClient.UnregisterHandler<ChatDeliverMessage>();
         base.OnStopClient();
     }
@@ -123,6 +128,8 @@ public class GameNetworkManager : NetworkManager
     {
         conn.Send(ContentCatalog.BuildItems());
         conn.Send(ContentCatalog.BuildAbilities());
+        conn.Send(ContentCatalog.BuildRaces());
+        conn.Send(ContentCatalog.BuildClasses());
         base.OnServerReady(conn);
     }
 

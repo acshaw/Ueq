@@ -59,4 +59,40 @@ public static class ContentCatalog
         AbilityRegistry.Instance.LoadFrom(abilities);
         Debug.Log($"[Content] Client received {abilities.Count} ability(ies) from the server catalog.");
     }
+
+    /// <summary>One content type's catalog as JSON (M2.10 — races/classes need client sync because
+    /// CharacterModelFactory/CharacterPreview read RaceClassRegistry on the client).</summary>
+    public struct RaceCatalogMessage : NetworkMessage
+    {
+        public string racesJson;
+    }
+
+    public static RaceCatalogMessage BuildRaces()
+        => new RaceCatalogMessage { racesJson = JsonConvert.SerializeObject(ContentLoader.Races) };
+
+    /// <summary>Client: rebuild the race registry from a received catalog. No-op on the host.</summary>
+    public static void ApplyRaces(RaceCatalogMessage msg)
+    {
+        if (NetworkServer.active) return; // host shares the server-populated registry
+        var races = JsonConvert.DeserializeObject<List<RaceSnapshot>>(msg.racesJson) ?? new List<RaceSnapshot>();
+        RaceClassRegistry.LoadRaces(races);
+        Debug.Log($"[Content] Client received {races.Count} race(s) from the server catalog.");
+    }
+
+    public struct ClassCatalogMessage : NetworkMessage
+    {
+        public string classesJson;
+    }
+
+    public static ClassCatalogMessage BuildClasses()
+        => new ClassCatalogMessage { classesJson = JsonConvert.SerializeObject(ContentLoader.Classes) };
+
+    /// <summary>Client: rebuild the class registry from a received catalog. No-op on the host.</summary>
+    public static void ApplyClasses(ClassCatalogMessage msg)
+    {
+        if (NetworkServer.active) return; // host shares the server-populated registry
+        var classes = JsonConvert.DeserializeObject<List<ClassSnapshot>>(msg.classesJson) ?? new List<ClassSnapshot>();
+        RaceClassRegistry.LoadClasses(classes);
+        Debug.Log($"[Content] Client received {classes.Count} class(es) from the server catalog.");
+    }
 }

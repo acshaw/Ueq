@@ -1,0 +1,222 @@
+<article class="doc">
+  <h1>Races &amp; Classes — Author Guide</h1>
+  <p class="lead">How to author races and classes in the web <strong>Race Editor</strong> and
+    <strong>Class Editor</strong> — and the one thing they <em>can't</em> do on their own: make a new
+    combination pickable at character creation (§3, read this before adding a race).</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>The big picture</li>
+      <li>Anatomy of a race</li>
+      <li>Anatomy of a class</li>
+      <li>The one thing NOT in the web editor: weapon props &amp; body art</li>
+      <li>The HP / Mana formulas, briefly</li>
+      <li>The Combat Tier Table, briefly</li>
+      <li>Starting abilities</li>
+      <li>Recipes (step-by-step)</li>
+      <li>Known gaps — what's still placeholder or unimplemented</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. The big picture</h2>
+  <p>A <strong>race</strong> and a <strong>class</strong> are independent, fully web-authored content
+    types — stats, formulas, and starting abilities all live in Postgres and are editable here, no Unity
+    Inspector needed for the <em>numbers</em>. What's <strong>not</strong> web-authored is which
+    (gender, race, class) <em>combinations</em> a player can actually pick at character creation, and what
+    body model + weapon prop each one shows — that lineup lives in a single Unity-only asset called
+    <code>CharacterRoster</code> (§4). Adding a race or class here is necessary but not sufficient to make
+    it playable.</p>
+  <div class="note"><strong>Everything text/numeric here is entirely web-authored.</strong> Restart the
+    Unity host after any web edit before testing — content loads once at host start. See §3 before adding
+    a brand-new race or class, not just tuning an existing one.</div>
+
+  <h2>2. Anatomy of a race</h2>
+  <p>Flat and small — no children. A race modifies XP rate and gives flat stat bonuses/penalties applied
+    on top of a class's base stats when a character is created.</p>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><strong>race_id</strong></td><td>The permanent identifier — matches what's stored on a
+      character row and what <code>CharacterRoster</code> entries reference by name (§4). Don't rename an
+      id already in use by a saved character or a roster entry.</td></tr>
+    <tr><td><strong>Display name</strong></td><td>Player-facing text.</td></tr>
+    <tr><td><strong>XP modifier</strong></td><td>1.0 = standard. Below 1 = less XP required to level
+      (faster leveling); above 1 = more required.</td></tr>
+    <tr><td><strong>7 stat modifiers</strong> (STR/STA/AGI/DEX/INT/WIS/CHA)</td><td>Flat additive bonuses/
+      penalties on top of the class's base stats. E.g. Dwarf: +2 STR, +3 STA, −2 AGI, −2 INT, +1 WIS.
+      </td></tr>
+  </table>
+
+  <h2>3. Anatomy of a class</h2>
+  <p>A much bigger record — identity, base stats, the HP formula, the mana formula, the 5.1.1 combat tier
+    table, and an ordered starting-abilities list. Every section below maps to one form section in the
+    editor.</p>
+  <table>
+    <tr><th>Section</th><th>Fields</th><th>Feeds</th></tr>
+    <tr><td>Identity</td><td>class_id, display name</td><td>Character creation, persistence</td></tr>
+    <tr><td>XP</td><td>XP modifier</td><td>Same as race, multiplied together (<code>PlayerExperience</code>
+      syncs the combined race×class modifier)</td></tr>
+    <tr><td>Base stats</td><td>7 flat stats (STR…CHA)</td><td>Starting point before race modifiers and
+      equipment bonuses</td></tr>
+    <tr><td>HP formula</td><td>Base HP, HP per level, STA cap, base STA ratio, STA growth rate</td>
+      <td><code>Health.EffectiveMax</code> — see §5</td></tr>
+    <tr><td>Mana formula</td><td>Mana stat (None/Intellect/Wisdom), base mana, mana per level, mana cap,
+      base mana ratio, mana growth rate</td><td><code>PlayerMana</code> — see §5. Mana stat = None means
+      this class has no mana pool at all (e.g. Warrior) regardless of the other mana fields.</td></tr>
+    <tr><td>Combat tier table</td><td>7 hit-tier weights × 2 (Level 1 and Level 20)</td>
+      <td><code>CombatResolver</code>'s Hit Roll step — see §6</td></tr>
+    <tr><td>Starting abilities</td><td>An ordered list of ability ids</td><td>Auto-fills the hotbar at
+      character creation — see §7</td></tr>
+  </table>
+
+  <h2>4. The one thing NOT in the web editor: weapon props &amp; body art</h2>
+  <p>If you go looking for "which weapon prop does the Warrior hold" in the Class Editor, <strong>it isn't
+    there.</strong> Weapon props (a cosmetic prefab attached to the right-hand bone, e.g. Warrior's sword)
+    and everything about which Synty body model represents a given (gender, race, class) tuple both live
+    in one Unity-only asset: <code>Resources/CharacterRoster.asset</code>, edited via
+    <strong>Tools → Character → Build Character Roster</strong> in the Unity Editor, not the web app.</p>
+  <div class="note"><strong>Why:</strong> a weapon prop is a prefab reference with no numeric/text content
+    a web form would add — it's pure Unity-asset wiring. Moving it into the database would have left one
+    dangling asset field on an otherwise clean DB row, so it stays alongside the roster's other prefab
+    wiring instead (mirrors how mob art also stays Unity-side in <code>MobModelCatalog</code>).</div>
+  <p><strong>The bigger consequence: adding a race or class here does not make it selectable at character
+    creation by itself.</strong> The create-form's gender→race→class cascade, and the server-side
+    whitelist that validates a create request, both read <code>CharacterRoster</code>'s list of legal
+    tuples — not the <code>races</code>/<code>classes</code> tables directly. A race or class that exists
+    in the web editor but has <strong>no matching roster entry</strong> simply never appears as an option,
+    and a hand-crafted client request for it would be rejected server-side. To make a new race/class
+    combination playable, someone needs to add a row to <code>CharacterRoster</code> in Unity (gender +
+    race name + class name + a body prefab) and re-run the build tool — see Recipe B.</p>
+
+  <h2>5. The HP / Mana formulas, briefly</h2>
+  <p><code>effectiveStat = min(STA or mana-stat, cap)</code>, then
+    <code>modifier = baseRatio + (level−1) × growthRate</code>, then
+    <code>max = classBase + (level−1) × perLevel + effectiveStat × modifier</code>. Tune the 5 HP fields
+    or 6 mana fields to reshape a class's HP/mana curve across the level range — the archetypes already
+    seeded (Warrior: high HP, no mana · Wizard: low HP, high INT-scaled mana · Cleric: mid HP, WIS-scaled
+    mana) are a reasonable starting reference for a new class's numbers.</p>
+
+  <h2>6. The Combat Tier Table, briefly</h2>
+  <p>The same 7-weight hit-tier table mobs use, authored twice per class (Level 1 and Level 20) —
+    <code>CombatResolver</code> interpolates between them by the character's actual level. See the
+    <strong>Combat Pipeline</strong> guide for the full mechanics (tier weights are relative, not
+    percentages; the total matters because runtime modifiers move fixed weight units). One class-specific
+    note: <strong>only Warrior's tables are the design doc's real numbers</strong> — Wizard and Cleric ship
+    a budget-ratio-scaled placeholder, not a hand-tuned target curve. Keep that in mind when balancing a
+    new class against them.</p>
+
+  <h2>7. Starting abilities</h2>
+  <p>An ordered list of ability ids (dropdown-populated from the Ability Editor's live list — see the
+    Abilities guide). <code>PlayerAbilities.SetRaceClass</code> auto-fills the hotbar from this list in
+    order at character creation, one ability per slot starting at slot 0. This only fires at creation —
+    changing a class's starting abilities has no effect on already-created characters of that class.</p>
+
+  <h2>8. Recipes (step-by-step)</h2>
+  <div class="legend">
+    <span><span class="tag web">Web app</span> in this browser UI</span>
+    <span><span class="tag unity">Unity</span> in the Unity editor</span>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe A — Tune an existing class's numbers</h3>
+    <p class="goal">Goal: adjust HP growth, mana, or the combat tier table on a class that's already
+      playable. No roster changes needed — this is the common case.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Class Editor → open the class → edit whichever section
+        (Base Stats, HP Formula, Mana Formula, Combat Tier Table, Starting Abilities). Save.</li>
+      <li><span class="tag unity">Unity</span> Restart the host. New characters (and existing ones, whose
+        stats are recomputed from the formula on load, not stored as a fixed number) reflect the change.
+        </li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe B — Add a brand-new race or class (full path, including the roster)</h3>
+    <p class="goal">Goal: a genuinely new race or class that shows up as a real, selectable option — not
+      just a row in the database.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Race Editor or Class Editor → + New → fill in the fields
+        per §2/§3. Save.</li>
+      <li><span class="tag unity">Unity</span> For a new <strong>class</strong>, first give it at least one
+        starting ability if you want anything on its hotbar (see the Abilities guide) — this can also be
+        done back in the web Class Editor.</li>
+      <li><span class="tag unity">Unity</span> Open <code>CharacterRosterSetup.cs</code> (or hand-edit
+        <code>Resources/CharacterRoster.asset</code> in the Inspector) and add the new
+        (gender, race, class) tuple(s) with a body prefab — and, for a new class, a
+        <code>classWeaponProps</code> entry if it should hold a weapon. Run
+        <strong>Tools → Character → Build Character Roster</strong>.</li>
+      <li><span class="tag unity">Unity</span> Restart the host. The new combination should now appear in
+        the character-create cascade and spawn with the right body.</li>
+    </ol>
+    <div class="note">Skipping step 3 is the single most common way a new race/class "doesn't show up" —
+      see §10.</div>
+  </div>
+
+  <div class="recipe">
+    <h3>Recipe C — Give a class a new starting ability</h3>
+    <p class="goal">Goal: a class gains a second hotbar ability at creation.</p>
+    <ol>
+      <li><span class="tag web">Web app</span> Create the ability first if it doesn't exist (see the
+        Abilities guide).</li>
+      <li><span class="tag web">Web app</span> Class Editor → open the class → Starting Abilities → +
+        Ability → pick it from the dropdown. Save.</li>
+      <li><span class="tag unity">Unity</span> Restart the host. Only <strong>newly created</strong>
+        characters of that class get the new hotbar slot (§7) — existing characters are unaffected.</li>
+    </ol>
+  </div>
+
+  <h2>9. Known gaps — what's still placeholder or unimplemented</h2>
+  <ul>
+    <li><strong>The character-creation lineup (gender/race/class tuples + body art) is Unity-only</strong>
+      — see §4. There's no web UI for it today, by deliberate design (it's prefab wiring, not authorable
+      content).</li>
+    <li><strong>Wizard and Cleric's combat tier tables are placeholders</strong>, not real design targets
+      — only Warrior's are the doc's actual numbers (§6).</li>
+    <li><strong>No in-place stat rebalance tooling</strong> beyond hand-editing the fields — changing a
+      class's HP formula affects every character of that class uniformly and immediately on next load;
+      there's no versioning or "preview before applying."</li>
+    <li><strong>Starting abilities only apply at creation</strong> (§7) — there's no retroactive grant and
+      no way to remove/replace an already-known ability from the web editor.</li>
+  </ul>
+
+  <h2>10. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>A new race/class I created in the web editor <strong>doesn't appear</strong> at character
+      creation</td><td>Expected until a matching <code>CharacterRoster</code> entry exists in Unity (§4) —
+      the web editors alone don't make a tuple selectable.</td></tr>
+    <tr><td>A class's weapon <strong>doesn't show</strong>, or shows the wrong prop</td><td>Not a web-editor
+      field — check <code>CharacterRoster.classWeaponProps</code> in Unity (§4), not the Class
+      Editor.</td></tr>
+    <tr><td>A character of a class with no starting abilities <strong>has an empty hotbar</strong></td>
+      <td>Expected — add ability ids to that class's Starting Abilities in the web editor, then create a
+      <em>new</em> character (§7, existing ones aren't retroactively updated).</td></tr>
+    <tr><td>My web edit to a race/class <strong>didn't change in-game behavior</strong></td><td>Unity loads
+      race/class content at host start — restart the Unity host. Also confirm Postgres + the API are
+      running.</td></tr>
+    <tr><td>A saved character's stats <strong>look wrong after editing a class's formula</strong></td>
+      <td>Expected behavior, not a bug — HP/mana are recomputed from the current formula on every load, not
+      stored as a fixed number, so editing a live class's numbers retroactively changes every character of
+      that class.</td></tr>
+  </table>
+
+  <h2>11. Quick reference</h2>
+  <table>
+    <tr><th>Concept</th><th>One-liner</th></tr>
+    <tr><td>Race</td><td>XP modifier + 7 flat stat modifiers. Flat, no children.</td></tr>
+    <tr><td>Class</td><td>Base stats + HP formula + mana formula + combat tier table (L1/L20) + starting
+      abilities. The bigger record.</td></tr>
+    <tr><td>Weapon props / body art</td><td><strong>Not in the web editor</strong> — Unity-only,
+      <code>CharacterRoster.asset</code>, <code>Tools → Character → Build Character Roster</code>.</td>
+    </tr>
+    <tr><td>Making a new race/class actually playable</td><td>Web-author it, <em>then</em> add a
+      <code>CharacterRoster</code> tuple in Unity — both steps required.</td></tr>
+  </table>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/RaceClassRegistry.cs</code>,
+    <code>RaceDefinition.cs</code>, <code>ClassDefinition.cs</code>, <code>CharacterRoster.cs</code>,
+    <code>CharacterRosterRegistry.cs</code>, <code>CharacterModelFactory.cs</code>, and
+    <code>docs/devplans/2.10-races-classes-content-type.md</code>.</footer>
+</article>

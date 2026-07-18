@@ -27,6 +27,8 @@ public class ContentDbContext : DbContext
     public DbSet<SpawnTable> SpawnTables => Set<SpawnTable>();
     public DbSet<Ability> Abilities => Set<Ability>();
     public DbSet<AbilityTag> AbilityTags => Set<AbilityTag>();
+    public DbSet<Race> Races => Set<Race>();
+    public DbSet<Class> Classes => Set<Class>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -358,6 +360,74 @@ public class ContentDbContext : DbContext
             e.Property(x => x.ScalingStat).HasColumnName("scaling_stat");
             e.Property(x => x.ScalingFactor).HasColumnName("scaling_factor");
             e.Property(x => x.SortOrder).HasColumnName("sort_order");
+        });
+
+        modelBuilder.Entity<Race>(e =>
+        {
+            e.ToTable("races");
+            e.HasKey(r => r.RaceId);
+            e.Property(r => r.RaceId).HasColumnName("race_id");
+            e.Property(r => r.RaceName).HasColumnName("race_name");
+            e.Property(r => r.XpModifier).HasColumnName("xp_modifier");
+            e.Property(r => r.StrMod).HasColumnName("str_mod");
+            e.Property(r => r.StaMod).HasColumnName("sta_mod");
+            e.Property(r => r.AgiMod).HasColumnName("agi_mod");
+            e.Property(r => r.DexMod).HasColumnName("dex_mod");
+            e.Property(r => r.IntMod).HasColumnName("int_mod");
+            e.Property(r => r.WisMod).HasColumnName("wis_mod");
+            e.Property(r => r.ChaMod).HasColumnName("cha_mod");
+        });
+
+        modelBuilder.Entity<Class>(e =>
+        {
+            e.ToTable("classes");
+            e.HasKey(c => c.ClassId);
+            e.Property(c => c.ClassId).HasColumnName("class_id");
+            e.Property(c => c.ClassName).HasColumnName("class_name");
+            e.Property(c => c.XpModifier).HasColumnName("xp_modifier");
+            e.Property(c => c.BaseStr).HasColumnName("base_str");
+            e.Property(c => c.BaseSta).HasColumnName("base_sta");
+            e.Property(c => c.BaseAgi).HasColumnName("base_agi");
+            e.Property(c => c.BaseDex).HasColumnName("base_dex");
+            e.Property(c => c.BaseInt).HasColumnName("base_int");
+            e.Property(c => c.BaseWis).HasColumnName("base_wis");
+            e.Property(c => c.BaseCha).HasColumnName("base_cha");
+            e.Property(c => c.ClassBaseHP).HasColumnName("class_base_hp");
+            e.Property(c => c.HpPerLevel).HasColumnName("hp_per_level");
+            e.Property(c => c.StaCap).HasColumnName("sta_cap");
+            e.Property(c => c.BaseStaRatio).HasColumnName("base_sta_ratio");
+            e.Property(c => c.StaGrowthRate).HasColumnName("sta_growth_rate");
+            e.Property(c => c.ManaStatType).HasColumnName("mana_stat_type");
+            e.Property(c => c.ClassBaseMana).HasColumnName("class_base_mana");
+            e.Property(c => c.ManaPerLevel).HasColumnName("mana_per_level");
+            e.Property(c => c.ManaCap).HasColumnName("mana_cap");
+            e.Property(c => c.BaseManaRatio).HasColumnName("base_mana_ratio");
+            e.Property(c => c.ManaGrowthRate).HasColumnName("mana_growth_rate");
+            e.Property(c => c.TierL1Miss).HasColumnName("tier_l1_miss");
+            e.Property(c => c.TierL1Glancing).HasColumnName("tier_l1_glancing");
+            e.Property(c => c.TierL1Hit).HasColumnName("tier_l1_hit");
+            e.Property(c => c.TierL1Solid).HasColumnName("tier_l1_solid");
+            e.Property(c => c.TierL1Good).HasColumnName("tier_l1_good");
+            e.Property(c => c.TierL1Critical).HasColumnName("tier_l1_critical");
+            e.Property(c => c.TierL1Crippling).HasColumnName("tier_l1_crippling");
+            e.Property(c => c.TierL20Miss).HasColumnName("tier_l20_miss");
+            e.Property(c => c.TierL20Glancing).HasColumnName("tier_l20_glancing");
+            e.Property(c => c.TierL20Hit).HasColumnName("tier_l20_hit");
+            e.Property(c => c.TierL20Solid).HasColumnName("tier_l20_solid");
+            e.Property(c => c.TierL20Good).HasColumnName("tier_l20_good");
+            e.Property(c => c.TierL20Critical).HasColumnName("tier_l20_critical");
+            e.Property(c => c.TierL20Crippling).HasColumnName("tier_l20_crippling");
+            e.HasMany(c => c.StartingAbilities).WithOne().HasForeignKey(a => a.ClassId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClassStartingAbility>(e =>
+        {
+            e.ToTable("class_starting_abilities");
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(a => a.ClassId).HasColumnName("class_id");
+            e.Property(a => a.AbilityId).HasColumnName("ability_id");
+            e.Property(a => a.SortOrder).HasColumnName("sort_order");
         });
 
         modelBuilder.Entity<XpLevel>(e =>

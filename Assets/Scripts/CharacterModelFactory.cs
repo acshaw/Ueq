@@ -67,18 +67,19 @@ public static class CharacterModelFactory
     }
 
     // Parent the class's weapon prop to the Humanoid right-hand bone (rig-independent — works across every
-    // Synty pack's avatar). Grip offsets are authored per class and tuned live in the 3.1.6 preview.
+    // Synty pack's avatar). Grip offsets are authored per class (on CharacterRoster since M2.10, RC4) and
+    // tuned live in the 3.1.6 preview.
     static void AttachWeaponProp(Animator anim, string cls)
     {
-        var def = RaceClassRegistry.GetClass(cls);
-        if (def == null || def.weaponPropPrefab == null) return;
+        var weapon = CharacterRosterRegistry.GetWeaponProp(cls);
+        if (weapon.prop == null) return;
 
         var hand = anim.GetBoneTransform(HumanBodyBones.RightHand);
         if (hand == null) return; // non-humanoid or unrigged body — skip quietly
 
-        var prop = Object.Instantiate(def.weaponPropPrefab, hand);
-        prop.transform.localPosition = def.gripPositionOffset;
-        prop.transform.localRotation = Quaternion.Euler(def.gripEulerOffset);
+        var prop = Object.Instantiate(weapon.prop, hand);
+        prop.transform.localPosition = weapon.gripPositionOffset;
+        prop.transform.localRotation = Quaternion.Euler(weapon.gripEulerOffset);
         prop.name = $"Weapon_{cls}";
 
         // Cosmetic only — strip any colliders so the weapon can't block the click-to-target raycast or

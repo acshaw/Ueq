@@ -109,7 +109,8 @@
       "Read(//c/Program Files/Unity/Hub/Editor/**)",
       "Read(//c//**)",
       "Bash('C:/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe' -batchmode -nographics -quit -projectPath 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq' -logFile 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\unity_compile_check.log')",
-      "Bash(echo \"EXIT CODE: $?\")"
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(python3 -c ' *)"
     ]
   },
   "hooks": {

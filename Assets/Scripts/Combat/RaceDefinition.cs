@@ -1,6 +1,10 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Ueq/Race Definition")]
+/// <summary>
+/// Runtime-only since M2.10 — built by <see cref="RaceClassRegistry"/> from a DB-backed
+/// <see cref="RaceSnapshot"/> (server load or client catalog sync). No longer authored as an asset;
+/// author races in the web Race Editor.
+/// </summary>
 public class RaceDefinition : ScriptableObject
 {
     public string raceName   = "Human";

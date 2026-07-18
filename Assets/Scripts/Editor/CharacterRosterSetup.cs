@@ -3,20 +3,20 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// One-click authoring for the 3.1.4 onboarding lineup (decision RM7). Creates the race + class assets the
-/// roster references (Human/Warrior already exist; Dwarf, Wizard, Cleric are stamped with placeholder
-/// stats — 3.1.5 tunes them), then builds <c>Resources/CharacterRoster.asset</c> with the seven legal
-/// (gender, race, class) tuples and their Synty body prefabs resolved by path.
+/// One-click authoring for the 3.1.4 onboarding lineup (decision RM7). Builds
+/// <c>Resources/CharacterRoster.asset</c> with the seven legal (gender, race, class) tuples, their Synty
+/// body prefabs, and (since M2.10, RC4) each class's cosmetic weapon-prop wiring — all pure Unity-asset
+/// references, kept out of the DB now that races/classes themselves are DB-authored content.
 ///
-/// Idempotent: re-running updates the roster in place and only creates missing race/class assets. Model
-/// prefabs live in the gitignored Synty packs — a missing one is warned about and left null (the create
-/// form still works; PlayerModel falls back). Menu: <c>Tools/Character/Build Character Roster</c>.
+/// Idempotent: re-running updates the roster in place. Model/prop prefabs live in the gitignored Synty
+/// packs — a missing one is warned about and left null (the create form still works; PlayerModel falls
+/// back). Race/class DATA (stats, formulas, starting abilities) is authored in the web Race &amp; Class
+/// editors and seeded by <c>DatabaseSeeder</c> — this tool only wires art. Menu:
+/// <c>Tools/Character/Build Character Roster</c>.
 /// </summary>
 public static class CharacterRosterSetup
 {
-    const string RosterPath  = "Assets/Resources/CharacterRoster.asset";
-    const string RacesDir    = "Assets/Resources/Races";
-    const string ClassesDir  = "Assets/Resources/Classes";
+    const string RosterPath     = "Assets/Resources/CharacterRoster.asset";
     const string ControllerPath = "Assets/Animations/PlayerLocomotion.controller";
 
     // Body prefab paths (Synty packs). Dwarf shares one body across both its classes.
@@ -27,18 +27,19 @@ public static class CharacterRosterSetup
     const string FemaleWizard  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Witch_01.prefab";
     const string FemaleCleric  = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Chr_Female_Peasant_02.prefab";
 
+    // Weapon prop paths (3.1.6; moved here from the retired ClassContentSetup.cs by M2.10 RC4).
+    const string WarriorSword  = "Assets/Synty/PolygonAdventure/Prefabs/Weapons/SM_Wep_Sword_01.prefab";
+    const string WizardStaff   = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Prop_WizardStaff_01.prefab";
+    const string ClericSceptre = "Assets/Synty/PolygonFantasyCharacters/Prefabs/SM_Prop_Sceptre_01.prefab";
+
     [MenuItem("Tools/Character/Build Character Roster")]
     public static void Build()
     {
-        EnsureRace("Human");    // already present; created if somehow missing
-        EnsureRace("Dwarf");
-        EnsureClass("Warrior");
-        EnsureClass("Wizard");
-        EnsureClass("Cleric");
-
         var roster = AssetDatabase.LoadAssetAtPath<CharacterRoster>(RosterPath);
         if (roster == null)
         {
+            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                AssetDatabase.CreateFolder("Assets", "Resources");
             roster = ScriptableObject.CreateInstance<CharacterRoster>();
             AssetDatabase.CreateAsset(roster, RosterPath);
         }
@@ -54,6 +55,13 @@ public static class CharacterRosterSetup
             Entry(Gender.Female, "Human", "Cleric",  FemaleCleric),
         };
 
+        // M2.10 (RC4) — preserve any grip offsets already hand-tuned on the existing roster; only fill in
+        // the prop prefab + a default zero offset for entries that don't exist yet.
+        roster.classWeaponProps = MergeWeaponProps(roster.classWeaponProps,
+            WeaponProp("Warrior", WarriorSword),
+            WeaponProp("Wizard",  WizardStaff),
+            WeaponProp("Cleric",  ClericSceptre));
+
         // 3.1.6 — the runtime create-form preview resolves the locomotion controller through the roster
         // (Resources-loadable) since it has no serialized scene ref of its own.
         roster.locomotionController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
@@ -65,8 +73,8 @@ public static class CharacterRosterSetup
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         CharacterRosterRegistry.Invalidate();
-        RaceClassRegistry.Invalidate();
-        Debug.Log($"[Roster] Built {RosterPath} with {roster.entries.Count} entries.");
+        Debug.Log($"[Roster] Built {RosterPath} with {roster.entries.Count} entries + " +
+                  $"{roster.classWeaponProps.Count} weapon prop(s).");
     }
 
     static RosterEntry Entry(Gender gender, string race, string cls, string prefabPath)
@@ -78,47 +86,32 @@ public static class CharacterRosterSetup
         return new RosterEntry { gender = gender, race = race, cls = cls, modelPrefab = prefab };
     }
 
-    static void EnsureRace(string raceName)
+    static ClassWeaponProp WeaponProp(string className, string prefabPath)
     {
-        string path = $"{RacesDir}/{raceName}.asset";
-        if (AssetDatabase.LoadAssetAtPath<RaceDefinition>(path) != null) return;
-
-        var r = ScriptableObject.CreateInstance<RaceDefinition>();
-        r.raceName = raceName;
-        // Placeholder racial flavor for the new Dwarf (tune in the Race & Class Editor).
-        if (raceName == "Dwarf")
-        {
-            r.strMod = 2; r.staMod = 3; r.agiMod = -2; r.intMod = -2; r.wisMod = 1;
-        }
-        AssetDatabase.CreateAsset(r, path);
-        Debug.Log($"[Roster] Created race asset {path}.");
+        var prop = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prop == null)
+            Debug.LogWarning($"[Roster] Weapon prop not found for {className}: {prefabPath} (pack not imported?).");
+        return new ClassWeaponProp { className = className, prop = prop };
     }
 
-    static void EnsureClass(string className)
+    // Preserve hand-tuned grip offsets from the existing list; only the prop prefab is (re)assigned.
+    static List<ClassWeaponProp> MergeWeaponProps(List<ClassWeaponProp> existing, params ClassWeaponProp[] fresh)
     {
-        string path = $"{ClassesDir}/{className}.asset";
-        if (AssetDatabase.LoadAssetAtPath<ClassDefinition>(path) != null) return;
+        var byClass = new Dictionary<string, ClassWeaponProp>();
+        if (existing != null)
+            foreach (var w in existing) byClass[w.className] = w;
 
-        var c = ScriptableObject.CreateInstance<ClassDefinition>();
-        c.className = className;
-        // Placeholder archetype stats/formulas (per the CLAUDE.md HP/mana model) — 3.1.5 finalizes.
-        switch (className)
+        var result = new List<ClassWeaponProp>();
+        foreach (var w in fresh)
         {
-            case "Wizard": // caster: low HP, INT mana
-                c.baseInt = 14;
-                c.classBaseHP = 12; c.hpPerLevel = 1; c.staCap = 100; c.staGrowthRate = 0.12f;
-                c.manaStatType = ManaStatType.Intellect;
-                c.classBaseMana = 40; c.manaPerLevel = 5; c.manaCap = 200; c.manaGrowthRate = 0.18f;
-                break;
-            case "Cleric": // healer: mid HP, WIS mana
-                c.baseWis = 14;
-                c.classBaseHP = 13; c.hpPerLevel = 2; c.staCap = 140; c.staGrowthRate = 0.12f;
-                c.manaStatType = ManaStatType.Wisdom;
-                c.classBaseMana = 35; c.manaPerLevel = 4; c.manaCap = 200; c.manaGrowthRate = 0.16f;
-                break;
-            // Warrior (melee) uses the ClassDefinition defaults + ManaStatType.None.
+            var merged = w;
+            if (byClass.TryGetValue(w.className, out var old))
+            {
+                merged.gripPositionOffset = old.gripPositionOffset;
+                merged.gripEulerOffset    = old.gripEulerOffset;
+            }
+            result.Add(merged);
         }
-        AssetDatabase.CreateAsset(c, path);
-        Debug.Log($"[Roster] Created class asset {path} (placeholder stats — tune in 3.1.5).");
+        return result;
     }
 }
