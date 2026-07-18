@@ -3,7 +3,11 @@ using UnityEngine;
 
 public enum AbilityTargetType { Self, SingleTarget }
 
-[CreateAssetMenu(menuName = "Ueq/Ability Definition")]
+/// <summary>
+/// Runtime-only since M2.9 — built by <see cref="AbilityRegistry"/> from a DB-backed
+/// <see cref="AbilitySnapshot"/> (server load or client catalog sync). No longer authored as an asset;
+/// author abilities in the web Ability Editor.
+/// </summary>
 public class AbilityDefinition : ScriptableObject
 {
     [Header("Identity")]
@@ -33,12 +37,4 @@ public class AbilityDefinition : ScriptableObject
 
     [Header("Effects")]
     public List<AbilityEffect> effects = new();
-
-#if UNITY_EDITOR
-    void OnValidate()
-    {
-        if (string.IsNullOrEmpty(abilityId))
-            abilityId = name;
-    }
-#endif
 }

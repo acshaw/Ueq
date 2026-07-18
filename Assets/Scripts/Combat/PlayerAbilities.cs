@@ -53,9 +53,9 @@ public class PlayerAbilities : NetworkBehaviour
 
         if (cls == null) return;
 
-        foreach (var ability in cls.startingAbilities)
-            if (ability != null && !string.IsNullOrEmpty(ability.abilityId))
-                _knownAbilities.Add(ability.abilityId);
+        foreach (var abilityId in cls.startingAbilities)
+            if (!string.IsNullOrEmpty(abilityId))
+                _knownAbilities.Add(abilityId);
 
         for (int i = 0; i < _knownAbilities.Count && i < _hotbar.Count; i++)
             _hotbar[i] = _knownAbilities[i];

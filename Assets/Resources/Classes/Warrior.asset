@@ -49,8 +49,8 @@ MonoBehaviour:
     Critical: 3
     Crippling: 2
   startingAbilities:
-  - {fileID: 11400000, guid: 018d9675a820cdf47a56561cca9a040f, type: 2}
-  - {fileID: 11400000, guid: f30cc044a195e3f4a9f010ce8fcf22a3, type: 2}
+  - kick
+  - Taunt
   weaponPropPrefab: {fileID: 181534, guid: 13af847dfa6dbe844ba4b7c902f98f67, type: 3}
   gripPositionOffset: {x: 0, y: 0, z: 0}
   gripEulerOffset: {x: 0, y: 0, z: 0}

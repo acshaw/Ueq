@@ -46,7 +46,9 @@ public class ClassDefinition : ScriptableObject
     };
 
     [Header("Abilities")]
-    public List<AbilityDefinition> startingAbilities = new();
+    [Tooltip("Ability ids granted at character creation (PlayerAbilities.SetRaceClass populates the " +
+             "hotbar from these). Ability ids, not asset refs, since M2.9 moved abilities to the DB.")]
+    public List<string> startingAbilities = new();
 
     [Header("Weapon Prop (3.1.6)")]
     [Tooltip("Cosmetic weapon attached to the body's right-hand bone (Warrior sword / Wizard staff / " +

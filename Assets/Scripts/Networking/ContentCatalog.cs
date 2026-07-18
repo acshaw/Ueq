@@ -35,4 +35,28 @@ public static class ContentCatalog
         ItemRegistry.Instance.LoadFrom(items);
         Debug.Log($"[Content] Client received {items.Count} item(s) from the server catalog.");
     }
+
+    /// <summary>One content type's catalog as JSON (M2.9 — abilities need client sync because HotbarUI reads AbilityRegistry).</summary>
+    public struct AbilityCatalogMessage : NetworkMessage
+    {
+        public string abilitiesJson;
+    }
+
+    /// <summary>Server: build the ability catalog message from what <c>ContentLoader</c> loaded at startup.</summary>
+    public static AbilityCatalogMessage BuildAbilities()
+        => new AbilityCatalogMessage { abilitiesJson = JsonConvert.SerializeObject(ContentLoader.Abilities) };
+
+    /// <summary>Client: rebuild the ability registry from a received catalog. No-op on the host.</summary>
+    public static void ApplyAbilities(AbilityCatalogMessage msg)
+    {
+        if (NetworkServer.active) return; // host shares the server-populated registry
+        if (AbilityRegistry.Instance == null)
+        {
+            Debug.LogWarning("[Content] Ability catalog arrived but AbilityRegistry.Instance is null on the client.");
+            return;
+        }
+        var abilities = JsonConvert.DeserializeObject<List<AbilitySnapshot>>(msg.abilitiesJson) ?? new List<AbilitySnapshot>();
+        AbilityRegistry.Instance.LoadFrom(abilities);
+        Debug.Log($"[Content] Client received {abilities.Count} ability(ies) from the server catalog.");
+    }
 }

@@ -49,7 +49,7 @@ MonoBehaviour:
     Critical: 1.83
     Crippling: 1.22
   startingAbilities:
-  - {fileID: 11400000, guid: cbac09c8b982365499cde6b21b4a9c95, type: 2}
+  - fire_bolt
   weaponPropPrefab: {fileID: 100508, guid: 1006941873f215d46b09517732f49978, type: 3}
   gripPositionOffset: {x: 0, y: 0, z: 0}
   gripEulerOffset: {x: 0, y: 0, z: 0}

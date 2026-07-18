@@ -104,7 +104,12 @@
       "Bash(curl -s http://localhost:5144/api/conversations)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\('conversations:', a.map\\(m=>m.setId\\).join\\(', '\\)\\)}\\)\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const a=JSON.parse\\(d\\);console.log\\('items:', a.map\\(m=>m.itemId\\).join\\(', '\\)\\)}\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(where unity *)",
+      "Read(//c/Program Files/Unity/Hub/Editor/**)",
+      "Read(//c//**)",
+      "Bash('C:/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe' -batchmode -nographics -quit -projectPath 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq' -logFile 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\unity_compile_check.log')",
+      "Bash(echo \"EXIT CODE: $?\")"
     ]
   },
   "hooks": {

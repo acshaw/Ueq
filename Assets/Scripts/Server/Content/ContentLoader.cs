@@ -17,6 +17,9 @@ public static class ContentLoader
     /// <summary>Item snapshots loaded at startup — the source for both the server registry and the client catalog sync.</summary>
     public static IReadOnlyList<ItemSnapshot> Items { get; private set; } = new List<ItemSnapshot>();
 
+    /// <summary>Ability snapshots loaded at startup — the source for both the server registry and the client catalog sync (M2.9).</summary>
+    public static IReadOnlyList<AbilitySnapshot> Abilities { get; private set; } = new List<AbilitySnapshot>();
+
     /// <summary>Load every DB-backed content type into its registry. Add a step per type as it migrates.</summary>
     public static void LoadAll()
     {
@@ -30,6 +33,15 @@ public static class ContentLoader
         else
             Debug.LogWarning("[Content] ItemRegistry.Instance is null at load — items not registered on the server.");
         Debug.Log($"[Content] Loaded {items.Count} item(s) from the database.");
+
+        // ── Abilities (M2.9 — needs client sync like items; HotbarUI reads AbilityRegistry) ──
+        var abilities = new AbilityRepository().LoadAll(conn);
+        Abilities = abilities;
+        if (AbilityRegistry.Instance != null)
+            AbilityRegistry.Instance.LoadFrom(abilities);
+        else
+            Debug.LogWarning("[Content] AbilityRegistry.Instance is null at load — abilities not registered on the server.");
+        Debug.Log($"[Content] Loaded {abilities.Count} ability(ies) from the database.");
 
         // ── Vendor inventories (M2.3 — server-only, no client sync) ─────────────────────
         var vendors = new VendorInventoryRepository().LoadAll(conn);

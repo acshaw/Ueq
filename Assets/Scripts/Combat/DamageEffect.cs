@@ -1,7 +1,8 @@
 using Mirror;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Ueq/Ability Effects/Damage")]
+/// <summary>Runtime-only since M2.9 — built by <see cref="AbilityRegistry"/> from a "damage" row of
+/// <c>ability_effects</c>. No longer authored as a sub-asset.</summary>
 public class DamageEffect : AbilityEffect
 {
     public int             baseDamage    = 10;

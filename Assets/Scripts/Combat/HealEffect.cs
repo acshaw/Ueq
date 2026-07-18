@@ -1,7 +1,8 @@
 using Mirror;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Ueq/Ability Effects/Heal")]
+/// <summary>Runtime-only since M2.9 — built by <see cref="AbilityRegistry"/> from a "heal" row of
+/// <c>ability_effects</c>. No longer authored as a sub-asset.</summary>
 public class HealEffect : AbilityEffect
 {
     public int             baseHeal      = 20;

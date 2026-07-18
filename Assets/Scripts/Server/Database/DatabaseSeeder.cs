@@ -15,6 +15,7 @@ public static class DatabaseSeeder
     {
         SeedDevAccount(conn);
         SeedStarterItems(conn);
+        SeedAbilities(conn);
         SeedStarterVendors(conn);
         SeedConversations(conn);
         SeedFactions(conn);
@@ -500,6 +501,101 @@ public static class DatabaseSeeder
         cmd.Parameters.AddWithValue("slot", equipSlot);
         cmd.Parameters.AddWithValue("buy", buy);
         cmd.Parameters.AddWithValue("sell", sell);
+        cmd.ExecuteNonQuery();
+    }
+
+    // Idempotent bootstrap of the abilities that used to live as Resources/Abilities SO assets (M2.9).
+    // Faithfully migrated from those assets' YAML (exact ids preserved — existing character hotbars
+    // already reference them). ON CONFLICT DO NOTHING on the header so web edits are never overwritten;
+    // children only insert the first time a given ability's header row is newly created.
+    static void SeedAbilities(NpgsqlConnection conn)
+    {
+        SeedAbilityTag(conn, "martialability", "MartialAbility");
+
+        if (SeedAbility(conn, "kick", "Kick", "Kicks the target", targetingType: 1, range: 10, manaCost: 0, animTrigger: "Kick"))
+        {
+            SeedAbilityTagRef(conn, "kick", "martialability", 0);
+            SeedAbilityCooldownLink(conn, "kick", "martialability", 10f, 0);
+            SeedAbilityEffect(conn, "kick", "damage", 8, (int)ScalingStatType.Str, 0.5f, 0);
+        }
+
+        if (SeedAbility(conn, "Taunt", "Taunt", "Taunts the eneimy", targetingType: 1, range: 20, manaCost: 0, animTrigger: ""))
+        {
+            SeedAbilityTagRef(conn, "Taunt", "martialability", 0);
+            SeedAbilityCooldownLink(conn, "Taunt", "martialability", 20f, 0);
+        }
+
+        if (SeedAbility(conn, "fire_bolt", "Fire Bolt", "A bolt of fire that scorches a single enemy.",
+                targetingType: 1, range: 20, manaCost: 10, animTrigger: "Cast"))
+            SeedAbilityEffect(conn, "fire_bolt", "damage", 12, (int)ScalingStatType.Int, 0.5f, 0);
+
+        if (SeedAbility(conn, "minor_heal", "Minor Heal", "Channels a mending light, restoring your own health.",
+                targetingType: 0, range: 0, manaCost: 10, animTrigger: "Cast"))
+            SeedAbilityEffect(conn, "minor_heal", "heal", 20, (int)ScalingStatType.Wis, 0.5f, 0);
+
+        Debug.Log("[DB] Seed: abilities ready (kick, Taunt, fire_bolt, minor_heal).");
+    }
+
+    static bool SeedAbility(NpgsqlConnection conn, string id, string name, string desc,
+                            int targetingType, float range, int manaCost, string animTrigger)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO abilities (ability_id, display_name, description, targeting_type, range, mana_cost, anim_trigger) " +
+            "VALUES (@id, @name, @desc, @tt, @range, @mana, @anim) " +
+            "ON CONFLICT (ability_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", name);
+        cmd.Parameters.AddWithValue("desc", desc);
+        cmd.Parameters.AddWithValue("tt", targetingType);
+        cmd.Parameters.AddWithValue("range", range);
+        cmd.Parameters.AddWithValue("mana", manaCost);
+        cmd.Parameters.AddWithValue("anim", animTrigger);
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    static void SeedAbilityTag(NpgsqlConnection conn, string tagId, string displayName)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO ability_tags (tag_id, display_name) VALUES (@id, @name) " +
+            "ON CONFLICT (tag_id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("id", tagId);
+        cmd.Parameters.AddWithValue("name", displayName);
+        cmd.ExecuteNonQuery();
+    }
+
+    static void SeedAbilityTagRef(NpgsqlConnection conn, string abilityId, string tagId, int order)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO ability_definition_tags (ability_id, tag_id, sort_order) VALUES (@a, @t, @o)", conn);
+        cmd.Parameters.AddWithValue("a", abilityId);
+        cmd.Parameters.AddWithValue("t", tagId);
+        cmd.Parameters.AddWithValue("o", order);
+        cmd.ExecuteNonQuery();
+    }
+
+    static void SeedAbilityCooldownLink(NpgsqlConnection conn, string abilityId, string tagId, float duration, int order)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO ability_cooldown_links (ability_id, tag_id, duration, sort_order) VALUES (@a, @t, @d, @o)", conn);
+        cmd.Parameters.AddWithValue("a", abilityId);
+        cmd.Parameters.AddWithValue("t", tagId);
+        cmd.Parameters.AddWithValue("d", duration);
+        cmd.Parameters.AddWithValue("o", order);
+        cmd.ExecuteNonQuery();
+    }
+
+    static void SeedAbilityEffect(NpgsqlConnection conn, string abilityId, string effectType,
+                                  int baseAmount, int scalingStat, float scalingFactor, int order)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO ability_effects (ability_id, effect_type, base_amount, scaling_stat, scaling_factor, sort_order) " +
+            "VALUES (@a, @type, @amt, @stat, @factor, @o)", conn);
+        cmd.Parameters.AddWithValue("a", abilityId);
+        cmd.Parameters.AddWithValue("type", effectType);
+        cmd.Parameters.AddWithValue("amt", baseAmount);
+        cmd.Parameters.AddWithValue("stat", scalingStat);
+        cmd.Parameters.AddWithValue("factor", scalingFactor);
+        cmd.Parameters.AddWithValue("o", order);
         cmd.ExecuteNonQuery();
     }
 

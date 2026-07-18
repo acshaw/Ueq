@@ -25,6 +25,8 @@ public class ContentDbContext : DbContext
     public DbSet<XpLevel> XpLevels => Set<XpLevel>();
     public DbSet<MobFactionHit> MobFactionHits => Set<MobFactionHit>();
     public DbSet<SpawnTable> SpawnTables => Set<SpawnTable>();
+    public DbSet<Ability> Abilities => Set<Ability>();
+    public DbSet<AbilityTag> AbilityTags => Set<AbilityTag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -296,6 +298,66 @@ public class ContentDbContext : DbContext
             e.Property(c => c.MaxCopper).HasColumnName("max_copper");
             e.Property(c => c.Weight).HasColumnName("weight");
             e.Property(c => c.SortOrder).HasColumnName("sort_order");
+        });
+
+        modelBuilder.Entity<Ability>(e =>
+        {
+            e.ToTable("abilities");
+            e.HasKey(a => a.AbilityId);
+            e.Property(a => a.AbilityId).HasColumnName("ability_id");
+            e.Property(a => a.DisplayName).HasColumnName("display_name");
+            e.Property(a => a.Description).HasColumnName("description");
+            e.Property(a => a.TargetingType).HasColumnName("targeting_type");
+            e.Property(a => a.Range).HasColumnName("range");
+            e.Property(a => a.CastTime).HasColumnName("cast_time");
+            e.Property(a => a.ManaCost).HasColumnName("mana_cost");
+            e.Property(a => a.AnimTrigger).HasColumnName("anim_trigger");
+            e.Property(a => a.UpdatedAt).HasColumnName("updated_at");
+            e.HasMany(a => a.Tags).WithOne().HasForeignKey(t => t.AbilityId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(a => a.CooldownLinks).WithOne().HasForeignKey(l => l.AbilityId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(a => a.Effects).WithOne().HasForeignKey(x => x.AbilityId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AbilityTag>(e =>
+        {
+            e.ToTable("ability_tags");
+            e.HasKey(t => t.TagId);
+            e.Property(t => t.TagId).HasColumnName("tag_id");
+            e.Property(t => t.DisplayName).HasColumnName("display_name");
+        });
+
+        modelBuilder.Entity<AbilityDefinitionTag>(e =>
+        {
+            e.ToTable("ability_definition_tags");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(t => t.AbilityId).HasColumnName("ability_id");
+            e.Property(t => t.TagId).HasColumnName("tag_id");
+            e.Property(t => t.SortOrder).HasColumnName("sort_order");
+        });
+
+        modelBuilder.Entity<AbilityCooldownLink>(e =>
+        {
+            e.ToTable("ability_cooldown_links");
+            e.HasKey(l => l.Id);
+            e.Property(l => l.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(l => l.AbilityId).HasColumnName("ability_id");
+            e.Property(l => l.TagId).HasColumnName("tag_id");
+            e.Property(l => l.Duration).HasColumnName("duration");
+            e.Property(l => l.SortOrder).HasColumnName("sort_order");
+        });
+
+        modelBuilder.Entity<AbilityEffectRow>(e =>
+        {
+            e.ToTable("ability_effects");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(x => x.AbilityId).HasColumnName("ability_id");
+            e.Property(x => x.EffectType).HasColumnName("effect_type");
+            e.Property(x => x.BaseAmount).HasColumnName("base_amount");
+            e.Property(x => x.ScalingStat).HasColumnName("scaling_stat");
+            e.Property(x => x.ScalingFactor).HasColumnName("scaling_factor");
+            e.Property(x => x.SortOrder).HasColumnName("sort_order");
         });
 
         modelBuilder.Entity<XpLevel>(e =>
