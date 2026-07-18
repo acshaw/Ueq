@@ -110,7 +110,10 @@
       "Read(//c//**)",
       "Bash('C:/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe' -batchmode -nographics -quit -projectPath 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq' -logFile 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\unity_compile_check.log')",
       "Bash(echo \"EXIT CODE: $?\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(grep -v -E \"^\\(Library|Temp|Logs|obj|\\\\.vs|\\\\.git\\)$\")",
+      "Bash(grep -i '\\\\.sql$')",
+      "Bash(docker rm *)"
     ]
   },
   "hooks": {

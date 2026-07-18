@@ -45,6 +45,8 @@ public class Class
     public float TierL20Critical { get; set; } = 3f;
     public float TierL20Crippling { get; set; } = 2f;
 
+    public DateTime UpdatedAt { get; set; }
+
     public List<ClassStartingAbility> StartingAbilities { get; set; } = new();
 }
 

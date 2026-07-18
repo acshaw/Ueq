@@ -34,6 +34,7 @@ public class RacesController : ControllerBase
         if (await _db.Races.AnyAsync(r => r.RaceId == input.RaceId))
             return Conflict($"A race with id '{input.RaceId}' already exists.");
 
+        input.UpdatedAt = DateTime.UtcNow;
         _db.Races.Add(input);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Get), new { raceId = input.RaceId }, input);
@@ -54,6 +55,7 @@ public class RacesController : ControllerBase
         row.IntMod = input.IntMod;
         row.WisMod = input.WisMod;
         row.ChaMod = input.ChaMod;
+        row.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         return row;

@@ -91,6 +91,7 @@ public class ClassesController : ControllerBase
 
     static void Fill(Class row, ClassDto input)
     {
+        row.UpdatedAt = DateTime.UtcNow;
         row.ClassName = input.ClassName ?? "";
         row.XpModifier = input.XpModifier;
         row.BaseStr = input.BaseStr; row.BaseSta = input.BaseSta; row.BaseAgi = input.BaseAgi;

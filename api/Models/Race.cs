@@ -13,4 +13,5 @@ public class Race
     public int IntMod { get; set; }
     public int WisMod { get; set; }
     public int ChaMod { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

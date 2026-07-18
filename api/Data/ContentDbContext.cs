@@ -326,6 +326,7 @@ public class ContentDbContext : DbContext
             e.HasKey(t => t.TagId);
             e.Property(t => t.TagId).HasColumnName("tag_id");
             e.Property(t => t.DisplayName).HasColumnName("display_name");
+            e.Property(t => t.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<AbilityDefinitionTag>(e =>
@@ -376,6 +377,7 @@ public class ContentDbContext : DbContext
             e.Property(r => r.IntMod).HasColumnName("int_mod");
             e.Property(r => r.WisMod).HasColumnName("wis_mod");
             e.Property(r => r.ChaMod).HasColumnName("cha_mod");
+            e.Property(r => r.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<Class>(e =>
@@ -417,6 +419,7 @@ public class ContentDbContext : DbContext
             e.Property(c => c.TierL20Good).HasColumnName("tier_l20_good");
             e.Property(c => c.TierL20Critical).HasColumnName("tier_l20_critical");
             e.Property(c => c.TierL20Crippling).HasColumnName("tier_l20_crippling");
+            e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
             e.HasMany(c => c.StartingAbilities).WithOne().HasForeignKey(a => a.ClassId).OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -37,6 +37,7 @@ public class AbilityTagsController : ControllerBase
         if (await _db.AbilityTags.AnyAsync(t => t.TagId == input.TagId))
             return Conflict($"A tag with id '{input.TagId}' already exists.");
 
+        input.UpdatedAt = DateTime.UtcNow;
         _db.AbilityTags.Add(input);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(Get), new { tagId = input.TagId }, input);
@@ -49,6 +50,7 @@ public class AbilityTagsController : ControllerBase
         if (row is null) return NotFound();
 
         row.DisplayName = input.DisplayName;
+        row.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return row;
     }

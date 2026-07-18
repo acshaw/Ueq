@@ -150,6 +150,59 @@ public static class DatabaseTools
     [MenuItem("Tools/Database/Wipe Character (by account)")]
     public static void WipeCharacter() => WipeCharacterWindow.Open();
 
+    // ── Content export/import (M2.11, SE2/SE3) ──────────────────────────────────────────
+    // Generic, schema-driven — see ContentExportImport.cs. "Content" = every DB table except the
+    // player/account-state ones (accounts, characters, character_*, schema_version).
+
+    [MenuItem("Tools/Database/Export Content...")]
+    public static void ExportContent()
+    {
+        string path = EditorUtility.SaveFilePanel(
+            "Export Content", "", $"ueq-content-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json", "json");
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            using var conn = Database.OpenConnection();
+            int rows = ContentExportImport.ExportToFile(conn, path);
+            Debug.Log($"[DB] Exported content to {path} ({rows} row(s) total).");
+            EditorUtility.DisplayDialog("Export Content", $"Exported {rows} row(s) to:\n\n{path}", "OK");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[DB] Export Content failed: {e.Message}\n{e}");
+            EditorUtility.DisplayDialog("Export Content", $"FAILED\n\n{e.Message}", "OK");
+        }
+    }
+
+    [MenuItem("Tools/Database/Import Content...")]
+    public static void ImportContent()
+    {
+        string path = EditorUtility.OpenFilePanel("Import Content", "", "json");
+        if (string.IsNullOrEmpty(path)) return;
+
+        if (!EditorUtility.DisplayDialog("Import Content",
+                "This REPLACES ALL content (items, mobs, abilities, races, classes, factions, " +
+                "conversations, loot, vendors, spawn tables, …) in the currently configured database " +
+                "with the contents of this file. Player accounts and characters are untouched. " +
+                "This cannot be undone.\n\nContinue?", "Import (Replace All Content)", "Cancel"))
+            return;
+
+        try
+        {
+            using var conn = Database.OpenConnection();
+            ContentExportImport.ImportFromFile(conn, path);
+            Debug.Log($"[DB] Imported content from {path}.");
+            EditorUtility.DisplayDialog("Import Content",
+                "Import complete. Restart the Unity host to load the new content.", "OK");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[DB] Import Content failed: {e.Message}\n{e}");
+            EditorUtility.DisplayDialog("Import Content", $"FAILED — no changes were committed.\n\n{e.Message}", "OK");
+        }
+    }
+
     [MenuItem("Tools/Database/Reset (drop schema_version)")]
     public static void Reset()
     {

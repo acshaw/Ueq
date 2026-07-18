@@ -23,6 +23,7 @@ public class AbilityTag
 {
     public string TagId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
+    public DateTime UpdatedAt { get; set; }
 }
 
 /// <summary>EF entity for <c>ability_definition_tags</c> — an ability's own semantic tags.</summary>
