@@ -76,17 +76,18 @@ jobs:
           # The instance never gets AWS credentials (Lightsail's own baked-in metadata identity
           # would shadow any role we grant it — see deploy.sh's header comment). Instead, generate
           # short-lived presigned URLs here, where this job's OIDC-assumed role has real S3
-          # permissions, and substitute them into the script before sending it. Plain bash string
-          # replacement, not sed -- presigned URLs contain `&`, which sed's replacement syntax
-          # treats specially and would corrupt the URL.
+          # permissions, and prepend them as safely-quoted assignment lines ahead of deploy.sh's
+          # own content. Built entirely via jq (--arg / @sh) rather than any text-substitution —
+          # two earlier attempts (sed, then plain bash find/replace) both corrupted the `&`
+          # characters in the presigned URL's query string; jq's @sh filter shell-quotes arbitrary
+          # content correctly with no such risk, since it's not pattern-matching-based at all.
           WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
           API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
-          echo "DEBUG generated WEB_URL (len ${#WEB_URL}): $WEB_URL"
-          SCRIPT=$(cat deploy/deploy.sh)
-          SCRIPT=${SCRIPT//REPLACE_ME_WEB_URL/$WEB_URL}
-          SCRIPT=${SCRIPT//REPLACE_ME_API_URL/$API_URL}
-          echo "$SCRIPT" > /tmp/deploy-runtime.sh
-          COMMANDS_JSON=$(jq -Rs -c 'split("\n")' /tmp/deploy-runtime.sh)
+          COMMANDS_JSON=$(jq -n \
+            --arg web "$WEB_URL" \
+            --arg api "$API_URL" \
+            --rawfile body deploy/deploy.sh \
+            '[("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh))] + ($body | split("\n"))')
           PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \

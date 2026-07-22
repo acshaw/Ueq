@@ -8,15 +8,17 @@
 # baked-in metadata-vended identity (AmazonLightsailInstanceRole, in AWS's own account) that takes
 # priority over any hybrid-activation role in the default credential chain, so an `aws s3 cp` here
 # would silently try to auth as the wrong identity. Presigned URLs sidestep that entirely — the
-# instance needs nothing but curl. WEB_URL / API_URL are substituted in by the CI job at deploy
-# time (short-lived, ~10-minute links, not secrets worth persisting).
+# instance needs nothing but curl.
+#
+# WEB_URL / API_URL are NOT defined in this file — the CI job prepends two `WEB_URL='...'` /
+# `API_URL='...'` lines ahead of this script's content at deploy time, built via jq's `@sh` filter
+# (safe for arbitrary content, including the many `&` characters in a presigned URL's query
+# string). An earlier text-substitution approach corrupted the URL for exactly that reason.
 #
 # Does NOT touch /opt/ueq/api/api.env (holds UEQ_DB_CONNSTRING) — that file is never part of the
 # published API output, so a plain overwrite never clobbers it.
 set -euo pipefail
 
-WEB_URL="REPLACE_ME_WEB_URL"
-API_URL="REPLACE_ME_API_URL"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
