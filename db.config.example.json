@@ -1,8 +1,23 @@
 {
-  "host": "localhost",
-  "port": 5432,
-  "database": "ueq",
-  "username": "ueq",
-  "password": "change_me",
-  "seedOnStart": true
+  "active": "local",
+  "profiles": [
+    {
+      "name": "local",
+      "host": "localhost",
+      "port": 5432,
+      "database": "ueq",
+      "username": "ueq",
+      "password": "change_me",
+      "seedOnStart": true
+    },
+    {
+      "name": "remote-tunnel",
+      "host": "localhost",
+      "port": 5433,
+      "database": "ueq",
+      "username": "ueq",
+      "password": "change_me",
+      "seedOnStart": true
+    }
+  ]
 }

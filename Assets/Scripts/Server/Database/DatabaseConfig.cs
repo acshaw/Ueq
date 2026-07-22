@@ -32,6 +32,23 @@ public static class DatabaseConfig
         public bool   seedOnStart = true;
     }
 
+    // Multi-target format: db.config.json can define several named profiles (e.g. "local" vs.
+    // "remote-tunnel") and pick one via "active" — switching targets is then a one-line edit
+    // instead of hand-editing host/port/password each time. The legacy flat single-object format
+    // (no "active"/"profiles") is still supported below, for backward compatibility.
+    [Serializable]
+    class NamedProfile : FileConfig
+    {
+        public string name;
+    }
+
+    [Serializable]
+    class ProfileFile
+    {
+        public string active;
+        public NamedProfile[] profiles;
+    }
+
     public static DbSettings Resolve()
     {
         var full = Environment.GetEnvironmentVariable("UEQ_DB_CONNSTRING");
@@ -77,7 +94,22 @@ public static class DatabaseConfig
                 "No DB config found. Set UEQ_DB_* env vars or create db.config.json at the " +
                 "project root (copy db.config.example.json). Looked at: " + path);
         }
-        return JsonUtility.FromJson<FileConfig>(File.ReadAllText(path));
+
+        var text = File.ReadAllText(path);
+
+        var multi = JsonUtility.FromJson<ProfileFile>(text);
+        if (multi != null && !string.IsNullOrEmpty(multi.active) && multi.profiles != null)
+        {
+            foreach (var p in multi.profiles)
+                if (p.name == multi.active)
+                    return p;
+            throw new InvalidOperationException(
+                $"db.config.json: active profile '{multi.active}' not found among: " +
+                string.Join(", ", Array.ConvertAll(multi.profiles, p => p.name)));
+        }
+
+        // Legacy flat single-object format.
+        return JsonUtility.FromJson<FileConfig>(text);
     }
 
     static string ProjectRootFile(string fileName)

@@ -23,6 +23,23 @@ public static class Database
     }
 
     /// <summary>
+    /// Opens a connection for one-shot Editor tools (Tools/Database/*): always re-resolves
+    /// db.config.json / env vars fresh, ignoring whatever was cached by an earlier Play session
+    /// or tool click. This is what lets switching db.config.json's target (e.g. local vs. a
+    /// remote SSM tunnel) take effect on the very next menu click — no recompile or Editor
+    /// restart needed. Live in-session server code (PersistenceService, ContentLoader) should
+    /// keep using the plain <see cref="OpenConnection"/> — it correctly wants a stable target for
+    /// the whole Play session, not a fresh re-read on every call.
+    /// </summary>
+    public static NpgsqlConnection OpenEditorConnection()
+    {
+        _connectionString = DatabaseConfig.Resolve().ConnectionString;
+        var conn = new NpgsqlConnection(_connectionString);
+        conn.Open();
+        return conn;
+    }
+
+    /// <summary>
     /// Connect, run any pending migrations, and seed (dev only). Throws on failure so the
     /// caller can abort server start rather than run silently without persistence.
     /// </summary>

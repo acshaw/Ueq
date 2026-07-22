@@ -14,7 +14,7 @@ public static class DatabaseTools
     {
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             using var cmd = new NpgsqlCommand("SELECT version();", conn);
             var version = cmd.ExecuteScalar() as string;
             Debug.Log($"[DB] Connected to {conn.DataSource}/{conn.Database}\n{version}");
@@ -32,7 +32,7 @@ public static class DatabaseTools
     {
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             int n = MigrationRunner.Run(conn);
             var msg = n == 0 ? "No pending migrations." : $"Applied {n} migration(s).";
             Debug.Log($"[DB] {msg}");
@@ -50,7 +50,7 @@ public static class DatabaseTools
     {
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             DatabaseSeeder.Seed(conn);
             Debug.Log("[DB] Seed complete (idempotent — existing rows left intact).");
             EditorUtility.DisplayDialog("Database",
@@ -163,7 +163,7 @@ public static class DatabaseTools
 
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             int rows = ContentExportImport.ExportToFile(conn, path);
             Debug.Log($"[DB] Exported content to {path} ({rows} row(s) total).");
             EditorUtility.DisplayDialog("Export Content", $"Exported {rows} row(s) to:\n\n{path}", "OK");
@@ -190,7 +190,7 @@ public static class DatabaseTools
 
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             ContentExportImport.ImportFromFile(conn, path);
             Debug.Log($"[DB] Imported content from {path}.");
             EditorUtility.DisplayDialog("Import Content",
@@ -213,7 +213,7 @@ public static class DatabaseTools
             return;
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             using var cmd = new NpgsqlCommand("DROP TABLE IF EXISTS schema_version;", conn);
             cmd.ExecuteNonQuery();
             Debug.Log("[DB] Dropped schema_version.");
@@ -258,7 +258,7 @@ public class CreateAccountWindow : EditorWindow
     {
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             long? id = new AccountRepository().TryRegister(conn, username, PasswordHasher.Hash(password));
             if (id == null)
             {
@@ -306,7 +306,7 @@ public class WipeCharacterWindow : EditorWindow
     {
         try
         {
-            using var conn = Database.OpenConnection();
+            using var conn = Database.OpenEditorConnection();
             var account = new AccountRepository().FindByUsername(conn, username);
             if (account == null)
             {
