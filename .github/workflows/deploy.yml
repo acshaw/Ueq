@@ -73,10 +73,18 @@ jobs:
 
       - name: Trigger deploy on the instance via SSM
         run: |
-          # deploy/deploy.sh ships with a placeholder bucket name (filled in here, not committed,
-          # since the real bucket name is account-specific) — substitute the real one, then hand
-          # every line to AWS-RunShellScript as its `commands` parameter.
-          sed "s#REPLACE_ME_ueq-deploy-artifacts-<account-id>#${{ vars.DEPLOY_BUCKET }}#" deploy/deploy.sh > /tmp/deploy-runtime.sh
+          # The instance never gets AWS credentials (Lightsail's own baked-in metadata identity
+          # would shadow any role we grant it — see deploy.sh's header comment). Instead, generate
+          # short-lived presigned URLs here, where this job's OIDC-assumed role has real S3
+          # permissions, and substitute them into the script before sending it. Plain bash string
+          # replacement, not sed -- presigned URLs contain `&`, which sed's replacement syntax
+          # treats specially and would corrupt the URL.
+          WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
+          API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
+          SCRIPT=$(cat deploy/deploy.sh)
+          SCRIPT=${SCRIPT//REPLACE_ME_WEB_URL/$WEB_URL}
+          SCRIPT=${SCRIPT//REPLACE_ME_API_URL/$API_URL}
+          echo "$SCRIPT" > /tmp/deploy-runtime.sh
           COMMANDS_JSON=$(jq -Rs -c 'split("\n")' /tmp/deploy-runtime.sh)
           PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
           CMD_ID=$(aws ssm send-command \
