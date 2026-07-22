@@ -20,6 +20,11 @@ jobs:
   deploy:
     name: Build + deploy
     runs-on: ubuntu-latest
+    env:
+      # Belt-and-suspenders: configure-aws-credentials is supposed to export this for later
+      # steps automatically, but a first real run showed it wasn't reaching the plain `aws`
+      # CLI calls in this job (NoRegion error) — setting it explicitly removes the ambiguity.
+      AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
 
