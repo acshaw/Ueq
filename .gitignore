@@ -11,9 +11,13 @@ MemoryCaptures/
 # Visual Studio / Rider
 .vs/
 .idea/
-*.csproj
-*.sln
-*.slnx
+# Root-anchored: Unity auto-generates IDE project files at the repo root (Assembly-CSharp.csproj,
+# Mirror.csproj, etc.) — a blanket `*.csproj` also swallowed the real, hand-authored
+# api/Ueq.ContentApi.csproj, so it was silently never committed. Anchoring to root only fixes that
+# without letting the ~90 Unity-generated root files back in.
+/*.csproj
+/*.sln
+/*.slnx
 *.suo
 *.user
 *.userprefs

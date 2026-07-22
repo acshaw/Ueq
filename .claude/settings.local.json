@@ -150,7 +150,8 @@
       "Bash(printf '%s' 'ZXIuc2VydmljZQpSZXF1aXJlcz1kb2NrZXIuc2Vy')",
       "Bash(printf '%s' 'dmljZQoKW1NlcnZpY2VdClR5cGU9c2ltcGxlClVz')",
       "Bash(grep -c '\\\\.sql$')",
-      "Bash(powershell -Command \"\\(Get-Item 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\db.config.json'\\).FullName\")"
+      "Bash(powershell -Command \"\\(Get-Item 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\db.config.json'\\).FullName\")",
+      "Bash(echo \"exit=$?\")"
     ]
   },
   "hooks": {
