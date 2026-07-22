@@ -33,6 +33,8 @@ download() {
   fi
 }
 
+echo "DEBUG received WEB_URL (len ${#WEB_URL}): $WEB_URL"
+
 echo "== Deploying web =="
 download "$WEB_URL" "${WORKDIR}/web.zip"
 sudo rm -rf /var/www/ueq-web

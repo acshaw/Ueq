@@ -81,6 +81,7 @@ jobs:
           # treats specially and would corrupt the URL.
           WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
           API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
+          echo "DEBUG generated WEB_URL (len ${#WEB_URL}): $WEB_URL"
           SCRIPT=$(cat deploy/deploy.sh)
           SCRIPT=${SCRIPT//REPLACE_ME_WEB_URL/$WEB_URL}
           SCRIPT=${SCRIPT//REPLACE_ME_API_URL/$API_URL}
