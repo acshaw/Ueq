@@ -151,7 +151,9 @@
       "Bash(printf '%s' 'dmljZQoKW1NlcnZpY2VdClR5cGU9c2ltcGxlClVz')",
       "Bash(grep -c '\\\\.sql$')",
       "Bash(powershell -Command \"\\(Get-Item 'C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\db.config.json'\\).FullName\")",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "Bash(python3 *)",
+      "Bash(bash -n verify-deploy.sh)"
     ]
   },
   "hooks": {

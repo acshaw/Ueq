@@ -76,18 +76,20 @@ jobs:
           # The instance never gets AWS credentials (Lightsail's own baked-in metadata identity
           # would shadow any role we grant it — see deploy.sh's header comment). Instead, generate
           # short-lived presigned URLs here, where this job's OIDC-assumed role has real S3
-          # permissions, and prepend them as safely-quoted assignment lines ahead of deploy.sh's
-          # own content. Built entirely via jq (--arg / @sh) rather than any text-substitution —
-          # two earlier attempts (sed, then plain bash find/replace) both corrupted the `&`
-          # characters in the presigned URL's query string; jq's @sh filter shell-quotes arbitrary
-          # content correctly with no such risk, since it's not pattern-matching-based at all.
+          # permissions, and insert them as safely-quoted assignment lines right after deploy.sh's
+          # shebang line (must stay line 1, or SSM's AWS-RunShellScript falls back to plain `sh`
+          # instead of bash, and deploy.sh's `set -o pipefail` isn't valid there). Built entirely
+          # via jq (--arg / @sh) rather than any text-substitution — two earlier attempts (sed,
+          # then plain bash find/replace) both corrupted the `&` characters in the presigned URL's
+          # query string; jq's @sh filter shell-quotes arbitrary content correctly with no such
+          # risk, since it's not pattern-matching-based at all.
           WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
           API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
           COMMANDS_JSON=$(jq -n \
             --arg web "$WEB_URL" \
             --arg api "$API_URL" \
             --rawfile body deploy/deploy.sh \
-            '[("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh))] + ($body | split("\n"))')
+            '($body | split("\n")) as $lines | [$lines[0], ("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh))] + $lines[1:]')
           PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
