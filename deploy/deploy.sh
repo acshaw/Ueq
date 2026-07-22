@@ -20,14 +20,27 @@ API_URL="REPLACE_ME_API_URL"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
+# Downloads $1 to $2. Unlike `curl -f`, this surfaces the actual response body on a non-2xx
+# status (S3 error responses are small XML with a specific <Code>/<Message> — worth seeing
+# instead of curl's generic "error 22" when something's wrong with the presigned URL).
+download() {
+  local url="$1" out="$2" status
+  status=$(curl -sSL -o "$out" -w '%{http_code}' "$url")
+  if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+    echo "Download failed (HTTP $status) for $out:" >&2
+    cat "$out" >&2
+    return 1
+  fi
+}
+
 echo "== Deploying web =="
-curl -fsSL -o "${WORKDIR}/web.zip" "$WEB_URL"
+download "$WEB_URL" "${WORKDIR}/web.zip"
 sudo rm -rf /var/www/ueq-web
 sudo mkdir -p /var/www/ueq-web
 sudo unzip -q -o "${WORKDIR}/web.zip" -d /var/www/ueq-web
 
 echo "== Deploying api =="
-curl -fsSL -o "${WORKDIR}/api.zip" "$API_URL"
+download "$API_URL" "${WORKDIR}/api.zip"
 sudo unzip -q -o "${WORKDIR}/api.zip" -d /opt/ueq/api
 
 echo "== Restarting services =="
