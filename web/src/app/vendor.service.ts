@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's VendorDto (M2.3) — a vendor plus its ordered item ids. */
@@ -24,7 +25,7 @@ export const VENDOR_SEARCH_FIELDS: (keyof Vendor)[] = ['vendorId', 'displayName'
 
 @Injectable({ providedIn: 'root' })
 export class VendorService {
-  private readonly base = 'http://localhost:5144/api/vendors';
+  private readonly base = `${environment.apiBase}/api/vendors`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Vendor[]> { return this.http.get<Vendor[]>(this.base); }

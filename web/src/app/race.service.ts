@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's Race (M2.10). */
@@ -33,7 +34,7 @@ export const RACE_SEARCH_FIELDS: (keyof Race)[] = ['raceId', 'raceName'];
 
 @Injectable({ providedIn: 'root' })
 export class RaceService {
-  private readonly base = 'http://localhost:5144/api/races';
+  private readonly base = `${environment.apiBase}/api/races`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Race[]> { return this.http.get<Race[]>(this.base); }

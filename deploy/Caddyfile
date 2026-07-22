@@ -1,0 +1,16 @@
+{$UEQ_HOSTNAME} {
+	# API calls proxy to the local Kestrel process (systemd: ueq-api.service).
+	# Matched first so it takes priority over the SPA static-file fallback below.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:5144
+	}
+
+	# Angular SPA — serve the built `dist/` output, falling back to index.html for any
+	# unmatched route so client-side routing works (mirrors family-cookbook's CloudFront
+	# 403/404 -> index.html custom error responses).
+	handle {
+		root * /var/www/ueq-web
+		try_files {path} /index.html
+		file_server
+	}
+}

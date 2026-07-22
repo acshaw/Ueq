@@ -29,6 +29,7 @@ public class ContentDbContext : DbContext
     public DbSet<AbilityTag> AbilityTags => Set<AbilityTag>();
     public DbSet<Race> Races => Set<Race>();
     public DbSet<Class> Classes => Set<Class>();
+    public DbSet<WebAdmin> WebAdmins => Set<WebAdmin>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -463,6 +464,16 @@ public class ContentDbContext : DbContext
             e.Property(x => x.Weight).HasColumnName("weight");
             e.Property(x => x.GroupSize).HasColumnName("group_size");
             e.Property(x => x.SortOrder).HasColumnName("sort_order");
+        });
+
+        modelBuilder.Entity<WebAdmin>(e =>
+        {
+            e.ToTable("web_admins");
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            e.Property(a => a.Username).HasColumnName("username");
+            e.Property(a => a.PasswordHash).HasColumnName("password_hash");
+            e.Property(a => a.CreatedAt).HasColumnName("created_at");
         });
     }
 }

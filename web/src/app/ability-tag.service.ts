@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's AbilityTag (M2.9) — a flat reference used by an ability's tags + cooldown links. */
@@ -21,7 +22,7 @@ export const ABILITY_TAG_SEARCH_FIELDS: (keyof AbilityTag)[] = ['tagId', 'displa
 
 @Injectable({ providedIn: 'root' })
 export class AbilityTagService {
-  private readonly base = 'http://localhost:5144/api/ability-tags';
+  private readonly base = `${environment.apiBase}/api/ability-tags`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<AbilityTag[]> { return this.http.get<AbilityTag[]>(this.base); }

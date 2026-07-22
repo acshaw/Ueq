@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's AbilityDto (M2.9) — an ability with its three ordered child lists. */
@@ -45,7 +46,7 @@ export const ABILITY_SEARCH_FIELDS: (keyof Ability)[] = ['abilityId', 'displayNa
 /** HTTP client for the abilities endpoints. */
 @Injectable({ providedIn: 'root' })
 export class AbilityService {
-  private readonly base = 'http://localhost:5144/api/abilities';
+  private readonly base = `${environment.apiBase}/api/abilities`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Ability[]> { return this.http.get<Ability[]>(this.base); }

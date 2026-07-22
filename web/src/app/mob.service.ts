@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** One faction standing change applied to the killer when this mob dies (M2.7.1). */
@@ -87,7 +88,7 @@ export const MOB_SEARCH_FIELDS: (keyof Mob)[] = ['mobId', 'displayName'];
 
 @Injectable({ providedIn: 'root' })
 export class MobService {
-  private readonly base = 'http://localhost:5144/api/mobs';
+  private readonly base = `${environment.apiBase}/api/mobs`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Mob[]> { return this.http.get<Mob[]>(this.base); }

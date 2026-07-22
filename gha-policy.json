@@ -1,0 +1,8 @@
+{ "Version":"2012-10-17","Statement":[
+{"Effect":"Allow","Action":["s3:PutObject","s3:GetObject"],
+"Resource":"arn:aws:s3:::ueq-deploy-artifacts-068000719896/*"},
+{"Effect":"Allow","Action":"ssm:SendCommand",
+"Resource":["arn:aws:ssm:us-east-2::document/AWS-RunShellScript",
+"arn:aws:ssm:us-east-2:068000719896:managed-instance/mi-01a2972e1087d15db"]},
+{"Effect":"Allow","Action":["ssm:GetCommandInvocation","ssm:ListCommandInvocations"],
+"Resource":"*"}]}

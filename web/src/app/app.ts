@@ -1,4 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { AuthService } from './auth.service';
+import { Login } from './login';
 import { ItemEditor } from './item-editor';
 import { VendorEditor } from './vendor-editor';
 import { ConversationEditor } from './conversation-editor';
@@ -19,58 +21,75 @@ import { Documentation } from './documentation';
  */
 @Component({
   selector: 'app-root',
-  imports: [ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation],
+  imports: [Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation],
   template: `
-    <header>
-      <strong>Ueq Content</strong>
-      <nav>
-        <button [class.active]="view() === 'items'" (click)="view.set('items')">Items</button>
-        <button [class.active]="view() === 'vendors'" (click)="view.set('vendors')">Vendors</button>
-        <button [class.active]="view() === 'conversations'" (click)="view.set('conversations')">Conversations</button>
-        <button [class.active]="view() === 'mobs'" (click)="view.set('mobs')">Mobs</button>
-        <button [class.active]="view() === 'factions'" (click)="view.set('factions')">Factions</button>
-        <button [class.active]="view() === 'loot'" (click)="view.set('loot')">Loot</button>
-        <button [class.active]="view() === 'xp'" (click)="view.set('xp')">XP</button>
-        <button [class.active]="view() === 'spawns'" (click)="view.set('spawns')">Spawns</button>
-        <button [class.active]="view() === 'abilities'" (click)="view.set('abilities')">Abilities</button>
-        <button [class.active]="view() === 'abilityTags'" (click)="view.set('abilityTags')">Ability Tags</button>
-        <button [class.active]="view() === 'races'" (click)="view.set('races')">Races</button>
-        <button [class.active]="view() === 'classes'" (click)="view.set('classes')">Classes</button>
-        <button class="docs" [class.active]="view() === 'docs'" (click)="view.set('docs')">Documentation</button>
-      </nav>
-    </header>
+    @if (!auth.ready()) {
+      <!-- brief flash while the initial /api/auth/me check resolves -->
+    } @else if (!auth.username()) {
+      <app-login />
+    } @else {
+      <header>
+        <strong>Ueq Content</strong>
+        <nav>
+          <button [class.active]="view() === 'items'" (click)="view.set('items')">Items</button>
+          <button [class.active]="view() === 'vendors'" (click)="view.set('vendors')">Vendors</button>
+          <button [class.active]="view() === 'conversations'" (click)="view.set('conversations')">Conversations</button>
+          <button [class.active]="view() === 'mobs'" (click)="view.set('mobs')">Mobs</button>
+          <button [class.active]="view() === 'factions'" (click)="view.set('factions')">Factions</button>
+          <button [class.active]="view() === 'loot'" (click)="view.set('loot')">Loot</button>
+          <button [class.active]="view() === 'xp'" (click)="view.set('xp')">XP</button>
+          <button [class.active]="view() === 'spawns'" (click)="view.set('spawns')">Spawns</button>
+          <button [class.active]="view() === 'abilities'" (click)="view.set('abilities')">Abilities</button>
+          <button [class.active]="view() === 'abilityTags'" (click)="view.set('abilityTags')">Ability Tags</button>
+          <button [class.active]="view() === 'races'" (click)="view.set('races')">Races</button>
+          <button [class.active]="view() === 'classes'" (click)="view.set('classes')">Classes</button>
+          <button class="docs" [class.active]="view() === 'docs'" (click)="view.set('docs')">Documentation</button>
+        </nav>
+        <span class="who">{{ auth.username() }}</span>
+        <button class="logout" (click)="auth.logout()">Log out</button>
+      </header>
 
-    <div class="body">
-      @switch (view()) {
-        @case ('items')         { <app-item-editor /> }
-        @case ('vendors')       { <app-vendor-editor /> }
-        @case ('conversations') { <app-conversation-editor /> }
-        @case ('mobs')          { <app-mob-editor /> }
-        @case ('factions')      { <app-faction-editor /> }
-        @case ('loot')          { <app-loot-editor /> }
-        @case ('xp')            { <app-xp-editor /> }
-        @case ('spawns')        { <app-spawn-editor /> }
-        @case ('abilities')     { <app-ability-editor /> }
-        @case ('abilityTags')   { <app-ability-tag-editor /> }
-        @case ('races')         { <app-race-editor /> }
-        @case ('classes')       { <app-class-editor /> }
-        @case ('docs')          { <app-documentation /> }
-      }
-    </div>
+      <div class="body">
+        @switch (view()) {
+          @case ('items')         { <app-item-editor /> }
+          @case ('vendors')       { <app-vendor-editor /> }
+          @case ('conversations') { <app-conversation-editor /> }
+          @case ('mobs')          { <app-mob-editor /> }
+          @case ('factions')      { <app-faction-editor /> }
+          @case ('loot')          { <app-loot-editor /> }
+          @case ('xp')            { <app-xp-editor /> }
+          @case ('spawns')        { <app-spawn-editor /> }
+          @case ('abilities')     { <app-ability-editor /> }
+          @case ('abilityTags')   { <app-ability-tag-editor /> }
+          @case ('races')         { <app-race-editor /> }
+          @case ('classes')       { <app-class-editor /> }
+          @case ('docs')          { <app-documentation /> }
+        }
+      </div>
+    }
   `,
   styles: [`
     :host { display: block; font-family: system-ui, sans-serif; }
     header { display: flex; align-items: center; gap: 1.5rem; padding: 0.6rem 1.25rem;
              border-bottom: 1px solid #e3e3e3; background: #fafafa; }
-    nav { display: flex; gap: 0.25rem; }
+    nav { display: flex; gap: 0.25rem; flex: 1; }
     nav button { background: none; border: none; padding: 0.35rem 0.8rem; cursor: pointer;
                  border-radius: 4px; color: #555; }
     nav button:hover { background: #eee; }
     nav button.active { background: #1a73e8; color: #fff; }
     nav button.docs { margin-left: 0.5rem; border-left: 1px solid #e3e3e3; padding-left: 0.9rem; }
+    .who { color: #888; font-size: 0.85rem; }
+    button.logout { background: none; border: 1px solid #ccc; padding: 0.3rem 0.7rem; border-radius: 4px;
+                     color: #555; cursor: pointer; font-size: 0.85rem; }
+    button.logout:hover { background: #eee; }
     .body { max-width: 980px; margin: 1.25rem auto; padding: 0 1rem; }
   `]
 })
-export class App {
+export class App implements OnInit {
+  readonly auth = inject(AuthService);
   readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'docs'>('items');
+
+  ngOnInit(): void {
+    this.auth.checkSession();
+  }
 }

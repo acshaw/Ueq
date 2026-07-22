@@ -1,0 +1,93 @@
+name: Deploy
+
+# Builds + publishes both apps, uploads to the private S3 deploy bucket, then triggers the
+# on-instance deploy script via SSM Run Command (5.11 / CD6). No stored SSH key, no long-lived
+# AWS secret in GitHub — auth is via OIDC (AWS_DEPLOY_ROLE_ARN) scoped to this repo only.
+#
+# Runs on push to main, or manually via workflow_dispatch (used for the first verification run
+# per the devplan's build order — confirm this goes green before trusting push-to-main).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required for aws-actions/configure-aws-credentials OIDC exchange
+  contents: read
+
+jobs:
+  deploy:
+    name: Build + deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish API
+        working-directory: api
+        run: dotnet publish -c Release -r linux-x64 --self-contained false -o publish
+
+      - name: Zip API artifact
+        working-directory: api/publish
+        run: zip -r ../../api.zip .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build web (production is the default configuration)
+        working-directory: web
+        run: npm run build
+
+      - name: Zip web artifact
+        working-directory: web/dist/web/browser
+        run: zip -r ../../../../web.zip .
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload artifacts to S3
+        run: |
+          aws s3 cp web.zip "s3://${{ vars.DEPLOY_BUCKET }}/web.zip"
+          aws s3 cp api.zip "s3://${{ vars.DEPLOY_BUCKET }}/api.zip"
+
+      - name: Trigger deploy on the instance via SSM
+        run: |
+          # deploy/deploy.sh ships with a placeholder bucket name (filled in here, not committed,
+          # since the real bucket name is account-specific) — substitute the real one, then hand
+          # every line to AWS-RunShellScript as its `commands` parameter.
+          sed "s#REPLACE_ME_ueq-deploy-artifacts-<account-id>#${{ vars.DEPLOY_BUCKET }}#" deploy/deploy.sh > /tmp/deploy-runtime.sh
+          COMMANDS_JSON=$(jq -Rs -c 'split("\n")' /tmp/deploy-runtime.sh)
+          PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
+          CMD_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=InstanceIds,Values=${{ vars.MANAGED_INSTANCE_ID }}" \
+            --parameters "$PARAMS_JSON" \
+            --query "Command.CommandId" --output text)
+          echo "CMD_ID=$CMD_ID" >> "$GITHUB_ENV"
+          echo "Sent command $CMD_ID to ${{ vars.MANAGED_INSTANCE_ID }}, waiting for completion..."
+          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "${{ vars.MANAGED_INSTANCE_ID }}"
+
+      - name: Show remote deploy output
+        if: always()
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "${{ vars.MANAGED_INSTANCE_ID }}" \
+            --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
+            --output json

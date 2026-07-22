@@ -1,0 +1,19 @@
+[Unit]
+Description=Ueq content API
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ueq
+WorkingDirectory=/opt/ueq/api
+ExecStart=/usr/bin/dotnet /opt/ueq/api/Ueq.ContentApi.dll
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5144
+# UEQ_DB_CONNSTRING lives here, not inline — keeps the DB password out of `systemctl cat`/journal.
+EnvironmentFile=/opt/ueq/api/api.env
+
+[Install]
+WantedBy=multi-user.target

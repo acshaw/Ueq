@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's SpawnTableDto (M2.7.2) — a weighted table with an inlined respawn timer. */
@@ -28,7 +29,7 @@ export const SPAWN_SEARCH_FIELDS: (keyof SpawnTable)[] = ['spawnTableId', 'displ
 
 @Injectable({ providedIn: 'root' })
 export class SpawnService {
-  private readonly base = 'http://localhost:5144/api/spawn-tables';
+  private readonly base = `${environment.apiBase}/api/spawn-tables`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<SpawnTable[]> { return this.http.get<SpawnTable[]>(this.base); }

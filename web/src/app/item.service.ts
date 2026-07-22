@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the `items` row / .NET API `Item` (M2.2). camelCase to match the API's JSON. */
@@ -61,7 +62,7 @@ export const ITEM_SEARCH_FIELDS: (keyof Item)[] = ['itemId', 'displayName'];
 /** HTTP client for the items endpoints. The reference shape later content services copy. */
 @Injectable({ providedIn: 'root' })
 export class ItemService {
-  private readonly base = 'http://localhost:5144/api/items';
+  private readonly base = `${environment.apiBase}/api/items`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Item[]> {

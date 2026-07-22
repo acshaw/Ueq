@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's LootTableDto (M2.7) — a loot table with its three weighted child lists. */
@@ -32,7 +33,7 @@ export const LOOT_SEARCH_FIELDS: (keyof LootTable)[] = ['lootTableId', 'displayN
 
 @Injectable({ providedIn: 'root' })
 export class LootService {
-  private readonly base = 'http://localhost:5144/api/loot-tables';
+  private readonly base = `${environment.apiBase}/api/loot-tables`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<LootTable[]> { return this.http.get<LootTable[]>(this.base); }

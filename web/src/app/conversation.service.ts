@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 export interface ItemAmount { itemId: string; quantity: number; }
@@ -54,7 +55,7 @@ export const CONVERSATION_SEARCH_FIELDS: (keyof ConversationSet)[] = ['setId', '
 
 @Injectable({ providedIn: 'root' })
 export class ConversationService {
-  private readonly base = 'http://localhost:5144/api/conversations';
+  private readonly base = `${environment.apiBase}/api/conversations`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<ConversationSet[]> { return this.http.get<ConversationSet[]>(this.base); }

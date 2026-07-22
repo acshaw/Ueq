@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's FactionDto (M2.6) — a faction plus its ally/hostile ids and race defaults. */
@@ -32,8 +33,8 @@ export const FACTION_SEARCH_FIELDS: (keyof Faction)[] = ['factionId', 'factionNa
 
 @Injectable({ providedIn: 'root' })
 export class FactionService {
-  private readonly base = 'http://localhost:5144/api/factions';
-  private readonly thresholdsUrl = 'http://localhost:5144/api/thresholds';
+  private readonly base = `${environment.apiBase}/api/factions`;
+  private readonly thresholdsUrl = `${environment.apiBase}/api/thresholds`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Faction[]> { return this.http.get<Faction[]>(this.base); }

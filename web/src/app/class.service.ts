@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 import { GridColumn } from './shared/content-grid';
 
 /** Mirrors the API's ClassDto (M2.10) — a class with its ordered starting-ability id list. Weapon-prop
@@ -55,7 +56,7 @@ export const CLASS_SEARCH_FIELDS: (keyof Class)[] = ['classId', 'className'];
 
 @Injectable({ providedIn: 'root' })
 export class ClassService {
-  private readonly base = 'http://localhost:5144/api/classes';
+  private readonly base = `${environment.apiBase}/api/classes`;
   private readonly http = inject(HttpClient);
 
   getAll(): Observable<Class[]> { return this.http.get<Class[]>(this.base); }
