@@ -361,7 +361,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > Goal: move from local hobby setup toward a real server.
 
 - [x] **6.1 — Deployed Postgres on AWS** (migrate from local Docker). ✅ Closed 2026-07-22 — delivered early by 5.11 (Postgres running in Docker on the Lightsail instance, reachable by the deployed API and, when needed, via an SSM port-forwarding tunnel for direct Editor access).
-- [ ] **6.2 — Dedicated server build + hosting.**
+- [ ] **6.2 — Dedicated server build + hosting.** 🟡 Draft devplan awaiting review ([devplan](docs/devplans/6.2-dedicated-server-build-hosting.md), decisions DH1–DH8). *(Added 2026-07-25, right after 5.10 closed.)* Scope: get the real Unity game server running as a fourth co-located process on the existing Lightsail box (per 5.11's CD9), reachable by a real client over the internet instead of localhost. Builds directly on 5.10 (proved a real standalone build works, just Windows so far) and 5.11 (the box, Postgres, and deploy pipeline already exist). Key new ground: this is the project's **first-ever Linux build** (the Lightsail box is Ubuntu; 5.10 was Windows-only) and the first use of Unity's purpose-built Dedicated Server target (5.10 explicitly deferred that switch to here). Explicitly excludes client distribution (6.4) and transport encryption/hardened auth (6.3) — both stay separate.
 - [ ] **6.3 — Transport security + real auth** (the deferred security work: encryption, hardened login).
 - [ ] **6.4 — Build pipeline / launcher / patcher.**
 - [ ] **6.5 — Load testing + zone-server architecture.**
