@@ -154,7 +154,13 @@
       "Bash(echo \"exit=$?\")",
       "Bash(python3 *)",
       "Bash(bash -n verify-deploy.sh)",
-      "Bash(curl.exe -s https://checkip.amazonaws.com)"
+      "Bash(curl.exe -s https://checkip.amazonaws.com)",
+      "PowerShell(Write-Output \"OneDriveExists: $\\(Test-Path 'C:\\\\Users\\\\acsha\\\\OneDrive'\\)\"; $item = Get-Item 'C:\\\\Users\\\\acsha\\\\source' -Force; Write-Output \"source attrs: $\\($item.Attributes\\)\"; $item2 = Get-Item 'C:\\\\Users\\\\acsha' -Force; Write-Output \"acsha attrs: $\\($item2.Attributes\\)\")",
+      "Bash([ -f \"$ED\" ])",
+      "Bash(xxd)",
+      "Bash(grep *)",
+      "Bash(tasklist)",
+      "Bash(taskkill *)"
     ]
   },
   "hooks": {

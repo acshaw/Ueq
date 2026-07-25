@@ -34,7 +34,8 @@ public class PlayerFrame : MonoBehaviour
     void OnLocalSpawned(NetworkedPlayer p)
     {
         _health = p.GetComponent<Health>();
-        nameLabel.text = p.GetComponent<Nameplate>()?.Label;
+        var np = p.GetComponent<Nameplate>();
+        nameLabel.text = np?.Label;
         if (string.IsNullOrEmpty(nameLabel.text)) nameLabel.text = "Player";
         if (_health != null)
         {
@@ -67,6 +68,12 @@ public class PlayerFrame : MonoBehaviour
 
     void Update()
     {
+        // Self-heal fallback: if the one-shot LocalPlayer.Spawned event was missed for any reason
+        // (5.10 finding: observed 0 subscribers at Spawned-invoke time in a real standalone
+        // client/server pair — root mechanism not fully pinned down), bind as soon as a local
+        // player exists instead of staying unbound for the rest of the session.
+        if (_health == null && LocalPlayer.Current != null) OnLocalSpawned(LocalPlayer.Current);
+
         if (_inCombat && combatBorder != null)
             SetBorderAlpha(0.35f + 0.45f * Mathf.Abs(Mathf.Sin(Time.time * 4f)));
     }

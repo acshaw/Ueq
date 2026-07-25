@@ -54,6 +54,9 @@ public class VendorUI : MonoBehaviour
 
     void Update()
     {
+        // Self-heal fallback — see PlayerFrame.Update for why.
+        if (_inventory == null && LocalPlayer.Current != null) OnLocalSpawned(LocalPlayer.Current);
+
         if (_inventory != null && panel.activeSelf)
         {
             int total = _inventory.TotalCopperValue;

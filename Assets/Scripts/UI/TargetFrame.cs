@@ -36,6 +36,12 @@ public class TargetFrame : MonoBehaviour
         _player.OnTargetChanged += OnTargetChanged;
     }
 
+    // Self-heal fallback — see PlayerFrame.Update for why.
+    void Update()
+    {
+        if (_player == null && LocalPlayer.Current != null) OnLocalSpawned(LocalPlayer.Current);
+    }
+
     void OnLocalDespawned()
     {
         _player = null;       // event dies with the destroyed player object

@@ -313,9 +313,9 @@ public static class SceneSetup
         CreateAbilityRegistry();
         EnsureDirectionalLight();
 
-        // 1.7: the HUD/menu canvases now live in the additive UI.unity scene (Tools/Build UI Scene).
-        // Strip any canvases this scene built before the refactor, and add the loader that pulls in
-        // the UI layer additively at runtime.
+        // 1.7 (reworked 5.10): the HUD/menu canvases live in a prefab (Tools/Build UI Scene) that
+        // UIManager instantiates at runtime. Strip any canvases this scene built before the
+        // refactor, and add the loader.
         RemoveStaleHudCanvases();
         CreateUIManager();
 
@@ -326,12 +326,29 @@ public static class SceneSetup
 #endif
     }
 
-    // ── Additive UI scene (1.7) ──────────────────────────────────────────────────
+    // ── UI layer (1.7, reworked 5.10 — see below) ────────────────────────────────
 
-    const string UIScenePath = "Assets/Scenes/UI.unity";
+    // Paths for the retired scene-based approach — kept only so BuildUIScene can clean up any
+    // leftover assets/Build-Settings entries from before the 5.10 rework.
+    const string UIScenePath       = "Assets/Scenes/UI.unity";
+    const string UIHotbarScenePath = "Assets/Scenes/UIHotbar.unity";
 
-    // Build the HUD/menu canvases into their own scene, loaded additively at runtime by UIManager.
-    // Re-runnable: regenerates UI.unity from scratch each time.
+    // 5.10 finding: an additively-loaded UI.unity scene reliably crashed a real standalone build
+    // ("... is corrupted!", native "Position out of bounds!" crash, immediately on boot) —
+    // reproduced regardless of AV, build cache, graphics API, or scene content (regenerating from
+    // scratch changed nothing). Splitting the panels across two scenes along an empirically-proven
+    // "clean either half" line didn't fix it either — it just moved the identical crash to a
+    // DIFFERENT, previously-untouched scene (grukmars_deep) — proving this isn't about any specific
+    // scene or its content, but a genuine engine-level bug in packing/loading multiple scenes in
+    // this Unity version/environment (matches several historical Unity Issue Tracker reports of the
+    // identical "Position out of bounds" symptom). Every other asset type in this project already
+    // loads successfully via Resources.Load + Instantiate (items, abilities, mob/character bodies) —
+    // none of which have ever hit this bug — so the HUD is now a PREFAB, instantiated directly by
+    // UIManager, instead of a separate additively-loaded scene. DontDestroyOnLoad on the
+    // instantiated root gives the same "survives zone transitions" property the scene approach was
+    // providing, without ever touching the mechanism that was crashing.
+    const string UIPrefabPath = "Assets/Resources/UI/HudRoot.prefab";
+
     [MenuItem("Tools/Build UI Scene")]
     static void BuildUIScene()
     {
@@ -339,8 +356,6 @@ public static class SceneSetup
         string prevPath = EditorSceneManager.GetActiveScene().path;
 
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-        // These build into the now-active (empty) UI scene.
         CreateChatUI();
         CreateHUDFrames();
         CreateInventoryUI();
@@ -350,19 +365,37 @@ public static class SceneSetup
         CreateHotbarUI();
         EnsureEventSystem();
 
-        if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
-            AssetDatabase.CreateFolder("Assets", "Scenes");
+        // Reparent every root object built above under one shared root so they can be saved as a
+        // single prefab. Canvases manage their own render order via sortingOrder, independent of
+        // hierarchy depth, so reparenting doesn't change any visual behavior.
+        var scene   = EditorSceneManager.GetActiveScene();
+        var roots   = scene.GetRootGameObjects();
+        var hudRoot = new GameObject("HudRoot");
+        foreach (var root in roots)
+            root.transform.SetParent(hudRoot.transform, false);
 
-        var ui = EditorSceneManager.GetActiveScene();
-        EditorSceneManager.SaveScene(ui, UIScenePath);
-        AddSceneToBuildSettings(UIScenePath);
+        if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder("Assets/Resources/UI"))
+            AssetDatabase.CreateFolder("Assets/Resources", "UI");
+
+        PrefabUtility.SaveAsPrefabAsset(hudRoot, UIPrefabPath);
+
+        // Retire the old scene-based approach so it doesn't linger in Build Settings.
+        RemoveSceneFromBuildSettings(UIScenePath);
+        RemoveSceneFromBuildSettings(UIHotbarScenePath);
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(UIScenePath) != null)
+            AssetDatabase.DeleteAsset(UIScenePath);
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(UIHotbarScenePath) != null)
+            AssetDatabase.DeleteAsset(UIHotbarScenePath);
 
         if (!string.IsNullOrEmpty(prevPath))
             EditorSceneManager.OpenScene(prevPath);
 
-        Debug.Log($"[SceneSetup] Built {UIScenePath}.");
-        EditorUtility.DisplayDialog("Build UI Scene",
-            $"Built {UIScenePath} and added it to Build Settings.\n\n" +
+        Debug.Log($"[SceneSetup] Built {UIPrefabPath}.");
+        EditorUtility.DisplayDialog("Build UI Prefab",
+            $"Built {UIPrefabPath} (replaces the old additive UI.unity / UIHotbar.unity scenes — " +
+            "removed from Build Settings and deleted).\n\n" +
             "Now re-run Tools/Setup All so the gameplay scene drops its old HUD canvases and gets the " +
             "UIManager loader.", "OK");
     }
@@ -376,6 +409,21 @@ public static class SceneSetup
         var updated = new EditorBuildSettingsScene[existing.Length + 1];
         System.Array.Copy(existing, updated, existing.Length);
         updated[existing.Length] = new EditorBuildSettingsScene(path, true);
+        EditorBuildSettings.scenes = updated;
+    }
+
+    static void RemoveSceneFromBuildSettings(string path)
+    {
+        var existing = EditorBuildSettings.scenes;
+        int keep = 0;
+        foreach (var s in existing)
+            if (s.path != path) keep++;
+        if (keep == existing.Length) return; // not present
+
+        var updated = new EditorBuildSettingsScene[keep];
+        int idx = 0;
+        foreach (var s in existing)
+            if (s.path != path) updated[idx++] = s;
         EditorBuildSettings.scenes = updated;
     }
 
@@ -674,6 +722,11 @@ public static class SceneSetup
         // 1.5: don't auto-spawn the player on connect — CharacterSelectController spawns it once a
         // character is created/selected (via AddPlayerForConnection).
         nmSo.FindProperty("autoCreatePlayer").boolValue = false;
+
+        // 5.10 — a real -batchmode -nographics build has no UI to click "Server Only" with, so lean
+        // on Mirror's own built-in headless autostart (NetworkManager.Start() → Utils.IsHeadless()).
+        // editorAutoStart stays false: normal in-editor testing (Host/Server Only buttons) is unaffected.
+        nmSo.FindProperty("headlessStartMode").enumValueIndex = (int)HeadlessStartOptions.AutoStartServer;
 
         var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
         if (playerPrefab != null)

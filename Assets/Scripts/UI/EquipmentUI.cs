@@ -48,6 +48,13 @@ public class EquipmentUI : MonoBehaviour
 
     void Update()
     {
+        // Not in the world yet — same 5.10 finding as ChatUI: this Update() already runs during
+        // login/register/character-creation, so an 'e' typed there would otherwise toggle this.
+        if (LocalPlayer.Current == null) return;
+
+        // Self-heal fallback — see PlayerFrame.Update for why.
+        if (_equipment == null) OnLocalSpawned(LocalPlayer.Current);
+
         var kb = Keyboard.current;
         if (kb != null && kb.eKey.wasPressedThisFrame && !ChatUI.IsOpen)
             panel.SetActive(!panel.activeSelf);

@@ -103,6 +103,12 @@ public class ChatUI : MonoBehaviour
 
         if (!_open)
         {
+            // Only allow opening chat once the player is actually in the world — otherwise an
+            // Enter press to submit the login/register/character-creation form gets misread as
+            // "open chat" (5.10 finding: the whole HUD now instantiates immediately at boot, so
+            // this Update() is already running during those pre-game screens).
+            if (LocalPlayer.Current == null) return;
+
             if (!_suppressEnterOpen && kb.enterKey.wasPressedThisFrame)
                 Open();
             else if (kb.slashKey.wasPressedThisFrame)

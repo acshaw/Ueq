@@ -62,8 +62,14 @@ public class InventoryUI : MonoBehaviour
 
     void Update()
     {
+        // Self-heal fallback — see PlayerFrame.Update for why.
+        if (_inventory == null && LocalPlayer.Current != null) OnLocalSpawned(LocalPlayer.Current);
+
         var kb = Keyboard.current;
-        if (kb != null && kb.bKey.wasPressedThisFrame && !ChatUI.IsOpen)
+        // Not in the world yet — same 5.10 finding as ChatUI/EquipmentUI: this Update() already
+        // runs during login/register/character-creation, so a 'b' typed there would otherwise
+        // toggle this.
+        if (kb != null && kb.bKey.wasPressedThisFrame && !ChatUI.IsOpen && LocalPlayer.Current != null)
             SetVisible(!panel.activeSelf);
 
         // Catch SyncVar-only currency changes (no slot change fires Refresh)
