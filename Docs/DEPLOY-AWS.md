@@ -554,11 +554,12 @@ aws s3 cp "bin\Release\net10.0-windows\win-x64\publish\UeqLauncher.exe" "s3://$e
 ```
 
 `aws s3 cp` alone doesn't make the object downloadable through Caddy's `/downloads/*` path (that
-serves `/var/www/ueq-downloads` on the instance, not the S3 bucket directly) — for this one file,
-it's simplest to grab it via SSM port-forwarding or the browser SSH file upload, or route it
-through the same presign+`deploy.sh` mechanism as the others (would need a `LAUNCHER_URL` line
-added to `deploy.sh`/`deploy.yml`, not built here since it's a rare one-off, not a routine deploy
-artifact — add it if this needs to happen often enough to be worth automating).
+serves `/var/www/ueq-downloads` on the instance, not the S3 bucket directly). `LAUNCHER_URL` is
+wired into `deploy.sh`/`deploy.yml` the same way as `CLIENT_URL`/`VERSION_URL` — push to `main` (or
+run the Deploy workflow manually) and it lands automatically. (An earlier version of this doc
+suggested a manual browser-SSH `curl` of a presigned URL instead — don't do that: that console
+corrupts long pasted lines with stray whitespace at display-wrap points, which breaks a presigned
+URL's signature. The automated pipeline sidesteps the problem entirely.)
 
 Send your brother the link to `https://18-218-79-193.sslip.io/downloads/UeqLauncher.exe` once. From
 then on, running it always fetches whatever's newest — no more manual redownloads for him.

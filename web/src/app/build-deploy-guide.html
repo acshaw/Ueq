@@ -109,10 +109,12 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
         Produces one self-contained <code>UeqLauncher.exe</code> (~100+ MB — that's the bundled .NET runtime, so
         the recipient needs nothing else installed).
       </li>
-      <li><span class="tag aws">AWS</span> Get that one file onto the box's <code>/downloads/</code> path (a
-        one-off — via SSM port-forwarding, the browser SSH file upload, or by wiring a
-        <code>LAUNCHER_URL</code> into the deploy pipeline the same way <code>client.zip</code> works, if this
-        starts happening often enough to be worth automating).</li>
+      <li><span class="tag aws">AWS</span>
+        <pre><code>aws s3 cp "bin\Release\net10.0-windows\win-x64\publish\UeqLauncher.exe" "s3://&lt;bucket&gt;/UeqLauncher.exe"</code></pre>
+        then push to <code>main</code> (or run the Deploy workflow manually) — <code>LAUNCHER_URL</code> is wired
+        into the same pipeline as <code>client.zip</code>, so it lands at <code>/downloads/UeqLauncher.exe</code>
+        automatically. (Don't try hand-pasting a presigned URL into the browser-SSH console instead — that
+        console corrupts long lines with stray whitespace, which breaks the URL's signature.)</li>
       <li>Send the download link once. From then on, running the launcher always fetches whatever's newest per
         Recipe A — no further launcher-side action needed on routine releases.</li>
     </ol>

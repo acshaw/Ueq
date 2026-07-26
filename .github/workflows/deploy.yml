@@ -90,21 +90,27 @@ jobs:
           # can't parse). `aws s3 presign` doesn't check the object exists, so this still succeeds
           # even before the first manual upload; deploy.sh treats a resulting 404 as a skip, not a
           # failure.
-          # CLIENT_URL/VERSION_URL (6.4): same story as GAMESERVER_URL — client.zip/version.txt
-          # aren't built by this job either, uploaded manually/locally after a local Editor build.
+          # CLIENT_URL/VERSION_URL/LAUNCHER_URL (6.4): same story as GAMESERVER_URL — none of these
+          # are built by this job either, all uploaded manually/locally after a local Editor/dotnet
+          # build. LAUNCHER_URL was originally meant to be a one-off manual browser-SSH curl, but
+          # that console corrupts long pasted lines (like a presigned URL) with stray whitespace —
+          # routing it through this already-reliable pipeline instead is simpler than working
+          # around that console's quirks for what would otherwise be a rare exception path.
           WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
           API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
           GAMESERVER_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/gameserver.tar.gz" --expires-in 600)
           CLIENT_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/client.zip" --expires-in 600)
           VERSION_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/version.txt" --expires-in 600)
+          LAUNCHER_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/UeqLauncher.exe" --expires-in 600)
           COMMANDS_JSON=$(jq -n \
             --arg web "$WEB_URL" \
             --arg api "$API_URL" \
             --arg gameserver "$GAMESERVER_URL" \
             --arg client "$CLIENT_URL" \
             --arg version "$VERSION_URL" \
+            --arg launcher "$LAUNCHER_URL" \
             --rawfile body deploy/deploy.sh \
-            '($body | split("\n")) as $lines | [$lines[0], ("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh)), ("GAMESERVER_URL=" + ($gameserver|@sh)), ("CLIENT_URL=" + ($client|@sh)), ("VERSION_URL=" + ($version|@sh))] + $lines[1:]')
+            '($body | split("\n")) as $lines | [$lines[0], ("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh)), ("GAMESERVER_URL=" + ($gameserver|@sh)), ("CLIENT_URL=" + ($client|@sh)), ("VERSION_URL=" + ($version|@sh)), ("LAUNCHER_URL=" + ($launcher|@sh))] + $lines[1:]')
           PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \

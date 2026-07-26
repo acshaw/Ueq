@@ -103,5 +103,18 @@ if [ -n "${VERSION_URL:-}" ]; then
 else
   echo "VERSION_URL not set — skipping."
 fi
+# LAUNCHER_URL: the devplan originally called this a rare one-off not worth wiring in — turned out
+# hand-pasting a long presigned URL into the Lightsail browser-SSH console is fragile (it corrupts
+# long lines with stray whitespace at display-wrap points, a known issue with that console), so
+# routing it through this already-reliable pipeline instead is simpler than working around that.
+if [ -n "${LAUNCHER_URL:-}" ]; then
+  if download "$LAUNCHER_URL" "/tmp/UeqLauncher.exe"; then
+    sudo mv /tmp/UeqLauncher.exe /var/www/ueq-downloads/UeqLauncher.exe
+  else
+    echo "Launcher artifact not available yet — skipping, not failing the deploy." >&2
+  fi
+else
+  echo "LAUNCHER_URL not set — skipping."
+fi
 
 echo "== Deploy complete =="
