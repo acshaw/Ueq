@@ -32,6 +32,13 @@ public static class ServerBuildTools
         }
         Directory.CreateDirectory(ServerOutputDir);
 
+        // 6.2 found the hard way: EditorUserBuildSettings.standaloneBuildSubtarget is a global,
+        // cross-session-persisted setting — building the Linux Dedicated Server (subtarget=Server)
+        // leaves it stuck on Server, and it silently overrides BuildPlayerOptions.subtarget's
+        // default (Player) when the OS target changes but the "Standalone" platform group doesn't.
+        // Reset explicitly so every build method here is self-contained, not order-dependent.
+        EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+
         var options = new BuildPlayerOptions
         {
             scenes = scenes,
@@ -73,6 +80,10 @@ public static class ServerBuildTools
             Debug.Log($"[ServerBuild] Deleted existing output dir: {LinuxServerOutputDir}");
         }
         Directory.CreateDirectory(LinuxServerOutputDir);
+
+        // See BuildHeadlessServer's comment — explicit, not relying on whatever subtarget a
+        // previous build call left active.
+        EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
 
         var options = new BuildPlayerOptions
         {
@@ -116,6 +127,10 @@ public static class ServerBuildTools
             Debug.Log($"[ServerBuild] Deleted existing output dir: {ClientOutputDir}");
         }
         Directory.CreateDirectory(ClientOutputDir);
+
+        // See BuildHeadlessServer's comment — explicit, not relying on whatever subtarget a
+        // previous build call left active.
+        EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
 
         var options = new BuildPlayerOptions
         {
