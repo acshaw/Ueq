@@ -38,10 +38,6 @@ public static class ServerBuildTools
         EditorUtility.SetDirty(info);
         AssetDatabase.SaveAssets();
 
-        // Plain-text sibling artifact — the standalone launcher (6.4) checks this over HTTP without
-        // ever running Unity code, so it can't read the Resources asset directly.
-        File.WriteAllText(Path.Combine(BuildsRootDir, "version.txt"), id);
-
         Debug.Log($"[ServerBuild] Stamped new build id: {id}. Now build whichever of client/server " +
             "changed — both will embed this id until the next stamp.");
     }

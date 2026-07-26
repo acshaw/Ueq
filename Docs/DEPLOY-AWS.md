@@ -517,30 +517,29 @@ echo 'UEQ_DOWNLOAD_URL=https://18-218-79-193.sslip.io/downloads/UeqLauncher.exe'
 sudo systemctl restart ueq-gameserver.service
 ```
 
-### 15b. Cutting a release: stamp, build, zip, upload
+### 15b. Cutting a release: build, zip, upload
 
-In the Unity Editor: **`Tools/Build/Stamp New Build Id`** first (once per release — this is what
-lets client and server detect a mismatch; skipping it means both keep whatever id was already
-stamped), then build whichever of client/server actually changed
-(`Tools/Build/Build Standalone Client`, `Tools/Build/Build Linux Dedicated Server`). **Always
-rebuild and redeploy both together** if the scene/code changed at all — the established rule from
-5.10/6.2 (a scene change alone desyncs Mirror's object hashing between an old server and a new
-client) still applies; the build-id check now makes that class of mistake surface as a clear login
-message instead of a confusing runtime symptom, but it doesn't make mismatched builds *work*.
+The launcher notices a new client automatically by checking `UeqClient.zip`'s own HTTP
+`ETag`/`Last-Modified` (Caddy's `file_server` sets these for any static file with zero extra
+config) — so a **routine client-only change doesn't need anything special**: just build, zip,
+upload, push.
 
 ```powershell
 Compress-Archive -Path "C:\Builds\Ueq\Client\*" -DestinationPath "C:\Builds\Ueq\client.zip" -Force
 aws s3 cp "C:\Builds\Ueq\client.zip" "s3://$env:DEPLOY_BUCKET/client.zip"
-aws s3 cp "C:\Builds\Ueq\version.txt" "s3://$env:DEPLOY_BUCKET/version.txt"
 ```
 
 (`Compress-Archive` is fine here, unlike the gameserver artifact — this zip is only ever extracted
 by the launcher's own .NET code on a Windows machine, never by Linux `unzip`, so the
 backslash-path-separator issue from 6.2 doesn't apply.)
 
-Then upload the rebuilt Linux server per §14d/e if it changed, and push to trigger the deploy (it
-presigns/redeploys client.zip + version.txt alongside web/api/gameserver automatically, same as
-6.2 — see `deploy.yml`).
+**Only run `Tools/Build/Stamp New Build Id` first if this release changes something that could
+break client/server *compatibility*** (a scene/network-protocol change, not a UI tweak) — that's
+the separate id `AccountAuthenticator` compares at login, and it's what lets an old client fail
+with a clear "out of date" message instead of a confusing silent desync. If you do stamp, **rebuild
+and redeploy both client and server together** (the established rule from 5.10/6.2) and upload the
+rebuilt Linux server per §14d/e too. Push to trigger the deploy either way — it presigns/redeploys
+whatever changed alongside web/api/gameserver automatically (see `deploy.yml`).
 
 ### 15c. One-time: build and hand off the launcher itself
 
@@ -566,13 +565,17 @@ then on, running it always fetches whatever's newest — no more manual redownlo
 
 ### 15d. Verify
 
-- Build+stamp+deploy a release, run the launcher fresh (no prior local install) — downloads,
-  extracts, launches, connects successfully.
-- Rebuild only the server with a **new** stamp (don't rebuild/redeploy the client) and try
-  connecting with the now-stale already-installed client directly (bypassing the launcher) —
-  expect a clear "Your client is out of date" rejection, not a silent desync.
-- Re-run the launcher after that mismatched test — it should detect the version change, redownload,
-  and connect successfully again.
+- Build+deploy a release, run the launcher fresh (no prior local install) — downloads, extracts,
+  launches, connects successfully.
+- Rebuild the client with a trivial change (no stamp) and redeploy just it — run the launcher again
+  (don't delete anything manually) and confirm it notices the new `ETag` on its own and re-downloads,
+  with zero manual steps. This is the exact case that motivated the ETag design — a shared
+  `version.txt` that only changes on an explicit stamp would have missed this.
+- Deliberately test the compatibility check: `Stamp New Build Id`, rebuild+redeploy the **server**
+  only, then connect with the now-stale already-installed client directly (bypassing the launcher)
+  — expect a clear "Your client is out of date" rejection, not a silent desync. (The launcher itself
+  can't fix this on its own — `client.zip` hasn't changed, so there's nothing for it to notice. The
+  client must also be rebuilt+redeployed with the matching stamp before the launcher will fetch it.)
 
 ## Cost recap
 

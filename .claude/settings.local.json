@@ -187,7 +187,10 @@
       "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client3.log\")",
       "Bash(dotnet publish *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4200)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5144/api/items)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5144/api/items)",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check3.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client4.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check4.log\")"
     ]
   },
   "hooks": {

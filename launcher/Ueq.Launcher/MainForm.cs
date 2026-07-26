@@ -4,10 +4,19 @@ using System.Net.Http;
 namespace Ueq.Launcher;
 
 /// <summary>
-/// 6.4 (BP6, option 1 — a real but right-sized launcher, not a full delta patcher). Checks a tiny
-/// <c>version.txt</c> against a locally installed marker; if different, re-downloads the whole
-/// game zip and extracts over the previous install; then launches it. No self-update for the
-/// launcher itself — its logic is meant to stay simple and stable enough to rarely need touching.
+/// 6.4 (BP6, option 1 — a real but right-sized launcher, not a full delta patcher). Checks the
+/// served game zip's own <c>ETag</c>/<c>Last-Modified</c> (via a HEAD request — Caddy's
+/// <c>file_server</c> sets these automatically for any static file, no extra deploy step needed)
+/// against a locally installed marker; if different, re-downloads the whole game zip and extracts
+/// over the previous install; then launches it. No self-update for the launcher itself — its logic
+/// is meant to stay simple and stable enough to rarely need touching.
+///
+/// Deliberately NOT keyed off <c>BuildInfo</c>'s stamped build id (the one
+/// <c>AccountAuthenticator</c> checks at login) — that id is only bumped for real client/server
+/// *compatibility* changes (see <c>Tools/Build/Stamp New Build Id</c>'s own doc comment), so a
+/// routine client-only rebuild (a UI tweak, a bugfix) would never change it and this launcher would
+/// never notice a new build existed. The served file's own fingerprint changes on every rebuild,
+/// automatically, with no separate "remember to bump something" step.
 /// </summary>
 public class MainForm : Form
 {
@@ -17,7 +26,7 @@ public class MainForm : Form
     static readonly string InstallDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UeqGame");
     static readonly string GameDir = Path.Combine(InstallDir, "Game");
-    static readonly string LocalVersionFile = Path.Combine(InstallDir, "version.txt");
+    static readonly string LocalFingerprintFile = Path.Combine(InstallDir, "installed.fingerprint");
     static readonly string GameExePath = Path.Combine(GameDir, "Ueq.exe");
 
     readonly Label _status = new() { AutoSize = false, TextAlign = ContentAlignment.MiddleCenter };
@@ -49,12 +58,11 @@ public class MainForm : Form
         _retry.Visible = false;
         Directory.CreateDirectory(InstallDir);
 
-        string? remoteVersion = null;
+        string? remoteFingerprint;
         try
         {
             SetStatus("Checking for updates...");
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            remoteVersion = (await http.GetStringAsync($"{BaseUrl}/version.txt")).Trim();
+            remoteFingerprint = await GetRemoteFingerprintAsync();
         }
         catch (Exception ex)
         {
@@ -73,14 +81,14 @@ public class MainForm : Form
             return;
         }
 
-        string localVersion = File.Exists(LocalVersionFile) ? File.ReadAllText(LocalVersionFile).Trim() : "";
-        bool needsUpdate = remoteVersion != localVersion || !File.Exists(GameExePath);
+        string localFingerprint = File.Exists(LocalFingerprintFile) ? File.ReadAllText(LocalFingerprintFile).Trim() : "";
+        bool needsUpdate = remoteFingerprint != localFingerprint || !File.Exists(GameExePath);
 
         if (needsUpdate)
         {
             try
             {
-                await DownloadAndInstallAsync(remoteVersion);
+                await DownloadAndInstallAsync(remoteFingerprint);
             }
             catch (Exception ex)
             {
@@ -95,7 +103,24 @@ public class MainForm : Form
         Launch();
     }
 
-    async Task DownloadAndInstallAsync(string version)
+    // A HEAD request costs nothing to run every launch and never downloads the ~100+ MB zip just to
+    // check it. Prefers ETag (content-addressed — changes iff the bytes changed); falls back to
+    // Last-Modified, then Content-Length, so this still works even if a future web server config
+    // doesn't emit ETags for some reason.
+    static async Task<string> GetRemoteFingerprintAsync()
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        using var request = new HttpRequestMessage(HttpMethod.Head, $"{BaseUrl}/UeqClient.zip");
+        using var response = await http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        if (response.Headers.ETag is { } etag) return "etag:" + etag.Tag;
+        if (response.Content.Headers.LastModified is { } modified) return "modified:" + modified.ToUnixTimeSeconds();
+        if (response.Content.Headers.ContentLength is { } length) return "length:" + length;
+        throw new InvalidOperationException("Server response had no ETag, Last-Modified, or Content-Length to compare.");
+    }
+
+    async Task DownloadAndInstallAsync(string fingerprint)
     {
         SetStatus("Downloading update...");
         _progress.Style = ProgressBarStyle.Blocks;
@@ -130,7 +155,7 @@ public class MainForm : Form
         ZipFile.ExtractToDirectory(tempZip, GameDir, overwriteFiles: true);
         File.Delete(tempZip);
 
-        File.WriteAllText(LocalVersionFile, version);
+        File.WriteAllText(LocalFingerprintFile, fingerprint);
     }
 
     void Launch()

@@ -29,7 +29,15 @@ public class TitlePanel : ScreenPanel
     RectTransform _col;   // left column; child 0 is the persistent wordmark, then the three mode forms
     Mode _mode = Mode.Menu;
 
-    TMP_InputField _address;   // persistent dev field (lives in the dev cluster, not a mode form)
+    // 6.4 — a real player (via the launcher) should default to the deployed AWS server without
+    // having to know/type its address; a two-way toggle instead of free text, since in practice
+    // there are only ever these two targets (the deployed server, or a local dev/Host session).
+    const string DeployedAddress = "18.218.79.193";
+    const string LocalAddress = "localhost";
+    bool _useLocal = false; // deployed is the default (L6 revised)
+    Button _localBtn, _deployedBtn;
+    static readonly Color ToggleOn  = new Color(0.78f, 0.56f, 0.28f, 0.96f); // matches Accent
+    static readonly Color ToggleOff = new Color(0.14f, 0.16f, 0.22f, 0.8f);  // matches devColor
 
     // Mode forms — built once, shown/hidden by SetMode.
     GameObject _menuForm, _loginForm, _registerForm;
@@ -58,14 +66,17 @@ public class TitlePanel : ScreenPanel
         BuildLoginForm();
         BuildRegisterForm();
 
-        // 4. Dev controls — small, dim, tucked bottom-left (dev-only; won't ship).
+        // 4. Server target toggle + dev controls — small, dim, tucked bottom-left. The toggle ships
+        // for real (defaults to the deployed AWS server, per 6.4 — a real player via the launcher
+        // shouldn't need to know an address at all); Host/Server Only stay dev-only.
         var dev = AnchoredColumn(new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 24f),
             240f, TextAnchor.LowerLeft, 6f);
-        var devLabel = MenuUI.Text(dev, "dev", 13, TextAlignmentOptions.Left);
-        devLabel.color = new Color(0.72f, 0.74f, 0.78f, 0.6f);
         var devColor = new Color(0.14f, 0.16f, 0.22f, 0.8f);
-        _address = MenuUI.Input(dev, "Server", false);   // dev-only; player login is username/password (L6)
-        _address.text = "localhost";
+        var serverLabel = MenuUI.Text(dev, "Server", 13, TextAlignmentOptions.Left);
+        serverLabel.color = new Color(0.72f, 0.74f, 0.78f, 0.6f);
+        var toggleRow = HorizontalRow(dev);
+        _deployedBtn = MenuUI.Button(toggleRow, "Deployed", () => SetServerToggle(false), ToggleOn, 14, 28);
+        _localBtn    = MenuUI.Button(toggleRow, "Local",    () => SetServerToggle(true),  ToggleOff, 14, 28);
         MenuUI.Button(dev, "Host (dev account)", () => Manager.HostAsDev(), devColor, 15, 30);
         MenuUI.Button(dev, "Server Only", () => Manager.StartServerOnly(), devColor, 15, 30);
 
@@ -189,14 +200,14 @@ public class TitlePanel : ScreenPanel
     void DoLogin()
     {
         if (NetworkClient.active) return; // already connecting
-        if (_address != null) Manager.SetAddress(_address.text);
+        Manager.SetAddress(_useLocal ? LocalAddress : DeployedAddress);
         Manager.Connect(_loginUser.text.Trim(), _loginPass.text, register: false);
     }
 
     void DoRegister()
     {
         if (NetworkClient.active) return;
-        if (_address != null) Manager.SetAddress(_address.text);
+        Manager.SetAddress(_useLocal ? LocalAddress : DeployedAddress);
         Manager.Connect(_regUser.text.Trim(), _regPass.text, register: true);
     }
 
@@ -204,6 +215,40 @@ public class TitlePanel : ScreenPanel
 
     // A vertical sub-column under _col holding one mode's widgets. Inactive forms take no layout space, so
     // the active form always sits directly under the wordmark.
+    // A horizontal row (e.g. the Local/Deployed toggle pair) under an arbitrary parent — unlike
+    // SubColumn, which is hardwired to parent under _col for the three mode forms.
+    static RectTransform HorizontalRow(Transform parent)
+    {
+        var go = new GameObject("Row", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var hlg = go.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 6f;
+        hlg.childControlWidth = true; hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = false;
+        return (RectTransform)go.transform;
+    }
+
+    // 6.4 — swaps which of Local/Deployed is highlighted; the actual address used is read at
+    // connect time in DoLogin/DoRegister, not stored redundantly here.
+    void SetServerToggle(bool useLocal)
+    {
+        _useLocal = useLocal;
+        RecolorToggle(_localBtn, useLocal);
+        RecolorToggle(_deployedBtn, !useLocal);
+    }
+
+    static void RecolorToggle(Button btn, bool selected)
+    {
+        if (btn == null) return;
+        var c = btn.colors;
+        var baseColor = selected ? ToggleOn : ToggleOff;
+        c.normalColor      = baseColor;
+        c.highlightedColor = Color.Lerp(baseColor, Color.white, 0.14f);
+        c.selectedColor    = Color.Lerp(baseColor, Color.white, 0.10f);
+        c.pressedColor     = Color.Lerp(baseColor, Color.black, 0.18f);
+        btn.colors = c;
+    }
+
     RectTransform SubColumn()
     {
         var go = new GameObject("Form", typeof(RectTransform));

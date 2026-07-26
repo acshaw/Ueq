@@ -32,11 +32,14 @@
 # `unzip` can't parse for nested folders (e.g. `Ueq_Data/`). `tar` has no such ambiguity and ships
 # natively on both Windows 10+ and Linux.
 #
-# CLIENT_URL/VERSION_URL (6.4): this box never extracts client.zip itself — it just stores the raw
-# bytes for Caddy's file_server to hand to a Windows machine, where the launcher (not Linux unzip)
-# does the extracting. So the Compress-Archive backslash-path issue above doesn't apply here; a
-# plain .zip is fine. Same "presign always succeeds, deploy.sh treats a 404 as a skip" pattern as
-# GAMESERVER_URL, for the same reason (no CI build for either).
+# CLIENT_URL (6.4): this box never extracts client.zip itself — it just stores the raw bytes for
+# Caddy's file_server to hand to a Windows machine, where the launcher (not Linux unzip) does the
+# extracting. So the Compress-Archive backslash-path issue above doesn't apply here; a plain .zip
+# is fine. Same "presign always succeeds, deploy.sh treats a 404 as a skip" pattern as
+# GAMESERVER_URL, for the same reason (no CI build for either). No separate version.txt artifact —
+# the launcher fingerprints client.zip directly via its own HTTP ETag/Last-Modified (Caddy's
+# file_server sets these automatically), so it notices any rebuild without a manual "bump a
+# version string" step.
 set -euo pipefail
 
 WORKDIR="$(mktemp -d)"
@@ -93,15 +96,6 @@ if [ -n "${CLIENT_URL:-}" ]; then
   fi
 else
   echo "CLIENT_URL not set — skipping."
-fi
-if [ -n "${VERSION_URL:-}" ]; then
-  if download "$VERSION_URL" "/tmp/version.txt"; then
-    sudo mv /tmp/version.txt /var/www/ueq-downloads/version.txt
-  else
-    echo "version.txt not available yet — skipping, not failing the deploy." >&2
-  fi
-else
-  echo "VERSION_URL not set — skipping."
 fi
 # LAUNCHER_URL: the devplan originally called this a rare one-off not worth wiring in — turned out
 # hand-pasting a long presigned URL into the Lightsail browser-SSH console is fragile (it corrupts

@@ -55,22 +55,22 @@
       it at all, only the client/server do.</td></tr>
   </table>
 
-  <h2>4. Recipe A — routine release (server and/or client code changed)</h2>
+  <h2>4. Recipe A — routine release (client and/or server code changed)</h2>
   <div class="legend">
     <span><span class="tag unity">Unity</span> in the Unity editor</span>
     <span><span class="tag local">Local shell</span> PowerShell / Git Bash on your machine</span>
     <span><span class="tag aws">AWS</span> your own AWS-authenticated terminal (this sandbox can't reach AWS)</span>
   </div>
+  <p>The launcher notices a new client on its own by checking <code>UeqClient.zip</code>'s own HTTP
+    <code>ETag</code>/<code>Last-Modified</code> (Caddy's <code>file_server</code> sets these for any static file,
+    no extra step needed) — so a plain rebuild-and-reupload is enough for most releases. You only need the extra
+    <strong>Stamp</strong> step (§4a) when a release could break client/server <em>compatibility</em>, not for
+    ordinary bugfixes/UI tweaks.</p>
 
   <div class="recipe">
+    <h3>Every release</h3>
     <ol>
       <li><span class="tag unity">Unity</span> Make and test your code/scene changes as usual.</li>
-      <li><span class="tag unity">Unity</span> <strong><code>Tools/Build/Stamp New Build Id</code></strong> — do
-        this <em>once per release</em>, not once per build method. It writes one timestamp id into
-        <code>Assets/Resources/BuildInfo.asset</code> and a sibling <code>C:\Builds\Ueq\version.txt</code>.
-        Stamping separately from building is deliberate: if you stamped inside each build method instead, building
-        the client a minute after the server would give them two <em>different</em> ids and the version check
-        (§6) would reject every login.</li>
       <li><span class="tag unity">Unity</span> Build whichever of client/server actually needs it —
         <code>Tools/Build/Build Linux Dedicated Server</code> and/or <code>Tools/Build/Build Standalone Client</code>.
         Per the golden rule (§2), if you're not sure, build <strong>both</strong>.</li>
@@ -80,7 +80,6 @@
       </li>
       <li><span class="tag aws">AWS</span> Upload whatever changed:
         <pre><code>aws s3 cp "C:\Builds\Ueq\client.zip" "s3://&lt;bucket&gt;/client.zip"
-aws s3 cp "C:\Builds\Ueq\version.txt" "s3://&lt;bucket&gt;/version.txt"
 # if the server changed too, tar it (Linux unzip DOES choke on Compress-Archive's backslash
 # paths for this one — see §7):
 cd "C:\Builds\Ueq\ServerLinux"; tar czf ../gameserver.tar.gz .
@@ -90,11 +89,25 @@ aws s3 cp "..\gameserver.tar.gz" "s3://&lt;bucket&gt;/gameserver.tar.gz"</code><
         <code>main</code> auto-triggers the deploy workflow, which presigns whatever's in the bucket and restarts
         the affected services (web/api always; gameserver and the client download only if their artifacts changed
         since the last deploy — redeploying an unchanged one is harmless).</li>
-      <li>Verify: log in with a freshly built client — should connect normally. If you deliberately want to test
-        the version check, connect with an <em>old</em> client build after redeploying a new server — expect a
-        clear "Your client is out of date" rejection, not a silent desync.</li>
+      <li>Verify: log in with a freshly built client — should connect normally.</li>
       <li>Tell whoever's testing (e.g. your brother) there's something new — running the launcher picks it up
-        automatically, no manual redownload needed on their end.</li>
+        automatically, no manual redownload needed on their end, no need to delete anything locally first.</li>
+    </ol>
+  </div>
+
+  <div class="recipe">
+    <h3>4a. Only if this release could break compatibility (a network/protocol/scene change)</h3>
+    <p class="goal">Goal: make an old client fail with a clear message instead of a silent desync.</p>
+    <ol>
+      <li><span class="tag unity">Unity</span> <strong><code>Tools/Build/Stamp New Build Id</code></strong> —
+        run this <em>before</em> building, once per release, not once per build method. It writes one timestamp id
+        into <code>Assets/Resources/BuildInfo.asset</code>, which both the client and server embed. Stamping
+        separately from building is deliberate: stamping inside each build method instead would give the client
+        and server built moments apart two <em>different</em> ids, breaking the very check this exists for.</li>
+      <li>Then follow the "Every release" steps above, but rebuild and redeploy <strong>both</strong> client and
+        server (the golden rule, §2, isn't optional here).</li>
+      <li>Verify: connect with an <em>old</em> client build after redeploying — expect a clear "Your client is out
+        of date" rejection, not a silent desync.</li>
     </ol>
   </div>
 
@@ -121,15 +134,23 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
   </div>
 
   <h2>6. How the version check works</h2>
-  <p>The login handshake (<code>AccountAuthenticator</code>) now carries a <code>clientBuildId</code>. The server
-    compares it to its own stamped id <strong>before doing any database work</strong> and, on a mismatch, rejects
-    with a clear message instead of letting a stale client limp along into a desync. If nobody has ever run
-    <code>Stamp New Build Id</code> (e.g. a fresh Editor Play session), the id is empty on both sides and the check
-    is skipped entirely — it only enforces once there's actually something to compare.</p>
-  <p>Separately, the <strong>launcher</strong> checks a tiny <code>version.txt</code> file over HTTP before the
-    game even starts, so most players never see the login-time rejection at all — they get an automatic update
-    instead. The login check is the safety net for someone who runs the extracted game .exe directly, bypassing
-    the launcher.</p>
+  <p>There are genuinely <strong>two separate checks</strong>, for two separate concerns:</p>
+  <table>
+    <tr><th>Check</th><th>Compares</th><th>Catches</th></tr>
+    <tr><td><strong>Launcher update check</strong></td><td><code>UeqClient.zip</code>'s own HTTP
+      <code>ETag</code>/<code>Last-Modified</code> vs. a local marker file</td><td>"Is there simply a newer client
+      to download?" — changes on <em>every</em> client rebuild, automatically, no manual step.</td></tr>
+    <tr><td><strong>Login handshake check</strong></td><td><code>AccountAuthenticator</code>'s
+      <code>clientBuildId</code> vs. the server's stamped id</td><td>"Could this specific client/server pair be
+      <em>incompatible</em>?" — only changes when you deliberately run <code>Stamp New Build Id</code> (§4a), since
+      most rebuilds (UI tweaks, bugfixes) don't actually break compatibility.</td></tr>
+  </table>
+  <p>The login check runs <strong>before any database work</strong> and, on a mismatch, rejects with a clear
+    message instead of letting a stale client limp along into a desync. If nobody has ever run <code>Stamp New
+    Build Id</code> (e.g. a fresh Editor Play session), the id is empty on both sides and the check is skipped
+    entirely. In practice most players never see this rejection at all — the launcher's update check already
+    caught it and downloaded the matching client first. The login check is the safety net for someone who runs the
+    extracted game .exe directly, bypassing the launcher.</p>
 
   <h2>7. Known gaps</h2>
   <ul>
@@ -156,30 +177,42 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
     <tr><td>Client gets "Your client is out of date" even though you just built it</td><td>You built it
       <em>before</em> running <code>Stamp New Build Id</code>, or stamped again after building it — the stamp
       must happen first, then the build. Re-stamp, then rebuild.</td></tr>
+    <tr><td>The launcher keeps redownloading even though nothing meaningful changed</td><td>Expected if you
+      rebuild the client at all — the <code>ETag</code> is content-based, so any rebuild (even an unrelated
+      recompile) produces a new one. Not a bug, just means "the bytes are different now."</td></tr>
     <tr><td>Weird desync symptoms (missing objects, "Spawn scene object not found") even though login succeeded
-      </td><td>The version check only compares build <em>ids</em>, which are just a timestamp you control by
-      remembering to stamp — it can't catch "you rebuilt the client but forgot to rebuild/redeploy the server" if
-      you never re-stamped in between. Follow the golden rule (§2): rebuild both together whenever either
-      changed.</td></tr>
+      </td><td>The login check only compares the <em>compatibility</em> id (§4a/§6), which by design doesn't change
+      on every rebuild — it can't catch "you rebuilt the client but forgot to rebuild/redeploy the server" unless
+      you deliberately re-stamped. Follow the golden rule (§2): rebuild both together whenever either changed.</td>
+      </tr>
     <tr><td>A brand-new player/tester falls through the world or spawns oddly</td><td>Not a build/deploy issue —
       check the scene's spawn points, not this pipeline.</td></tr>
     <tr><td>The deploy workflow shows the gameserver or client step as skipped, not failed</td><td>Expected the
-      very first time — the artifact hasn't been uploaded to S3 yet. Upload it once (Recipe A step 5) and the next
+      very first time — the artifact hasn't been uploaded to S3 yet. Upload it once (Recipe A) and the next
       deploy picks it up.</td></tr>
+    <tr><td>Downloading from <code>/downloads/...</code> returns the Angular app's <code>index.html</code> instead
+      of the real file</td><td>The live Caddy config on the instance is stale — editing
+      <code>deploy/Caddyfile</code> in the repo does <strong>not</strong> update it automatically (unlike
+      everything else in this guide, that file is a one-time manual copy per the original setup runbook). Copy it
+      to <code>/etc/caddy/Caddyfile</code> again and <code>sudo systemctl reload caddy</code>.</td></tr>
   </table>
 
   <h2>9. Quick reference</h2>
   <table>
     <tr><th>Action</th><th>Where</th></tr>
-    <tr><td>Stamp a new release id</td><td><code>Tools/Build/Stamp New Build Id</code> (Unity)</td></tr>
+    <tr><td>Stamp a new release id <em>(only for a compatibility-breaking release, §4a)</em></td>
+      <td><code>Tools/Build/Stamp New Build Id</code> (Unity)</td></tr>
     <tr><td>Build the server</td><td><code>Tools/Build/Build Linux Dedicated Server</code> (Unity) →
       <code>C:\Builds\Ueq\ServerLinux</code></td></tr>
     <tr><td>Build the client</td><td><code>Tools/Build/Build Standalone Client</code> (Unity) →
       <code>C:\Builds\Ueq\Client</code></td></tr>
     <tr><td>Download page</td><td><code>https://&lt;hostname&gt;/downloads/</code>
-      (<code>UeqClient.zip</code>, <code>version.txt</code>, <code>UeqLauncher.exe</code>)</td></tr>
-    <tr><td>Server-side download URL shown on mismatch</td><td><code>UEQ_DOWNLOAD_URL</code> env var in
-      <code>/opt/ueq/gameserver/gameserver.env</code></td></tr>
+      (<code>UeqClient.zip</code>, <code>UeqLauncher.exe</code>) — also linked from this site's Play tab</td></tr>
+    <tr><td>Server-side download URL shown on a compatibility rejection</td><td><code>UEQ_DOWNLOAD_URL</code> env
+      var in <code>/opt/ueq/gameserver/gameserver.env</code></td></tr>
+    <tr><td>Changed <code>deploy/Caddyfile</code> itself (new routes, etc.)</td><td><strong>Manual</strong> — copy
+      to <code>/etc/caddy/Caddyfile</code> on the instance + <code>sudo systemctl reload caddy</code>. Not part of
+      the automated deploy (see §8).</td></tr>
   </table>
 
   <footer>Authoritative behavior lives in <code>Assets/Scripts/Editor/ServerBuildTools.cs</code>,
