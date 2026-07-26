@@ -176,7 +176,11 @@
       "Bash(where 7za)",
       "Bash(zip --version)",
       "Bash(tar --version)",
-      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client.log\")"
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod StartPositionAudit.Audit -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\audit.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod StartPositionAudit.CleanDuplicates -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\clean.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildLinuxDedicatedServer -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_linux.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client2.log\")"
     ]
   },
   "hooks": {

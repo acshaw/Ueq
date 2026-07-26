@@ -736,9 +736,25 @@ public static class SceneSetup
 
         nmSo.ApplyModifiedPropertiesWithoutUndo();
 
-        var spawnPoint = new GameObject("SpawnPoint");
-        spawnPoint.transform.position = DefaultSpawnPos;
-        spawnPoint.AddComponent<NetworkStartPosition>();
+        // 6.2 fix: this used to unconditionally create a new "SpawnPoint" object every run with a
+        // hardcoded position, with no check for one already existing. Repeated `Setup All` runs
+        // over the project's history left 13 duplicate, never-cleaned-up copies all frozen at the
+        // pre-terrain-reshape coordinate below — after Creslin's Field's terrain was reshaped
+        // (3.1.9), that spot sank ~8 units below the real ground, so any of those 13 (picked
+        // randomly by Mirror's GetStartPosition() alongside any legitimate hand-placed one) would
+        // spawn a new character embedded in solid terrain. Now idempotent: skip entirely if any
+        // NetworkStartPosition already exists (a hand-placed one, e.g. near a hub, is authoritative
+        // and shouldn't be duplicated), and ground-snap the fallback so it can't go stale the same
+        // way if the terrain is reshaped again later.
+        if (Object.FindAnyObjectByType<NetworkStartPosition>() == null)
+        {
+            var spawnPoint = new GameObject("SpawnPoint");
+            var pos = DefaultSpawnPos;
+            if (Physics.Raycast(pos + Vector3.up * 500f, Vector3.down, out var hit, 2000f))
+                pos.y = hit.point.y + 1.1f;
+            spawnPoint.transform.position = pos;
+            spawnPoint.AddComponent<NetworkStartPosition>();
+        }
 #endif
     }
 
