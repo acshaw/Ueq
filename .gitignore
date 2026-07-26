@@ -37,6 +37,10 @@ db.config.json
 /api/appsettings.Development.json
 /web/node_modules/
 /web/dist/
+
+# 6.4 — launcher (.NET WinForms, its own build output)
+/launcher/Ueq.Launcher/bin/
+/launcher/Ueq.Launcher/obj/
 /web/.angular/
 
 # NuGetForUnity restored packages (restored from Assets/packages.config)

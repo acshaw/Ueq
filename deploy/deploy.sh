@@ -31,6 +31,12 @@
 # it, since there's no Unity CI) can write backslash path separators inside the zip, which Linux's
 # `unzip` can't parse for nested folders (e.g. `Ueq_Data/`). `tar` has no such ambiguity and ships
 # natively on both Windows 10+ and Linux.
+#
+# CLIENT_URL/VERSION_URL (6.4): this box never extracts client.zip itself — it just stores the raw
+# bytes for Caddy's file_server to hand to a Windows machine, where the launcher (not Linux unzip)
+# does the extracting. So the Compress-Archive backslash-path issue above doesn't apply here; a
+# plain .zip is fine. Same "presign always succeeds, deploy.sh treats a 404 as a skip" pattern as
+# GAMESERVER_URL, for the same reason (no CI build for either).
 set -euo pipefail
 
 WORKDIR="$(mktemp -d)"
@@ -75,6 +81,27 @@ if [ -n "${GAMESERVER_URL:-}" ]; then
   fi
 else
   echo "GAMESERVER_URL not set — skipping gameserver deploy."
+fi
+
+echo "== Deploying client download artifacts =="
+sudo mkdir -p /var/www/ueq-downloads
+if [ -n "${CLIENT_URL:-}" ]; then
+  if download "$CLIENT_URL" "/tmp/UeqClient.zip"; then
+    sudo mv /tmp/UeqClient.zip /var/www/ueq-downloads/UeqClient.zip
+  else
+    echo "Client artifact not available yet — skipping, not failing the deploy." >&2
+  fi
+else
+  echo "CLIENT_URL not set — skipping."
+fi
+if [ -n "${VERSION_URL:-}" ]; then
+  if download "$VERSION_URL" "/tmp/version.txt"; then
+    sudo mv /tmp/version.txt /var/www/ueq-downloads/version.txt
+  else
+    echo "version.txt not available yet — skipping, not failing the deploy." >&2
+  fi
+else
+  echo "VERSION_URL not set — skipping."
 fi
 
 echo "== Deploy complete =="

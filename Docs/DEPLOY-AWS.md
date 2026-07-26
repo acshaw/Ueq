@@ -503,6 +503,76 @@ proved once locally, now proved over the real internet against the real AWS-host
 Simulate a crash to confirm supervision works: `sudo systemctl kill ueq-gameserver.service` →
 `systemctl status` should show it auto-restarted within `RestartSec` (5s).
 
+## 15. Client distribution + launcher (6.4)
+
+See `docs/devplans/6.4-build-pipeline-launcher.md` for the reasoning. Gets a runnable, self-updating
+client into the hands of someone who can't build it themselves (no Unity, no dev environment).
+
+### 15a. One-time: point the game-server's version-mismatch message at the download page
+
+Add to `/opt/ueq/gameserver/gameserver.env` (browser SSH):
+
+```bash
+echo 'UEQ_DOWNLOAD_URL=https://18-218-79-193.sslip.io/downloads/UeqLauncher.exe' | sudo tee -a /opt/ueq/gameserver/gameserver.env
+sudo systemctl restart ueq-gameserver.service
+```
+
+### 15b. Cutting a release: stamp, build, zip, upload
+
+In the Unity Editor: **`Tools/Build/Stamp New Build Id`** first (once per release — this is what
+lets client and server detect a mismatch; skipping it means both keep whatever id was already
+stamped), then build whichever of client/server actually changed
+(`Tools/Build/Build Standalone Client`, `Tools/Build/Build Linux Dedicated Server`). **Always
+rebuild and redeploy both together** if the scene/code changed at all — the established rule from
+5.10/6.2 (a scene change alone desyncs Mirror's object hashing between an old server and a new
+client) still applies; the build-id check now makes that class of mistake surface as a clear login
+message instead of a confusing runtime symptom, but it doesn't make mismatched builds *work*.
+
+```powershell
+Compress-Archive -Path "C:\Builds\Ueq\Client\*" -DestinationPath "C:\Builds\Ueq\client.zip" -Force
+aws s3 cp "C:\Builds\Ueq\client.zip" "s3://$env:DEPLOY_BUCKET/client.zip"
+aws s3 cp "C:\Builds\Ueq\version.txt" "s3://$env:DEPLOY_BUCKET/version.txt"
+```
+
+(`Compress-Archive` is fine here, unlike the gameserver artifact — this zip is only ever extracted
+by the launcher's own .NET code on a Windows machine, never by Linux `unzip`, so the
+backslash-path-separator issue from 6.2 doesn't apply.)
+
+Then upload the rebuilt Linux server per §14d/e if it changed, and push to trigger the deploy (it
+presigns/redeploys client.zip + version.txt alongside web/api/gameserver automatically, same as
+6.2 — see `deploy.yml`).
+
+### 15c. One-time: build and hand off the launcher itself
+
+The launcher's own logic is meant to stay simple/stable enough that it rarely needs rebuilding —
+this is a one-time (or rare) step, not part of the routine release flow above.
+
+```powershell
+cd launcher\Ueq.Launcher
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+aws s3 cp "bin\Release\net10.0-windows\win-x64\publish\UeqLauncher.exe" "s3://$env:DEPLOY_BUCKET/UeqLauncher.exe"
+```
+
+`aws s3 cp` alone doesn't make the object downloadable through Caddy's `/downloads/*` path (that
+serves `/var/www/ueq-downloads` on the instance, not the S3 bucket directly) — for this one file,
+it's simplest to grab it via SSM port-forwarding or the browser SSH file upload, or route it
+through the same presign+`deploy.sh` mechanism as the others (would need a `LAUNCHER_URL` line
+added to `deploy.sh`/`deploy.yml`, not built here since it's a rare one-off, not a routine deploy
+artifact — add it if this needs to happen often enough to be worth automating).
+
+Send your brother the link to `https://18-218-79-193.sslip.io/downloads/UeqLauncher.exe` once. From
+then on, running it always fetches whatever's newest — no more manual redownloads for him.
+
+### 15d. Verify
+
+- Build+stamp+deploy a release, run the launcher fresh (no prior local install) — downloads,
+  extracts, launches, connects successfully.
+- Rebuild only the server with a **new** stamp (don't rebuild/redeploy the client) and try
+  connecting with the now-stale already-installed client directly (bypassing the launcher) —
+  expect a clear "Your client is out of date" rejection, not a silent desync.
+- Re-run the launcher after that mismatched test — it should detect the version change, redownload,
+  and connect successfully again.
+
 ## Cost recap
 
 | Item | Cost |

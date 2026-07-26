@@ -8,12 +8,56 @@ using UnityEngine;
 /// windowed Standalone client from the same enabled scene list, to known short paths, so a
 /// fresh build can be produced repeatably instead of hand-driving File > Build Settings.
 /// 6.2 — added a Linux Dedicated Server build target for the real AWS deploy (DH1/DH2).
+/// 6.4 — added build-id stamping (BP4) so client/server pairs can detect a mismatch at connect.
 /// </summary>
 public static class ServerBuildTools
 {
     const string ServerOutputDir = @"C:\Builds\Ueq\Server";
     const string ClientOutputDir = @"C:\Builds\Ueq\Client";
     const string LinuxServerOutputDir = @"C:\Builds\Ueq\ServerLinux";
+    const string BuildsRootDir = @"C:\Builds\Ueq";
+    const string BuildInfoAssetPath = "Assets/Resources/BuildInfo.asset";
+
+    // 6.4 (BP4) — one id per release, not one per build-method call. Stamping is a deliberate,
+    // separate step so building the client and the server independently (in either order) for the
+    // same release still embeds the identical id — re-stamping inside each build method would give
+    // every individual build its own timestamp and make the mismatch check always fire.
+    [MenuItem("Tools/Build/Stamp New Build Id")]
+    static void StampNewBuildId()
+    {
+        Directory.CreateDirectory(BuildsRootDir);
+        string id = System.DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
+
+        var info = AssetDatabase.LoadAssetAtPath<BuildInfo>(BuildInfoAssetPath);
+        if (info == null)
+        {
+            info = ScriptableObject.CreateInstance<BuildInfo>();
+            AssetDatabase.CreateAsset(info, BuildInfoAssetPath);
+        }
+        info.buildId = id;
+        EditorUtility.SetDirty(info);
+        AssetDatabase.SaveAssets();
+
+        // Plain-text sibling artifact — the standalone launcher (6.4) checks this over HTTP without
+        // ever running Unity code, so it can't read the Resources asset directly.
+        File.WriteAllText(Path.Combine(BuildsRootDir, "version.txt"), id);
+
+        Debug.Log($"[ServerBuild] Stamped new build id: {id}. Now build whichever of client/server " +
+            "changed — both will embed this id until the next stamp.");
+    }
+
+    // Auto-stamps on first use so a from-scratch clone doesn't silently ship with an empty build id
+    // forever (an empty id disables the mismatch check entirely, rather than enforcing a wrong one —
+    // safe by default — but it's better to actually have one from the start).
+    static void EnsureBuildInfoStamped()
+    {
+        if (AssetDatabase.LoadAssetAtPath<BuildInfo>(BuildInfoAssetPath) == null)
+        {
+            Debug.LogWarning("[ServerBuild] No BuildInfo asset yet — stamping one now. Re-stamp " +
+                "explicitly (Tools/Build/Stamp New Build Id) before cutting each new release.");
+            StampNewBuildId();
+        }
+    }
 
     [MenuItem("Tools/Build/Build Headless Server (Standalone)")]
     static void BuildHeadlessServer()
@@ -24,6 +68,7 @@ public static class ServerBuildTools
             Debug.LogError("[ServerBuild] No enabled scenes in Build Settings — nothing to build.");
             return;
         }
+        EnsureBuildInfoStamped();
 
         if (Directory.Exists(ServerOutputDir))
         {
@@ -73,6 +118,7 @@ public static class ServerBuildTools
             Debug.LogError("[ServerBuild] No enabled scenes in Build Settings — nothing to build.");
             return;
         }
+        EnsureBuildInfoStamped();
 
         if (Directory.Exists(LinuxServerOutputDir))
         {
@@ -120,6 +166,7 @@ public static class ServerBuildTools
             Debug.LogError("[ServerBuild] No enabled scenes in Build Settings — nothing to build.");
             return;
         }
+        EnsureBuildInfoStamped();
 
         if (Directory.Exists(ClientOutputDir))
         {

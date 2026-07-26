@@ -5,6 +5,15 @@
 		reverse_proxy 127.0.0.1:5144
 	}
 
+	# 6.4 — client.zip / version.txt / the one-time launcher exe. Plain static files, no auth
+	# (same exposure posture as the open game port and API — see the 6.4 devplan's Risks section).
+	# handle_path (not handle) strips the /downloads prefix before file_server looks on disk, so
+	# /downloads/version.txt maps to /var/www/ueq-downloads/version.txt, not a nested subfolder.
+	handle_path /downloads/* {
+		root * /var/www/ueq-downloads
+		file_server
+	}
+
 	# Angular SPA — serve the built `dist/` output, falling back to index.html for any
 	# unmatched route so client-side routing works (mirrors family-cookbook's CloudFront
 	# 403/404 -> index.html custom error responses).

@@ -26,6 +26,7 @@ public class AccountAuthenticator : NetworkAuthenticator
         public string username;
         public string password;
         public bool   register;   // true = create account if the name is free
+        public string clientBuildId; // 6.4 (BP3) — checked before any DB work
     }
 
     public struct AuthResponseMessage : NetworkMessage
@@ -42,6 +43,7 @@ public class AccountAuthenticator : NetworkAuthenticator
         AlreadyOnline  = 202,
         BadInput       = 203,
         ServerError    = 204,
+        VersionMismatch = 205, // 6.4 (BP3)
     }
 
     // Plain, Unity-free outcome that crosses the worker→main thread boundary.
@@ -95,9 +97,25 @@ public class AccountAuthenticator : NetworkAuthenticator
 
     public override void OnServerAuthenticate(NetworkConnectionToClient conn) { /* wait for the request */ }
 
+    // 6.4 (BP3) — cached once; empty means no download URL configured, falls back to a generic
+    // message rather than a broken link.
+    static readonly string DownloadUrl = System.Environment.GetEnvironmentVariable("UEQ_DOWNLOAD_URL") ?? "";
+
     void OnAuthRequest(NetworkConnectionToClient conn, AuthRequestMessage msg)
     {
         if (_pending.Contains(conn)) return; // already processing this connection
+
+        // 6.4 (BP3) — checked first, before any DB work. BuildInfo.Current is "" if nobody has ever
+        // run Tools/Build/Stamp New Build Id (e.g. Editor Play testing) — treated as "don't enforce"
+        // rather than rejecting every connection, since there's nothing to compare against yet.
+        string serverBuildId = BuildInfo.Current;
+        if (!string.IsNullOrEmpty(serverBuildId) && msg.clientBuildId != serverBuildId)
+        {
+            string where = string.IsNullOrEmpty(DownloadUrl) ? "" : $" Get the latest at {DownloadUrl}.";
+            SendResponse(conn, AuthCode.VersionMismatch, $"Your client is out of date.{where}");
+            DelayedReject(conn);
+            return;
+        }
 
         string username = (msg.username ?? "").Trim();
         string password = msg.password ?? "";
@@ -217,6 +235,7 @@ public class AccountAuthenticator : NetworkAuthenticator
         AuthCode.UsernameTaken  => "That username is already taken.",
         AuthCode.AlreadyOnline  => "That account is already online.",
         AuthCode.ServerError    => "Server error. Try again.",
+        AuthCode.VersionMismatch => "Your client is out of date.",
         _                       => "Login failed.",
     };
 
@@ -233,6 +252,7 @@ public class AccountAuthenticator : NetworkAuthenticator
             username = clientUsername,
             password = clientPassword,
             register = clientRegister,
+            clientBuildId = BuildInfo.Current,
         });
 
     void OnAuthResponse(AuthResponseMessage msg)

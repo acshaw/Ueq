@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UeqLauncher</AssemblyName>
+    <!--
+      6.4 (BP1) — published as a single self-contained win-x64 exe (see the publish command in
+      docs/DEPLOY-AWS.md §15) so the brother doesn't need the .NET runtime installed at all —
+      download one file, double-click, done.
+    -->
+  </PropertyGroup>
+
+</Project>
