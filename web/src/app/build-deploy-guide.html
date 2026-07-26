@@ -1,0 +1,188 @@
+<article class="doc">
+  <h1>Build &amp; Deploy — Regenerating the Client and Server</h1>
+  <p class="lead">How to cut a new release when the <strong>Unity project itself</strong> changed (code, scenes,
+    prefabs) — not for content edits made through the other editors on this site, which take effect on their own
+    the next time the Unity host restarts and need no rebuild at all.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>Do you even need to rebuild?</li>
+      <li>The golden rule: client and server travel together</li>
+      <li>The three pieces</li>
+      <li>Recipe A — routine release (server and/or client code changed)</li>
+      <li>Recipe B — first-time / rare: publishing the launcher itself</li>
+      <li>How the version check works</li>
+      <li>Known gaps</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. Do you even need to rebuild?</h2>
+  <table>
+    <tr><th>What changed</th><th>Rebuild needed?</th></tr>
+    <tr><td>An item, mob, ability, quest, faction, loot table, race/class, XP curve, spawn table — anything edited
+      through this website's other tabs</td><td><strong>No.</strong> Content loads from the database at server
+      startup / on demand. Restart the Unity host (or the deployed <code>ueq-gameserver.service</code>) if it's
+      not picking up a change, but that's a restart, not a rebuild.</td></tr>
+    <tr><td>Any C# script, prefab, scene, or ScriptableObject default inside the Unity project</td>
+      <td><strong>Yes</strong> — both the client and the server are compiled from that project, so a code/scene
+      change is baked into the binary and can only reach players through a new build.</td></tr>
+  </table>
+
+  <h2>2. The golden rule: client and server travel together</h2>
+  <div class="note">⚠️ <strong>Never deploy a server built from a different point in the project than the client
+    players are running.</strong> This project has been bitten by this more than once — a scene change alone is
+    enough to desync Mirror's internal object bookkeeping between an old server and a new client (or vice versa),
+    producing confusing symptoms like "Spawn scene object not found" instead of a clean error. The build-id check
+    (§6) now catches the login-time version of this mistake automatically, but it can't fix a deployed
+    <em>server</em> that's out of sync with the <em>database</em> or scene content it expects — always rebuild and
+    redeploy both sides together whenever either changed.</div>
+
+  <h2>3. The three pieces</h2>
+  <table>
+    <tr><th>Piece</th><th>What it is</th><th>How often it changes</th></tr>
+    <tr><td><strong>Server</strong> (<code>ueq-gameserver.service</code> on AWS)</td><td>Linux Dedicated Server
+      build, <code>Tools/Build/Build Linux Dedicated Server</code> in Unity</td><td>Every release that touches
+      server-relevant code/scenes</td></tr>
+    <tr><td><strong>Client</strong> (what a player runs)</td><td>Windows Standalone build,
+      <code>Tools/Build/Build Standalone Client</code> in Unity, zipped and served for download</td><td>Every
+      release — see the golden rule above</td></tr>
+    <tr><td><strong>Launcher</strong> (<code>UeqLauncher.exe</code>)</td><td>A small separate .NET app
+      (<code>launcher/Ueq.Launcher/</code>) that checks for a new client and downloads/launches it</td>
+      <td><strong>Rarely.</strong> Its own logic is meant to stay simple and stable — most releases don't touch
+      it at all, only the client/server do.</td></tr>
+  </table>
+
+  <h2>4. Recipe A — routine release (server and/or client code changed)</h2>
+  <div class="legend">
+    <span><span class="tag unity">Unity</span> in the Unity editor</span>
+    <span><span class="tag local">Local shell</span> PowerShell / Git Bash on your machine</span>
+    <span><span class="tag aws">AWS</span> your own AWS-authenticated terminal (this sandbox can't reach AWS)</span>
+  </div>
+
+  <div class="recipe">
+    <ol>
+      <li><span class="tag unity">Unity</span> Make and test your code/scene changes as usual.</li>
+      <li><span class="tag unity">Unity</span> <strong><code>Tools/Build/Stamp New Build Id</code></strong> — do
+        this <em>once per release</em>, not once per build method. It writes one timestamp id into
+        <code>Assets/Resources/BuildInfo.asset</code> and a sibling <code>C:\Builds\Ueq\version.txt</code>.
+        Stamping separately from building is deliberate: if you stamped inside each build method instead, building
+        the client a minute after the server would give them two <em>different</em> ids and the version check
+        (§6) would reject every login.</li>
+      <li><span class="tag unity">Unity</span> Build whichever of client/server actually needs it —
+        <code>Tools/Build/Build Linux Dedicated Server</code> and/or <code>Tools/Build/Build Standalone Client</code>.
+        Per the golden rule (§2), if you're not sure, build <strong>both</strong>.</li>
+      <li><span class="tag local">Local shell</span> Zip the client (PowerShell's <code>Compress-Archive</code> is
+        fine here — the launcher's own .NET code extracts it, never Linux <code>unzip</code>):
+        <pre><code>Compress-Archive -Path "C:\Builds\Ueq\Client\*" -DestinationPath "C:\Builds\Ueq\client.zip" -Force</code></pre>
+      </li>
+      <li><span class="tag aws">AWS</span> Upload whatever changed:
+        <pre><code>aws s3 cp "C:\Builds\Ueq\client.zip" "s3://&lt;bucket&gt;/client.zip"
+aws s3 cp "C:\Builds\Ueq\version.txt" "s3://&lt;bucket&gt;/version.txt"
+# if the server changed too, tar it (Linux unzip DOES choke on Compress-Archive's backslash
+# paths for this one — see §7):
+cd "C:\Builds\Ueq\ServerLinux"; tar czf ../gameserver.tar.gz .
+aws s3 cp "..\gameserver.tar.gz" "s3://&lt;bucket&gt;/gameserver.tar.gz"</code></pre>
+      </li>
+      <li><span class="tag local">Local shell</span> Commit and push your code changes — <code>git push</code> to
+        <code>main</code> auto-triggers the deploy workflow, which presigns whatever's in the bucket and restarts
+        the affected services (web/api always; gameserver and the client download only if their artifacts changed
+        since the last deploy — redeploying an unchanged one is harmless).</li>
+      <li>Verify: log in with a freshly built client — should connect normally. If you deliberately want to test
+        the version check, connect with an <em>old</em> client build after redeploying a new server — expect a
+        clear "Your client is out of date" rejection, not a silent desync.</li>
+      <li>Tell whoever's testing (e.g. your brother) there's something new — running the launcher picks it up
+        automatically, no manual redownload needed on their end.</li>
+    </ol>
+  </div>
+
+  <h2>5. Recipe B — first-time / rare: publishing the launcher itself</h2>
+  <p>Most releases <strong>don't</strong> need this — only do it if you've actually changed something in
+    <code>launcher/Ueq.Launcher/</code>, or the very first time you hand the launcher to someone.</p>
+  <div class="recipe">
+    <ol>
+      <li><span class="tag local">Local shell</span>
+        <pre><code>cd launcher\Ueq.Launcher
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true</code></pre>
+        Produces one self-contained <code>UeqLauncher.exe</code> (~100+ MB — that's the bundled .NET runtime, so
+        the recipient needs nothing else installed).
+      </li>
+      <li><span class="tag aws">AWS</span> Get that one file onto the box's <code>/downloads/</code> path (a
+        one-off — via SSM port-forwarding, the browser SSH file upload, or by wiring a
+        <code>LAUNCHER_URL</code> into the deploy pipeline the same way <code>client.zip</code> works, if this
+        starts happening often enough to be worth automating).</li>
+      <li>Send the download link once. From then on, running the launcher always fetches whatever's newest per
+        Recipe A — no further launcher-side action needed on routine releases.</li>
+    </ol>
+  </div>
+
+  <h2>6. How the version check works</h2>
+  <p>The login handshake (<code>AccountAuthenticator</code>) now carries a <code>clientBuildId</code>. The server
+    compares it to its own stamped id <strong>before doing any database work</strong> and, on a mismatch, rejects
+    with a clear message instead of letting a stale client limp along into a desync. If nobody has ever run
+    <code>Stamp New Build Id</code> (e.g. a fresh Editor Play session), the id is empty on both sides and the check
+    is skipped entirely — it only enforces once there's actually something to compare.</p>
+  <p>Separately, the <strong>launcher</strong> checks a tiny <code>version.txt</code> file over HTTP before the
+    game even starts, so most players never see the login-time rejection at all — they get an automatic update
+    instead. The login check is the safety net for someone who runs the extracted game .exe directly, bypassing
+    the launcher.</p>
+
+  <h2>7. Known gaps</h2>
+  <ul>
+    <li><strong>No true delta/patch downloads.</strong> Any update re-downloads the whole client zip
+      (hundreds of MB), not just the changed files. Deliberately not built yet — real delta patching (per-file
+      hashing, partial downloads, integrity checks) is a meaningfully bigger project, worth it if update size or
+      frequency ever becomes a real pain, not before.</li>
+    <li><strong>The launcher doesn't update itself.</strong> If its own logic ever needs to change, that's a
+      manual one-off handoff (Recipe B), not automatic.</li>
+    <li><strong>Client zip vs. gameserver artifact use different archive formats on purpose</strong> — the client
+      zip is <code>.zip</code>/<code>Compress-Archive</code> (extracted by the launcher's own .NET code on a
+      Windows machine); the gameserver artifact is <code>.tar.gz</code>/<code>tar</code> (extracted by Linux
+      <code>unzip</code>... which can't actually parse the backslash-style paths <code>Compress-Archive</code>
+      writes for nested folders — that's exactly why the server side uses <code>tar</code> instead). Don't swap
+      them.</li>
+    <li>The download page/artifacts are <strong>public, unauthenticated</strong> — same exposure posture as the
+      open game port and API. Fine at hobby scale with a small, trusted set of players; revisit if that ever
+      changes.</li>
+  </ul>
+
+  <h2>8. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>Client gets "Your client is out of date" even though you just built it</td><td>You built it
+      <em>before</em> running <code>Stamp New Build Id</code>, or stamped again after building it — the stamp
+      must happen first, then the build. Re-stamp, then rebuild.</td></tr>
+    <tr><td>Weird desync symptoms (missing objects, "Spawn scene object not found") even though login succeeded
+      </td><td>The version check only compares build <em>ids</em>, which are just a timestamp you control by
+      remembering to stamp — it can't catch "you rebuilt the client but forgot to rebuild/redeploy the server" if
+      you never re-stamped in between. Follow the golden rule (§2): rebuild both together whenever either
+      changed.</td></tr>
+    <tr><td>A brand-new player/tester falls through the world or spawns oddly</td><td>Not a build/deploy issue —
+      check the scene's spawn points, not this pipeline.</td></tr>
+    <tr><td>The deploy workflow shows the gameserver or client step as skipped, not failed</td><td>Expected the
+      very first time — the artifact hasn't been uploaded to S3 yet. Upload it once (Recipe A step 5) and the next
+      deploy picks it up.</td></tr>
+  </table>
+
+  <h2>9. Quick reference</h2>
+  <table>
+    <tr><th>Action</th><th>Where</th></tr>
+    <tr><td>Stamp a new release id</td><td><code>Tools/Build/Stamp New Build Id</code> (Unity)</td></tr>
+    <tr><td>Build the server</td><td><code>Tools/Build/Build Linux Dedicated Server</code> (Unity) →
+      <code>C:\Builds\Ueq\ServerLinux</code></td></tr>
+    <tr><td>Build the client</td><td><code>Tools/Build/Build Standalone Client</code> (Unity) →
+      <code>C:\Builds\Ueq\Client</code></td></tr>
+    <tr><td>Download page</td><td><code>https://&lt;hostname&gt;/downloads/</code>
+      (<code>UeqClient.zip</code>, <code>version.txt</code>, <code>UeqLauncher.exe</code>)</td></tr>
+    <tr><td>Server-side download URL shown on mismatch</td><td><code>UEQ_DOWNLOAD_URL</code> env var in
+      <code>/opt/ueq/gameserver/gameserver.env</code></td></tr>
+  </table>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Editor/ServerBuildTools.cs</code>,
+    <code>Assets/Scripts/BuildInfo.cs</code>, <code>Assets/Scripts/Server/Auth/AccountAuthenticator.cs</code>,
+    <code>launcher/Ueq.Launcher/</code>, <code>deploy/deploy.sh</code>, <code>.github/workflows/deploy.yml</code>,
+    and <code>docs/DEPLOY-AWS.md</code> §14–15 (the full one-time AWS setup, this guide only covers the repeatable
+    release loop).</footer>
+</article>

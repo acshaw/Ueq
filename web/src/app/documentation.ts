@@ -5,6 +5,7 @@ import { ConversationGuide } from './conversation-guide';
 import { CombatGuide } from './combat-guide';
 import { AbilitiesGuide } from './abilities-guide';
 import { RacesClassesGuide } from './races-classes-guide';
+import { BuildDeployGuide } from './build-deploy-guide';
 
 /**
  * Documentation tab — in-app reference guides for content authors. A small sub-nav switches between
@@ -13,7 +14,7 @@ import { RacesClassesGuide } from './races-classes-guide';
  */
 @Component({
   selector: 'app-documentation',
-  imports: [SpawnGuide, ConversationGuide, QuestGuide, CombatGuide, AbilitiesGuide, RacesClassesGuide],
+  imports: [SpawnGuide, ConversationGuide, QuestGuide, CombatGuide, AbilitiesGuide, RacesClassesGuide, BuildDeployGuide],
   template: `
     <nav class="guides">
       <button [class.active]="guide() === 'spawn'" (click)="guide.set('spawn')">Spawn System</button>
@@ -22,6 +23,7 @@ import { RacesClassesGuide } from './races-classes-guide';
       <button [class.active]="guide() === 'combat'" (click)="guide.set('combat')">Combat Pipeline</button>
       <button [class.active]="guide() === 'abilities'" (click)="guide.set('abilities')">Abilities</button>
       <button [class.active]="guide() === 'racesClasses'" (click)="guide.set('racesClasses')">Races &amp; Classes</button>
+      <button [class.active]="guide() === 'buildDeploy'" (click)="guide.set('buildDeploy')">Build &amp; Deploy</button>
     </nav>
     @switch (guide()) {
       @case ('spawn') { <app-spawn-guide /> }
@@ -30,6 +32,7 @@ import { RacesClassesGuide } from './races-classes-guide';
       @case ('combat') { <app-combat-guide /> }
       @case ('abilities') { <app-abilities-guide /> }
       @case ('racesClasses') { <app-races-classes-guide /> }
+      @case ('buildDeploy') { <app-build-deploy-guide /> }
     }
   `,
   styles: [`
@@ -43,5 +46,5 @@ import { RacesClassesGuide } from './races-classes-guide';
   `]
 })
 export class Documentation {
-  readonly guide = signal<'spawn' | 'conversation' | 'quest' | 'combat' | 'abilities' | 'racesClasses'>('spawn');
+  readonly guide = signal<'spawn' | 'conversation' | 'quest' | 'combat' | 'abilities' | 'racesClasses' | 'buildDeploy'>('spawn');
 }
