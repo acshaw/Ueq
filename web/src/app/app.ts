@@ -14,6 +14,7 @@ import { AbilityTagEditor } from './ability-tag-editor';
 import { RaceEditor } from './race-editor';
 import { ClassEditor } from './class-editor';
 import { Documentation } from './documentation';
+import { PlayPage } from './play-page';
 
 /**
  * Shell for the Ueq content editors. A simple left-nav switches between the per-type editors
@@ -21,7 +22,7 @@ import { Documentation } from './documentation';
  */
 @Component({
   selector: 'app-root',
-  imports: [Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation],
+  imports: [Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor, XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation, PlayPage],
   template: `
     @if (!auth.ready()) {
       <!-- brief flash while the initial /api/auth/me check resolves -->
@@ -31,6 +32,7 @@ import { Documentation } from './documentation';
       <header>
         <strong>Ueq Content</strong>
         <nav>
+          <button class="play" [class.active]="view() === 'play'" (click)="view.set('play')">Play</button>
           <button [class.active]="view() === 'items'" (click)="view.set('items')">Items</button>
           <button [class.active]="view() === 'vendors'" (click)="view.set('vendors')">Vendors</button>
           <button [class.active]="view() === 'conversations'" (click)="view.set('conversations')">Conversations</button>
@@ -51,6 +53,7 @@ import { Documentation } from './documentation';
 
       <div class="body">
         @switch (view()) {
+          @case ('play')          { <app-play-page /> }
           @case ('items')         { <app-item-editor /> }
           @case ('vendors')       { <app-vendor-editor /> }
           @case ('conversations') { <app-conversation-editor /> }
@@ -78,6 +81,8 @@ import { Documentation } from './documentation';
     nav button:hover { background: #eee; }
     nav button.active { background: #1a73e8; color: #fff; }
     nav button.docs { margin-left: 0.5rem; border-left: 1px solid #e3e3e3; padding-left: 0.9rem; }
+    nav button.play { margin-right: 0.5rem; border-right: 1px solid #e3e3e3; padding-right: 0.9rem;
+                       font-weight: 600; }
     .who { color: #888; font-size: 0.85rem; }
     button.logout { background: none; border: 1px solid #ccc; padding: 0.3rem 0.7rem; border-radius: 4px;
                      color: #555; cursor: pointer; font-size: 0.85rem; }
@@ -87,7 +92,7 @@ import { Documentation } from './documentation';
 })
 export class App implements OnInit {
   readonly auth = inject(AuthService);
-  readonly view = signal<'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'docs'>('items');
+  readonly view = signal<'play' | 'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp' | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'docs'>('play');
 
   ngOnInit(): void {
     this.auth.checkSession();
