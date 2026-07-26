@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] Transform cameraHolder;
+    [SerializeField] Transform cameraHolder; 
     [SerializeField] float moveSpeed = 1f;
     [SerializeField] float sprintSpeed = 3f;
     [SerializeField] float jumpHeight = 2.5f;

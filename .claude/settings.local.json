@@ -190,7 +190,12 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5144/api/items)",
       "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check3.log\")",
       "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildStandaloneClient -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_client4.log\")",
-      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check4.log\")"
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check4.log\")",
+      "Bash(curl *)",
+      "Bash(dotnet run *)",
+      "Bash(/c/Users/acsha/AppData/Local/Temp/claude/C--Users-acsha-source-Ueq/7d245e5e-51fa-436e-8bc3-8b8944ca4f98/scratchpad/headtest/bin/Release/net10.0/win-x64/publish/headtest.exe *)",
+      "Bash(rm -f \"/c/Users/acsha/AppData/Local/UeqGame/launcher-debug.log\")",
+      "Bash(\"/c/Users/acsha/source/Ueq/launcher/Ueq.Launcher/bin/Release/net10.0-windows/win-x64/publish/UeqLauncher.exe\")"
     ]
   },
   "hooks": {
