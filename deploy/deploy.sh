@@ -25,6 +25,12 @@
 # NOT fatal (see the "Deploying gameserver" block below, which treats a failed download as a skip,
 # not an error), so wiring this in ahead of the first real upload can't break the existing web/api
 # deploy.
+#
+# The gameserver artifact is a .tar.gz, not a .zip like web/api — found the hard way that
+# PowerShell's `Compress-Archive` (used to package the build on the Windows machine that produces
+# it, since there's no Unity CI) can write backslash path separators inside the zip, which Linux's
+# `unzip` can't parse for nested folders (e.g. `Ueq_Data/`). `tar` has no such ambiguity and ships
+# natively on both Windows 10+ and Linux.
 set -euo pipefail
 
 WORKDIR="$(mktemp -d)"
@@ -59,9 +65,9 @@ sudo systemctl reload caddy
 
 echo "== Deploying gameserver =="
 if [ -n "${GAMESERVER_URL:-}" ]; then
-  if download "$GAMESERVER_URL" "${WORKDIR}/gameserver.zip"; then
+  if download "$GAMESERVER_URL" "${WORKDIR}/gameserver.tar.gz"; then
     sudo mkdir -p /opt/ueq/gameserver
-    sudo unzip -q -o "${WORKDIR}/gameserver.zip" -d /opt/ueq/gameserver
+    sudo tar xzf "${WORKDIR}/gameserver.tar.gz" -C /opt/ueq/gameserver
     sudo chmod +x /opt/ueq/gameserver/Ueq.x86_64
     sudo systemctl restart ueq-gameserver.service
   else

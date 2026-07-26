@@ -168,7 +168,14 @@
       "Bash(\"./Unity Hub.exe\" -- --headless editors -r --json)",
       "Bash(\"./Unity Hub.exe\" -- --headless install-modules --version 6000.4.12f1 --module linux-server)",
       "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check.log\")",
-      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildLinuxDedicatedServer -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_linux_server.log\")"
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildLinuxDedicatedServer -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_linux_server.log\")",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(where zip *)",
+      "Bash(where 7z)",
+      "Bash(where 7za)",
+      "Bash(zip --version)",
+      "Bash(tar --version)"
     ]
   },
   "hooks": {

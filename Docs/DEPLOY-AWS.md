@@ -463,15 +463,19 @@ platform switch); confirm `Result: Succeeded` in the Console.
 ### 14d. Upload the build to S3
 
 The Linux server isn't built by CI (no Unity in GitHub Actions — DH7), so this step is manual, run
-locally whenever the server code changes:
+locally whenever the server code changes.
+
+**Use `tar`, not a Windows zip tool.** PowerShell's `Compress-Archive` can write backslash path
+separators inside the archive, which Linux's `unzip` can't parse for nested folders (`Ueq_Data/`
+specifically — this bit us on the first real deploy). `tar` has no such ambiguity and ships
+natively on both Windows 10+/Git Bash and Linux:
 
 ```bash
-cd "C:\Builds\Ueq\ServerLinux"
-# zip the *contents* of the folder, not the folder itself, so deploy.sh's `unzip -d
-# /opt/ueq/gameserver` lands Ueq.x86_64 directly in that dir, not nested one level deeper.
-7z a -tzip ../gameserver.zip .   # or: Compress-Archive from PowerShell, or zip -r from Git Bash
+# from Git Bash, so `tar` is guaranteed present
+cd "/c/Builds/Ueq/ServerLinux"
+tar czf ../gameserver.tar.gz .   # tars the folder's *contents*, not the folder itself
 
-aws s3 cp ../gameserver.zip s3://$DEPLOY_BUCKET/gameserver.zip
+aws s3 cp ../gameserver.tar.gz s3://$DEPLOY_BUCKET/gameserver.tar.gz
 ```
 
 ### 14e. Trigger the deploy
