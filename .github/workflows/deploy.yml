@@ -83,13 +83,20 @@ jobs:
           # then plain bash find/replace) both corrupted the `&` characters in the presigned URL's
           # query string; jq's @sh filter shell-quotes arbitrary content correctly with no such
           # risk, since it's not pattern-matching-based at all.
+          #
+          # GAMESERVER_URL (6.2): gameserver.zip isn't built by this job (no Unity in CI — DH7) —
+          # it's uploaded to the bucket manually/locally after a local Editor build. `aws s3
+          # presign` doesn't check the object exists, so this still succeeds even before the first
+          # manual upload; deploy.sh treats a resulting 404 as a skip, not a failure.
           WEB_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/web.zip" --expires-in 600)
           API_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/api.zip" --expires-in 600)
+          GAMESERVER_URL=$(aws s3 presign "s3://${{ vars.DEPLOY_BUCKET }}/gameserver.zip" --expires-in 600)
           COMMANDS_JSON=$(jq -n \
             --arg web "$WEB_URL" \
             --arg api "$API_URL" \
+            --arg gameserver "$GAMESERVER_URL" \
             --rawfile body deploy/deploy.sh \
-            '($body | split("\n")) as $lines | [$lines[0], ("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh))] + $lines[1:]')
+            '($body | split("\n")) as $lines | [$lines[0], ("WEB_URL=" + ($web|@sh)), ("API_URL=" + ($api|@sh)), ("GAMESERVER_URL=" + ($gameserver|@sh))] + $lines[1:]')
           PARAMS_JSON=$(jq -n --argjson commands "$COMMANDS_JSON" '{commands:$commands}')
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \

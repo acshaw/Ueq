@@ -1,0 +1,19 @@
+[Unit]
+Description=Ueq dedicated game server (Mirror/KCP, UDP 7777)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ueq
+WorkingDirectory=/opt/ueq/gameserver
+ExecStart=/opt/ueq/gameserver/Ueq.x86_64 -batchmode -nographics -logFile -
+Restart=on-failure
+RestartSec=5
+# UEQ_DB_* lives here, not inline — keeps the DB password out of `systemctl cat`/journal, same
+# convention as ueq-api.service's api.env. `-logFile -` sends the player's own log to stdout so
+# journald captures it (DH5) instead of a file this unit would otherwise need to rotate.
+EnvironmentFile=/opt/ueq/gameserver/gameserver.env
+
+[Install]
+WantedBy=multi-user.target

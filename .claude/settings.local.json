@@ -160,7 +160,15 @@
       "Bash(xxd)",
       "Bash(grep *)",
       "Bash(tasklist)",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(where \"Unity Hub.exe\")",
+      "Bash(where unityhub *)",
+      "Bash(\"./Unity Hub.exe\" -- --headless help)",
+      "Bash(\"./Unity Hub.exe\" -- --headless editors -i)",
+      "Bash(\"./Unity Hub.exe\" -- --headless editors -r --json)",
+      "Bash(\"./Unity Hub.exe\" -- --headless install-modules --version 6000.4.12f1 --module linux-server)",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\compile_check.log\")",
+      "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.4.12f1/Editor/Unity.exe\" -batchmode -quit -nographics -projectPath \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\" -executeMethod ServerBuildTools.BuildLinuxDedicatedServer -logFile \"C:\\\\Users\\\\acsha\\\\source\\\\Ueq\\\\build_linux_server.log\")"
     ]
   },
   "hooks": {

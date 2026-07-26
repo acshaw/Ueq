@@ -16,7 +16,15 @@
 # string). An earlier text-substitution approach corrupted the URL for exactly that reason.
 #
 # Does NOT touch /opt/ueq/api/api.env (holds UEQ_DB_CONNSTRING) — that file is never part of the
-# published API output, so a plain overwrite never clobbers it.
+# published API output, so a plain overwrite never clobbers it. Same holds for
+# /opt/ueq/gameserver/gameserver.env once 6.2's gameserver deploy below is active.
+#
+# GAMESERVER_URL (6.2) is presigned the same way as WEB_URL/API_URL, but the object it points at
+# is uploaded to S3 manually/locally (the Unity Linux Dedicated Server build has no CI — DH7), not
+# by this workflow. Until that first manual upload happens, the presigned URL 404s — deliberately
+# NOT fatal (see the "Deploying gameserver" block below, which treats a failed download as a skip,
+# not an error), so wiring this in ahead of the first real upload can't break the existing web/api
+# deploy.
 set -euo pipefail
 
 WORKDIR="$(mktemp -d)"
@@ -48,5 +56,19 @@ sudo unzip -q -o "${WORKDIR}/api.zip" -d /opt/ueq/api
 echo "== Restarting services =="
 sudo systemctl restart ueq-api.service
 sudo systemctl reload caddy
+
+echo "== Deploying gameserver =="
+if [ -n "${GAMESERVER_URL:-}" ]; then
+  if download "$GAMESERVER_URL" "${WORKDIR}/gameserver.zip"; then
+    sudo mkdir -p /opt/ueq/gameserver
+    sudo unzip -q -o "${WORKDIR}/gameserver.zip" -d /opt/ueq/gameserver
+    sudo chmod +x /opt/ueq/gameserver/Ueq.x86_64
+    sudo systemctl restart ueq-gameserver.service
+  else
+    echo "Gameserver artifact not available yet (not uploaded to S3 for the first time?) — skipping, not failing the deploy." >&2
+  fi
+else
+  echo "GAMESERVER_URL not set — skipping gameserver deploy."
+fi
 
 echo "== Deploy complete =="

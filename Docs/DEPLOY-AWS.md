@@ -391,6 +391,114 @@ repeat it here against the real deployed instance:
   actually sign in.
 - `caddy`'s cert issuance succeeded (`sudo journalctl -u caddy | grep -i certificate`).
 
+## 14. Deploy the dedicated game server (6.2)
+
+See `docs/devplans/6.2-dedicated-server-build-hosting.md` (DH1–DH8) for the reasoning. This is a
+fourth co-located process on the same box (CD9) — its own systemd unit, its own UDP firewall rule,
+no Caddy involved (raw UDP, not HTTP).
+
+### 14a. Open the firewall — add UDP 7777 to the existing rule set
+
+`put-instance-public-ports` **replaces the whole rule set**, so re-list the 3 existing rules
+alongside the new one:
+
+```bash
+aws lightsail put-instance-public-ports \
+  --instance-name $INSTANCE_NAME \
+  --region $AWS_REGION \
+  --port-infos "[
+    {\"fromPort\":80,\"toPort\":80,\"protocol\":\"tcp\",\"cidrs\":[\"0.0.0.0/0\"]},
+    {\"fromPort\":443,\"toPort\":443,\"protocol\":\"tcp\",\"cidrs\":[\"0.0.0.0/0\"]},
+    {\"fromPort\":22,\"toPort\":22,\"protocol\":\"tcp\",\"cidrListAliases\":[\"lightsail-connect\"]},
+    {\"fromPort\":7777,\"toPort\":7777,\"protocol\":\"udp\",\"cidrs\":[\"0.0.0.0/0\"]}
+  ]"
+```
+
+**DH6, restated:** this exposes an *unencrypted* KCP/UDP transport to the whole internet. Accepted
+for now (6.3 hardens it) — same posture already applied to the open API.
+
+### 14b. First-time instance setup (browser SSH)
+
+```bash
+sudo useradd --system --no-create-home ueq   # already exists if you did step 7 — harmless either way
+sudo mkdir -p /opt/ueq/gameserver
+```
+
+Create `/opt/ueq/gameserver/gameserver.env` (root-owned, mode 600 — same convention as
+`api.env`). `UEQ_DB_SEED=0` is deliberate: production content is authored via the web admin, not
+`DatabaseSeeder`'s dev bootstrap data — the seeder's inserts are idempotent (`ON CONFLICT DO
+NOTHING`) so leaving it on wouldn't corrupt anything, but there's no reason to run it against a
+live DB either.
+
+```bash
+sudo tee /opt/ueq/gameserver/gameserver.env > /dev/null <<'EOF'
+UEQ_DB_CONNSTRING=Host=127.0.0.1;Port=5432;Database=ueq;Username=ueq;Password=<your-real-db-password>
+UEQ_DB_SEED=0
+EOF
+sudo chmod 600 /opt/ueq/gameserver/gameserver.env
+```
+
+Copy `deploy/ueq-gameserver.service` from this repo to `/etc/systemd/system/ueq-gameserver.service`,
+then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable ueq-gameserver.service
+# don't start yet — there's no binary in /opt/ueq/gameserver/ until the first deploy below runs
+```
+
+**Note on migrations:** unlike the API, the Unity server calls `MigrationRunner.Run` on every
+startup (established since 1.1) — so once this service is live, any pending migration gets applied
+automatically the next time it restarts (including via a routine deploy), not just via the manual
+`Tools/Database/Run Migrations` step in CD8. That's existing, already-reviewed server behavior
+(idempotent, versioned `.sql` files you already committed), just worth knowing it now runs against
+the real production DB too.
+
+### 14c. Build the Linux Dedicated Server locally
+
+In the Unity Editor: **`Tools/Build/Build Linux Dedicated Server`** — builds to
+`C:\Builds\Ueq\ServerLinux` (binary `Ueq.x86_64` + `Ueq_Data/`). First run installs slower (fresh
+platform switch); confirm `Result: Succeeded` in the Console.
+
+### 14d. Upload the build to S3
+
+The Linux server isn't built by CI (no Unity in GitHub Actions — DH7), so this step is manual, run
+locally whenever the server code changes:
+
+```bash
+cd "C:\Builds\Ueq\ServerLinux"
+# zip the *contents* of the folder, not the folder itself, so deploy.sh's `unzip -d
+# /opt/ueq/gameserver` lands Ueq.x86_64 directly in that dir, not nested one level deeper.
+7z a -tzip ../gameserver.zip .   # or: Compress-Archive from PowerShell, or zip -r from Git Bash
+
+aws s3 cp ../gameserver.zip s3://$DEPLOY_BUCKET/gameserver.zip
+```
+
+### 14e. Trigger the deploy
+
+`deploy.yml` already presigns `gameserver.zip` and restarts `ueq-gameserver.service` on every run
+(extended for 6.2) — either push to `main`, or run the **Deploy** workflow manually
+(`workflow_dispatch`) from the GitHub Actions tab. Watch the "Show remote deploy output" step for
+`== Deploying gameserver ==` / a successful `systemctl restart`.
+
+### 14f. Verify
+
+```bash
+# on the instance, browser SSH:
+sudo systemctl status ueq-gameserver.service
+sudo journalctl -u ueq-gameserver -n 100
+# expect the same [DB] Connected.../[Content] Loaded... lines 5.10 already validated the meaning of
+```
+
+Then, from your own machine: build a normal Standalone Windows client
+(`Tools/Build/Build Standalone Client`), launch it, and on the Title screen's dev cluster set the
+server address to `$UEQ_HOSTNAME` (or the static IP) instead of the `127.0.0.1` default — then run
+the full register→login→spawn→target→combat→loot→camp→relog loop, same checklist 5.10's DS5 already
+proved once locally, now proved over the real internet against the real AWS-hosted Postgres.
+
+Simulate a crash to confirm supervision works: `sudo systemctl kill ueq-gameserver.service` →
+`systemctl status` should show it auto-restarted within `RestartSec` (5s).
+
 ## Cost recap
 
 | Item | Cost |
@@ -406,6 +514,6 @@ repeat it here against the real deployed instance:
 - CD8: migrations to the deployed DB stay manual for now. A portable, non-Unity migration runner (so
   `deploy.yml` could auto-apply migrations) is an **expected fast-follow**, not just a someday-maybe — flagged
   during CD8's review.
-- CD9: when 5.10/6.2 land, the Unity dedicated server becomes a fourth process on this same box — its own
+- CD9: done as of 6.2 (§14) — the Unity dedicated server is a fourth process on this same box, its own
   systemd unit, its own UDP firewall rule. Whether it stays co-located or splits onto dedicated capacity is
-  a 6.5 (load testing) decision, not this one.
+  still a 6.5 (load testing) decision, not this one.
