@@ -133,6 +133,7 @@ public static class SceneSetup
             typeof(PlayerSitting),
             typeof(PlayerAbilities),
             typeof(PlayerWeaponSkills),
+            typeof(PlayerParty),
             typeof(CharacterPersistence),
             typeof(PlayerModel),
             typeof(NetworkedPlayer),
@@ -358,6 +359,7 @@ public static class SceneSetup
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         CreateChatUI();
         CreateHUDFrames();
+        CreatePartyFrameUI();
         CreateInventoryUI();
         CreateEquipmentUI();
         CreateVendorUI();
@@ -553,6 +555,7 @@ public static class SceneSetup
         player.AddComponent<PlayerSitting>();
         player.AddComponent<PlayerAbilities>();
         player.AddComponent<PlayerWeaponSkills>();
+        player.AddComponent<PlayerParty>();
         player.AddComponent<CharacterPersistence>();
         var np = player.AddComponent<NetworkedPlayer>();
 
@@ -696,6 +699,7 @@ public static class SceneSetup
         nmObj.AddComponent<CharacterSelectController>(); // 1.5 — server-side select/create handlers
         nmObj.AddComponent<CharacterSelectUI>();         // 1.5 — pre-spawn client select/create panel
         nmObj.AddComponent<CampController>();            // 1.6.1 — client-side camp countdown
+        nmObj.AddComponent<PartyManager>();               // 5.3 — session-only party registry
 
         string[] transportCandidates = {
             "Mirror.KcpTransport",
@@ -1105,6 +1109,58 @@ public static class SceneSetup
         hpTMP.raycastTarget = false;
 
         return (panelObj, nameTMP, fillImg, hpTMP);
+    }
+
+    // ── Party frames (5.3) ──────────────────────────────────────────────────────
+
+    // Up to 5 stacked frames for other party members (self stays in the existing PlayerFrame), directly
+    // below PlayerFramePanel (-10) and TargetFramePanel (-72, 52 tall). Reuses CreateFramePanel — same
+    // background/name/health-bar wiring as the player/target frames, just a different bar color.
+    static void CreatePartyFrameUI()
+    {
+        var existing = GameObject.Find("PartyFrameCanvas");
+        if (existing != null) Object.DestroyImmediate(existing);
+
+        var canvasObj = new GameObject("PartyFrameCanvas");
+        var canvas    = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 15;
+        var scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        const int   MaxOtherMembers = 5;
+        const float SlotW  = 220f;
+        const float SlotH  = 52f;
+        const float Gap    = 4f;
+        const float StartY = -134f; // below PlayerFramePanel (-10) + TargetFramePanel (-72, 52 tall)
+
+        var slotUIs = new PartyFrameSlotUI[MaxOtherMembers];
+
+        for (int i = 0; i < MaxOtherMembers; i++)
+        {
+            float y = StartY - i * (SlotH + Gap);
+            var (panel, nameTMP, fillImg, hpTMP) = CreateFramePanel(
+                $"PartySlot{i + 1}", canvasObj.transform,
+                new Vector2(10, y), new Vector2(SlotW, SlotH),
+                new Color(0.3f, 0.55f, 0.85f));
+
+            var bgImg  = panel.GetComponent<Image>();
+            var slotUI = panel.AddComponent<PartyFrameSlotUI>();
+            slotUI.Init(nameTMP, fillImg, hpTMP, bgImg);
+            panel.SetActive(false); // hidden until a member occupies this slot (PartyFrameUI.Show)
+
+            slotUIs[i] = slotUI;
+        }
+
+        var partyFrameUI = canvasObj.AddComponent<PartyFrameUI>();
+        var so = new SerializedObject(partyFrameUI);
+        var slotsProp = so.FindProperty("slots");
+        slotsProp.arraySize = slotUIs.Length;
+        for (int i = 0; i < slotUIs.Length; i++)
+            slotsProp.GetArrayElementAtIndex(i).objectReferenceValue = slotUIs[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     // ── Inventory ─────────────────────────────────────────────────────────────

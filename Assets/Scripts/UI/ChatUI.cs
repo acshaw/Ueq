@@ -25,6 +25,7 @@ public class ChatUI : MonoBehaviour
     [SerializeField] bool filterAbility     = true;
     [SerializeField] bool filterEnvironment = true;
     [SerializeField] bool filterNPC         = true;
+    [SerializeField] bool filterGroup       = true;
 
     static readonly Color[] ChannelColors =
     {
@@ -37,6 +38,7 @@ public class ChatUI : MonoBehaviour
         new Color(0.6f, 0.40f, 1f),       // Ability — purple
         new Color(0.7f, 0.90f, 0.70f),   // Environment — muted sage
         new Color(1f,   0.90f, 0.60f),   // NPC     — warm cream
+        new Color(1f,   0.65f, 0.20f),   // Group   — orange (5.3)
     };
 
     const int MaxStoredLines = 500;
@@ -63,6 +65,13 @@ public class ChatUI : MonoBehaviour
         ("/sit",                  "Sit / stand (also hotbar key 0); rest faster while seated"),
         ("/unstuck",              "Warp to a safe spot if stuck or falling (out of combat)"),
         ("/travel <name>",        "Fast travel: creslins, thornwood, grukmar, village, mobs, crossroads"),
+        ("/invite <name>",        "Invite a player to your group (leader only)"),
+        ("/accept",               "Accept a pending group invite"),
+        ("/leave",                "Leave your group"),
+        ("/disband",              "Disband your group (leader only)"),
+        ("/kick <name>",          "Remove a player from your group (leader only)"),
+        ("/makeleader <name>",    "Transfer group leadership (leader only)"),
+        ("/g <msg>",              "Message your party"),
         ("/help",                 "List chat commands"),
         ("/font-size <1-5>",      "Set chat text size"),
     };
@@ -203,6 +212,53 @@ public class ChatUI : MonoBehaviour
             return true;
         }
 
+        // ── 5.3 — party commands ──────────────────────────────────────────────
+        if (raw.StartsWith("/invite ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(8).Trim();
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdInvite(arg);
+            return true;
+        }
+
+        if (raw.Equals("/accept", StringComparison.OrdinalIgnoreCase))
+        {
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdAccept();
+            return true;
+        }
+
+        if (raw.Equals("/leave", StringComparison.OrdinalIgnoreCase))
+        {
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdLeave();
+            return true;
+        }
+
+        if (raw.Equals("/disband", StringComparison.OrdinalIgnoreCase))
+        {
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdDisband();
+            return true;
+        }
+
+        if (raw.StartsWith("/kick ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(6).Trim();
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdKick(arg);
+            return true;
+        }
+
+        if (raw.StartsWith("/makeleader ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(12).Trim();
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdMakeLeader(arg);
+            return true;
+        }
+
+        if (raw.StartsWith("/g ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(3).Trim();
+            LocalPlayer.Current?.GetComponent<PlayerParty>()?.CmdGroupChat(arg);
+            return true;
+        }
+
         if (raw.Equals("/help", StringComparison.OrdinalIgnoreCase))
         {
             AppendLine("<i>[Commands]</i>");
@@ -270,6 +326,7 @@ public class ChatUI : MonoBehaviour
             ChatChannel.Ability     => $"<color=#{hex}>{msg.Text}</color>",
             ChatChannel.Environment => $"<color=#{hex}>{msg.Text}</color>",
             ChatChannel.NPC         => $"<color=#{hex}>[{msg.SenderName}] {msg.Text}</color>",
+            ChatChannel.Group       => $"<color=#{hex}>[Group] {msg.SenderName}: {msg.Text}</color>",
             _                       => msg.Text,
         };
 
@@ -309,6 +366,7 @@ public class ChatUI : MonoBehaviour
         ChatChannel.Ability     => filterAbility,
         ChatChannel.Environment => filterEnvironment,
         ChatChannel.NPC         => filterNPC,
+        ChatChannel.Group       => filterGroup,
         _                       => true,
     };
 

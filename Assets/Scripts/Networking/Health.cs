@@ -80,6 +80,13 @@ public class Health : NetworkBehaviour
         if (IsDead) return;
         if (Time.time < _immunityUntil) return;
 
+        // 5.3 (GP6) — friendly-fire hard backstop: a player can't damage a party member, regardless of
+        // source (auto-attack, ability effects, riposte counters all funnel through this one method). The
+        // proactive, player-facing refusal message lives at the attack call site (e.g. PlayerAutoAttack);
+        // this is the silent no-op safety net that covers every current and future damage path for free.
+        if (attacker != null && netIdentity != null && PlayerParty.InSameParty(netIdentity, attacker))
+            return;
+
         // Combat-state stamp (1.6.1) — all damage routes through here, so this covers both the victim
         // (taking) and the attacker (dealing). Only players carry CombatState; null-safe for mobs.
         GetComponent<CombatState>()?.MarkCombat();

@@ -18,6 +18,7 @@ public class GameNetworkManager : NetworkManager
             Database.InitializeServer();
             ContentLoader.LoadAll(); // 2.1 — load DB-backed content into registries before the world goes live
             GetComponent<ZoneManager>()?.ServerInitialize(); // 3.0 — additive zones + interest partitioning
+            GetComponent<PartyManager>()?.ServerInitialize(); // 5.3 — session-only party registry
             PersistenceService.Create();
             GetComponent<CharacterSelectController>()?.OnServerStarted(); // 1.5 select/create handlers
             InvokeRepeating(nameof(AutosaveTick), AutosaveSeconds, AutosaveSeconds); // 1.6 autosave (O3)
@@ -40,6 +41,7 @@ public class GameNetworkManager : NetworkManager
     {
         CancelInvoke(nameof(AutosaveTick));
         GetComponent<CharacterSelectController>()?.OnServerStopped(); // 1.5 — unregister select handlers
+        GetComponent<PartyManager>()?.ServerShutdown(); // 5.3 — session-only, nothing to persist
         GetComponent<ZoneManager>()?.ServerShutdown(); // 3.0 — clear zone state (scenes torn down by Unity)
 
         // Save every connected character FIRST — Mirror destroys player objects during the
@@ -86,6 +88,8 @@ public class GameNetworkManager : NetworkManager
         conn?.identity?.GetComponent<CharacterPersistence>()?.Save();
         // Free single-login state before Mirror tears the connection down.
         (authenticator as AccountAuthenticator)?.HandleServerDisconnect(conn);
+        // 5.3 (GP1/GP3) — session-only groups: a disconnect is treated exactly like /leave.
+        PartyManager.Instance?.HandleDisconnect(conn?.identity);
         base.OnServerDisconnect(conn);
         Debug.Log($"[Server] Client disconnected: {conn.connectionId}");
     }

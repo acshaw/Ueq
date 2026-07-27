@@ -8,5 +8,5 @@ public enum ChatChannel
     Reward,
     Ability,
     Environment,
-    NPC
-}
+    NPC,
+    Group // 5.3 (GP10) — party chat, zone-independent delivery like every other channel

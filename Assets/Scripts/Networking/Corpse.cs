@@ -16,6 +16,29 @@ public class Corpse : NetworkBehaviour, IOnDeath
     public int                     Copper   => _copper;
     public bool                    IsActive => _isActive;
 
+    // 5.3 (GP5) — the first ownership restriction on mob-corpse looting; previously any player in range
+    // could loot any mob corpse. Snapshotted at death by MobKillReward (not a live party reference — a
+    // later party change doesn't retroactively grant/revoke rights on an already-dead corpse). Server-only;
+    // no client sync needed, only NetworkedPlayer's own loot commands read it, server-side.
+    readonly HashSet<NetworkIdentity> _eligibleLooters = new();
+    bool _eligibilitySet;
+
+    [Server]
+    public void SetEligibleLooters(List<NetworkIdentity> members)
+    {
+        _eligibilitySet = true;
+        _eligibleLooters.Clear();
+        if (members != null)
+            foreach (var m in members)
+                if (m != null) _eligibleLooters.Add(m);
+    }
+
+    // Falls back to "anyone" if eligibility was never resolved (e.g. a mob with no MobKillReward/
+    // EnemyAI) — preserves today's open-looting behavior for that edge case instead of soft-locking it.
+    [Server]
+    public bool CanLoot(NetworkIdentity player)
+        => !_eligibilitySet || (player != null && _eligibleLooters.Contains(player));
+
     // ── IOnDeath — dispatched by NpcEventDispatcher when Health reaches zero ──
 
     public void OnDeath(NetworkIdentity attacker)

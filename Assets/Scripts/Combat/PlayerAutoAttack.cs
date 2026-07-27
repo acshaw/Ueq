@@ -63,6 +63,18 @@ public class PlayerAutoAttack : NetworkBehaviour
 
         if (Time.time < _nextAttack) return;
 
+        // 5.3 (GP6) — proactive friendly-fire refusal: mirrors the LOS/range messaging below so a player
+        // aiming at a group member gets a clear reason instead of silently whiffing forever. Health.
+        // TakeDamage already backstops this unconditionally; this just makes the failure legible.
+        if (PlayerParty.InSameParty(netIdentity, target))
+        {
+            _on = false;
+            ChatManager.Instance?.SendDirect(
+                new ChatMessage(ChatChannel.System, "System", "You cannot attack a group member."),
+                connectionToClient);
+            return;
+        }
+
         if (!HasLineOfSight(target.transform))
         {
             ChatManager.Instance?.SendDirect(

@@ -137,7 +137,12 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     {
         _movementBehavior?.Suspend();
         StopAllCoroutines();
-        ClearAllThreat();
+        // 5.3 (GP5): _threatList is deliberately NOT cleared here — it holds each attacker's final damage
+        // total, which ResolveCreditedGroup (called from MobKillReward.OnDeath, another IOnDeath subscriber
+        // on this same GameObject) needs to read. Leaving it intact makes that read correct regardless of
+        // which of the two OnDeath calls the NpcEventDispatcher fan-out happens to run first. AddThreat
+        // already refuses to add anything once _health.IsDead, so nothing repopulates it after this point.
+        _currentTarget = null;
         _agent.ResetPath();
         _agent.enabled = false;
         _state = State.Idle;
@@ -335,10 +340,60 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         else EnterReturn();
     }
 
-    void ClearAllThreat()
+    // ── 5.3 (GP5) — multi-group kill-credit resolution ────────────────────────
+    // Groups this mob's final threat tally (damage dealt, per the shared aggro-is-damage model) by party —
+    // an ungrouped attacker counts as its own party of one — and returns the full member list of whichever
+    // group dealt the most damage. Used by MobKillReward for both XP credit and (via Corpse.
+    // SetEligibleLooters) loot rights. Reads _threatList directly; OnDeath (above) deliberately leaves it
+    // intact so this works no matter which order IOnDeath subscribers on this GameObject run in. Ties
+    // (exact equal damage, rare) go to the killing blow's group.
+    [Server]
+    public List<NetworkIdentity> ResolveCreditedGroup(NetworkIdentity killingBlowAttacker)
     {
-        _threatList.Clear();
-        _currentTarget = null;
+        var groupDamage = new Dictionary<uint, int>();
+        var soloDamage  = new Dictionary<NetworkIdentity, int>();
+
+        foreach (var (ni, dmg) in _threatList)
+        {
+            if (ni == null) continue;
+            uint partyId = ni.GetComponent<PlayerParty>()?.PartyId ?? 0;
+            if (partyId != 0) groupDamage[partyId] = groupDamage.GetValueOrDefault(partyId) + dmg;
+            else               soloDamage[ni]      = soloDamage.GetValueOrDefault(ni) + dmg;
+        }
+
+        uint            bestPartyId = 0;
+        NetworkIdentity bestSolo    = null;
+        int             bestDamage  = int.MinValue;
+
+        foreach (var (id, dmg) in groupDamage)
+            if (dmg > bestDamage) { bestDamage = dmg; bestPartyId = id; bestSolo = null; }
+        foreach (var (ni, dmg) in soloDamage)
+            if (dmg > bestDamage) { bestDamage = dmg; bestPartyId = 0; bestSolo = ni; }
+
+        if (killingBlowAttacker != null)
+        {
+            uint killerPartyId = killingBlowAttacker.GetComponent<PlayerParty>()?.PartyId ?? 0;
+            int  killerDamage  = killerPartyId != 0
+                ? groupDamage.GetValueOrDefault(killerPartyId)
+                : soloDamage.GetValueOrDefault(killingBlowAttacker);
+
+            if (killerDamage == bestDamage)
+            {
+                bestPartyId = killerPartyId;
+                bestSolo    = killerPartyId != 0 ? null : killingBlowAttacker;
+            }
+        }
+
+        List<NetworkIdentity> result = bestPartyId != 0
+            ? (PartyManager.Instance?.MembersOf(bestPartyId) ?? new List<NetworkIdentity>())
+            : (bestSolo != null ? new List<NetworkIdentity> { bestSolo } : new List<NetworkIdentity>());
+
+        // Safety net — should only ever trigger if something bypassed the normal OnAttacked→AddThreat path
+        // (e.g. a non-combat death), not the ordinary case (the killing blow always leaves a threat entry).
+        if (result.Count == 0 && killingBlowAttacker != null)
+            result.Add(killingBlowAttacker);
+
+        return result;
     }
 
     // Warp to nearest NavMesh point if the agent hasn't been placed yet, then set destination.

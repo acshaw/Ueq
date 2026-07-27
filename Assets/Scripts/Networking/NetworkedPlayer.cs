@@ -540,8 +540,11 @@ public class NetworkedPlayer : NetworkBehaviour
         }
     }
 
+    // Public so PartyFrameUI (5.3, GP11) can drive the same server-side target from an F-key press, not
+    // just a mouse click — it does NOT touch the client-side Targetable/highlight/TargetFrame system (see
+    // PartyFrameUI's own doc comment for why), only the server-authoritative combat target.
     [Command]
-    void CmdSetTarget(NetworkIdentity target) => _serverTarget = target;
+    public void CmdSetTarget(NetworkIdentity target) => _serverTarget = target;
 
     // ── Death handling ────────────────────────────────────────────────────────
 
@@ -851,6 +854,9 @@ public class NetworkedPlayer : NetworkBehaviour
     {
         corpse = id?.GetComponent<Corpse>();
         if (corpse == null || !corpse.IsActive) { corpse = null; return false; }
+        // 5.3 (GP5) — exclusive to the group that dealt the majority of this mob's damage (snapshotted at
+        // death); Corpse.CanLoot falls back to "anyone" if that resolution never ran (e.g. no MobKillReward).
+        if (!corpse.CanLoot(netIdentity)) { corpse = null; return false; }
         if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; return false; }
         return true;
     }
