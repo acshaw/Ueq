@@ -88,6 +88,13 @@ import { ADMIN_STYLES } from './shared/admin-styles';
           <div class="grid">
             <label>Perception radius <input type="number" step="0.1" [(ngModel)]="model.perceptionRadius" name="perceptionRadius" /></label>
             <label>Base aggro threat <input type="number" [(ngModel)]="model.baseAggroThreat" name="baseAggroThreat" /></label>
+            <label>Social aggro (5.4)
+              <select [(ngModel)]="model.socialAggroEnabled" name="socialAggroEnabled">
+                <option [ngValue]="false">Off (solitary)</option>
+                <option [ngValue]="true">On (calls nearby allies into the fight)</option>
+              </select>
+            </label>
+            <label>Social aggro radius <input type="number" step="0.1" [(ngModel)]="model.socialAggroRadius" name="socialAggroRadius" [disabled]="!model.socialAggroEnabled" /></label>
             <label>Faction
               <select [(ngModel)]="model.factionId" name="factionId">
                 <option [ngValue]="null">(none)</option>

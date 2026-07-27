@@ -33,7 +33,11 @@ public class ThresholdsController : ControllerBase
         {
             var name = (t.Name ?? "").Trim();
             if (string.IsNullOrEmpty(name) || rows.Any(r => r.Name == name)) continue;
-            rows.Add(new FactionThreshold { Name = name, MinScore = t.MinScore, SortOrder = order++ });
+            rows.Add(new FactionThreshold
+            {
+                Name = name, MinScore = t.MinScore, SortOrder = order++,
+                ConsiderText = (t.ConsiderText ?? "").Trim(),
+            });
         }
         _db.FactionThresholds.AddRange(rows);
         await _db.SaveChangesAsync();

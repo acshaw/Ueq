@@ -33,6 +33,7 @@ public class FactionThreshold
     public string Name { get; set; } = string.Empty;
     public int MinScore { get; set; }
     public int SortOrder { get; set; }
+    public string ConsiderText { get; set; } = string.Empty; // 5.4 (AG1)
 }
 
 /// <summary>Editor-friendly shape: a faction, its ally/hostile id lists, and its race defaults.</summary>

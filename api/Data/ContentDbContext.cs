@@ -205,6 +205,8 @@ public class ContentDbContext : DbContext
             e.Property(m => m.AttackIsParryable).HasColumnName("attack_is_parryable");
             e.Property(m => m.AvoidanceAgility).HasColumnName("avoidance_agility");
             e.Property(m => m.AvoidanceDexterity).HasColumnName("avoidance_dexterity");
+            e.Property(m => m.SocialAggroEnabled).HasColumnName("social_aggro_enabled");
+            e.Property(m => m.SocialAggroRadius).HasColumnName("social_aggro_radius");
             e.HasMany(m => m.FactionHits).WithOne().HasForeignKey(h => h.MobId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -255,6 +257,7 @@ public class ContentDbContext : DbContext
             e.Property(t => t.Name).HasColumnName("name");
             e.Property(t => t.MinScore).HasColumnName("min_score");
             e.Property(t => t.SortOrder).HasColumnName("sort_order");
+            e.Property(t => t.ConsiderText).HasColumnName("consider_text");
         });
 
         modelBuilder.Entity<LootTable>(e =>

@@ -92,10 +92,13 @@ import { ADMIN_STYLES } from './shared/admin-styles';
       (close)="closeThresholds()"
     >
       <p class="muted">The named standing ladder every faction evaluates against, low → high.</p>
+      <p class="muted">Consider text is what a player sees pressing C / right-clicking a mob at this
+        standing — shown as "&lt;target&gt; &lt;text&gt;." (5.4).</p>
       @for (t of thresholds(); track $index; let i = $index) {
         <div class="trow">
           <input [(ngModel)]="t.name" [name]="'tn'+i" placeholder="Indifferent" />
           <input type="number" [(ngModel)]="t.minScore" [name]="'tm'+i" placeholder="0" />
+          <input [(ngModel)]="t.considerText" [name]="'tc'+i" placeholder="regards you indifferently" class="considertext" />
           <button class="small" (click)="moveThreshold(i,-1)" [disabled]="i===0">↑</button>
           <button class="small" (click)="moveThreshold(i,1)" [disabled]="i===thresholds().length-1">↓</button>
           <button class="small danger" (click)="removeThreshold(i)">✕</button>
@@ -112,6 +115,7 @@ import { ADMIN_STYLES } from './shared/admin-styles';
     .check input { width: auto; }
     .rdrow, .trow { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
     .rdrow input:first-child, .trow input:first-child { flex: 1; }
+    .trow input.considertext { flex: 2; }
   `],
 })
 export class FactionEditor implements OnInit {
@@ -203,7 +207,7 @@ export class FactionEditor implements OnInit {
 
   closeThresholds(): void { this.thresholdsOpen = false; this.error.set(null); }
 
-  addThreshold(): void { this.thresholds.update(t => [...t, { name: '', minScore: 0, sortOrder: t.length }]); }
+  addThreshold(): void { this.thresholds.update(t => [...t, { name: '', minScore: 0, sortOrder: t.length, considerText: '' }]); }
   removeThreshold(i: number): void { this.thresholds.update(t => t.filter((_, j) => j !== i)); }
   moveThreshold(i: number, dir: number): void {
     const a = [...this.thresholds()];

@@ -26,6 +26,7 @@ public class ChatUI : MonoBehaviour
     [SerializeField] bool filterEnvironment = true;
     [SerializeField] bool filterNPC         = true;
     [SerializeField] bool filterGroup       = true;
+    [SerializeField] bool filterConsider    = true;
 
     static readonly Color[] ChannelColors =
     {
@@ -39,6 +40,7 @@ public class ChatUI : MonoBehaviour
         new Color(0.7f, 0.90f, 0.70f),   // Environment — muted sage
         new Color(1f,   0.90f, 0.60f),   // NPC     — warm cream
         new Color(1f,   0.65f, 0.20f),   // Group   — orange (5.3)
+        new Color(0.75f, 0.75f, 0.85f),  // Consider — pale lavender-grey (5.4)
     };
 
     const int MaxStoredLines = 500;
@@ -327,6 +329,7 @@ public class ChatUI : MonoBehaviour
             ChatChannel.Environment => $"<color=#{hex}>{msg.Text}</color>",
             ChatChannel.NPC         => $"<color=#{hex}>[{msg.SenderName}] {msg.Text}</color>",
             ChatChannel.Group       => $"<color=#{hex}>[Group] {msg.SenderName}: {msg.Text}</color>",
+            ChatChannel.Consider    => $"<color=#{hex}>{msg.Text}</color>",
             _                       => msg.Text,
         };
 
@@ -367,6 +370,7 @@ public class ChatUI : MonoBehaviour
         ChatChannel.Environment => filterEnvironment,
         ChatChannel.NPC         => filterNPC,
         ChatChannel.Group       => filterGroup,
+        ChatChannel.Consider    => filterConsider,
         _                       => true,
     };
 

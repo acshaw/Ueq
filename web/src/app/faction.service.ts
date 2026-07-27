@@ -15,7 +15,7 @@ export interface Faction {
 }
 
 /** One standing on the shared ladder. */
-export interface Threshold { name: string; minScore: number; sortOrder: number; }
+export interface Threshold { name: string; minScore: number; sortOrder: number; considerText: string; }
 
 export function emptyFaction(): Faction {
   return { factionId: '', factionName: '', allyIds: [], hostileIds: [], raceDefaults: [] };

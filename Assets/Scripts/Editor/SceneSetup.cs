@@ -134,6 +134,13 @@ public static class SceneSetup
             typeof(PlayerAbilities),
             typeof(PlayerWeaponSkills),
             typeof(PlayerParty),
+            typeof(PlayerConsider),
+            typeof(Nameplate), // long-standing gap, found 2026-07-26 — never on the Player prefab at all,
+                               // unlike Enemy.prefab, which is why CharacterPersistence.ApplyName's
+                               // Nameplate.SetLabel call has always silently no-op'd for players
+            typeof(Targetable), // 5.4 follow-up — lets another player be click-targeted (a Cleric needs to
+                                // select a groupmate to heal them); Targetable.SetHighlight distinguishes
+                                // a friendly (player) target from the hostile-red used for mobs/NPCs
             typeof(CharacterPersistence),
             typeof(PlayerModel),
             typeof(NetworkedPlayer),
@@ -556,6 +563,9 @@ public static class SceneSetup
         player.AddComponent<PlayerAbilities>();
         player.AddComponent<PlayerWeaponSkills>();
         player.AddComponent<PlayerParty>();
+        player.AddComponent<PlayerConsider>();
+        player.AddComponent<Nameplate>();
+        player.AddComponent<Targetable>();
         player.AddComponent<CharacterPersistence>();
         var np = player.AddComponent<NetworkedPlayer>();
 

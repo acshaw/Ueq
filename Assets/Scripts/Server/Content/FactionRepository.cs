@@ -22,6 +22,7 @@ public struct FactionThresholdSnapshot
     public string Name;
     public int    MinScore;
     public int    SortOrder;
+    public string ConsiderText; // 5.4 (AG1)
 }
 
 /// <summary>One race→faction starting score.</summary>
@@ -58,16 +59,17 @@ public sealed class FactionRepository : IRepository
         };
 
         using (var cmd = new NpgsqlCommand(
-            "SELECT name, min_score, sort_order FROM faction_thresholds ORDER BY sort_order, min_score",
+            "SELECT name, min_score, sort_order, consider_text FROM faction_thresholds ORDER BY sort_order, min_score",
             conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
             while (reader.Read())
                 content.Thresholds.Add(new FactionThresholdSnapshot
                 {
-                    Name      = reader.GetString(0),
-                    MinScore  = reader.GetInt32(1),
-                    SortOrder = reader.GetInt32(2),
+                    Name         = reader.GetString(0),
+                    MinScore     = reader.GetInt32(1),
+                    SortOrder    = reader.GetInt32(2),
+                    ConsiderText = reader.GetString(3),
                 });
         }
 

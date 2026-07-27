@@ -56,6 +56,10 @@ public class Mob
 
     public float AvoidanceAgility { get; set; } = 20f;
     public float AvoidanceDexterity { get; set; } = 20f;
+
+    // 5.4 (AG3) — social aggro, opt-in per mob.
+    public bool SocialAggroEnabled { get; set; }
+    public float SocialAggroRadius { get; set; } = 20f;
 }
 
 /// <summary>EF entity for <c>mob_faction_hits</c> (M2.7.1) — a standing change applied to the killer.</summary>

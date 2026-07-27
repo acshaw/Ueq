@@ -93,7 +93,7 @@ public class HotbarUI : MonoBehaviour
         for (int i = 0; i < HotbarKeys.Length && i < PlayerAbilities.HotbarSize; i++)
         {
             if (!kb[HotbarKeys[i]].wasPressedThisFrame) continue;
-            _player?.CmdCastAbility(i, _player.CurrentTargetIdentity);
+            _player?.CmdCastAbility(i);
             break;
         }
     }

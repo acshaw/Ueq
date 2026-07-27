@@ -42,6 +42,10 @@ public struct MobSnapshot
     public float TierMiss, TierGlancing, TierHit, TierSolid, TierGood, TierCritical, TierCrippling;
     public bool  AttackIsParryable;
     public float AvoidanceAgility, AvoidanceDexterity;
+
+    // 5.4 (AG3) — social aggro, opt-in per mob.
+    public bool  SocialAggroEnabled;
+    public float SocialAggroRadius;
 }
 
 /// <summary>One faction adjustment applied to the killer on this mob's death (M2.7.1).</summary>
@@ -75,7 +79,8 @@ public sealed class MobRepository : IRepository
             "vendor_id, vendor_open_keyword, " +
             "weapon_category, weapon_skill, " +
             "tier_miss, tier_glancing, tier_hit, tier_solid, tier_good, tier_critical, tier_crippling, " +
-            "attack_is_parryable, avoidance_agility, avoidance_dexterity " +
+            "attack_is_parryable, avoidance_agility, avoidance_dexterity, " +
+            "social_aggro_enabled, social_aggro_radius " +
             "FROM mobs ORDER BY mob_id", conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
@@ -119,6 +124,8 @@ public sealed class MobRepository : IRepository
                     AttackIsParryable  = reader.GetBoolean(32),
                     AvoidanceAgility   = reader.GetFloat(33),
                     AvoidanceDexterity = reader.GetFloat(34),
+                    SocialAggroEnabled = reader.GetBoolean(35),
+                    SocialAggroRadius  = reader.GetFloat(36),
                     FactionHits        = new List<MobFactionHitSnapshot>(),
                 };
                 order.Add(id);

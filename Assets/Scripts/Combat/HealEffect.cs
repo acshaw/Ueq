@@ -11,7 +11,11 @@ public class HealEffect : AbilityEffect
 
     public override void Apply(NetworkIdentity caster, NetworkIdentity target, AbilityDefinition source)
     {
-        var health = target?.GetComponent<Health>();
+        // Players only — Health.Heal() itself has no restriction, so without this an enemy mob targeted
+        // via click-targeting could be "healed" (an odd, exploit-adjacent edge case with no legitimate use).
+        if (target == null || target.GetComponent<NetworkedPlayer>() == null) return;
+
+        var health = target.GetComponent<Health>();
         if (health == null || health.IsDead) return;
 
         int amount = baseHeal;

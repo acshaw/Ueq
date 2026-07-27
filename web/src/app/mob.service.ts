@@ -28,6 +28,10 @@ export interface Mob {
   perceptionRadius: number;
   baseAggroThreat: number;
 
+  // 5.4 (AG3) — social aggro, opt-in per mob.
+  socialAggroEnabled: boolean;
+  socialAggroRadius: number;
+
   factionId: string | null;
   aggroMaxStanding: string;
   warningMaxStanding: string;
@@ -64,6 +68,7 @@ export function emptyMob(): Mob {
     maxHealth: 10, attackDamage: 1, attackInterval: 2, attackRange: 2,
     movementType: 1, moveSpeed: 3.5, wanderRadius: 10, wanderPauseMin: 2, wanderPauseMax: 6,
     perceptionRadius: 20, baseAggroThreat: 1,
+    socialAggroEnabled: false, socialAggroRadius: 20,
     factionId: null, aggroMaxStanding: 'Threatening', warningMaxStanding: 'Apprehensive',
     conversationSetId: null, lootTableId: null, xpReward: 0,
     vendorId: null, vendorOpenKeyword: 'wares',

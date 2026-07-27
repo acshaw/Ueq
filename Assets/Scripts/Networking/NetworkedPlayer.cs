@@ -37,11 +37,18 @@ public class NetworkedPlayer : NetworkBehaviour
     Vector3 _bindPoint;
     string  _zoneId = ZoneCatalog.DefaultStarterZoneId; // M3.0 — server-side current zone
 
+    // 5.4 (AG4) — reverse-index: which mobs currently have this player threat-listed. Populated by
+    // EnemyAI.AddThreat; drained (each mob told to flip this player's entry to Dead/Zoned) at the two real
+    // departure points below. Server-only, never synced. Disconnect needs no entry here — Mirror destroys
+    // the character on disconnect, and every read of a threat entry's identity is already null-safe against
+    // that, so nothing needs to proactively push a status change for it.
+    readonly System.Collections.Generic.HashSet<EnemyAI> _threateningMobs = new();
+
     Vector2 _moveInput;
     bool _sprint;
     bool _jumpQueued;
     bool _isLooking; // true while RMB held
-    bool _rmbIsLoot; // RMB press was consumed by loot — suppress look mode for that press
+    bool _rmbIsLoot; // RMB press was consumed by loot or consider (5.4) — suppress look mode for that press
 
     // ── 4.2 — client-side prediction + reconciliation ──────────────────────────
     [Header("Prediction")]
@@ -76,7 +83,11 @@ public class NetworkedPlayer : NetworkBehaviour
     // Readable by server-side components (e.g. PlayerAutoAttack)
     public NetworkIdentity ServerTarget => _serverTarget;
 
-    // Client-side access for HotbarUI to pass target into CmdCastAbility
+    // Client-side access for PlayerConsider to pass a raycast/click target into CmdConsider. Ability
+    // casts deliberately do NOT use this (see CmdCastAbility) — F-key group-targeting (5.3) only ever
+    // updates ServerTarget, not this client-side Targetable-based property, so a Cleric targeting a
+    // groupmate via F2 could never heal them if casting still trusted this instead of the server's own
+    // authoritative target.
     public NetworkIdentity CurrentTargetIdentity =>
         _currentTarget != null ? _currentTarget.GetComponentInParent<NetworkIdentity>() : null;
 
@@ -246,6 +257,18 @@ public class NetworkedPlayer : NetworkBehaviour
                         _rmbIsLoot = true;
                         LootUI.Open(hitPlayerCorpse);
                     }
+                    else
+                    {
+                        // 5.4 (AG1) — right-click a live (non-corpse) target considers it. Purely
+                        // additive: RMB on a live mob did nothing before this.
+                        var hitTargetable = rmbHit.collider.GetComponentInParent<Targetable>();
+                        var considerNi = hitTargetable != null ? hitTargetable.GetComponentInParent<NetworkIdentity>() : null;
+                        if (considerNi != null)
+                        {
+                            _rmbIsLoot = true; // reuse the same look-mode suppression flag
+                            GetComponent<PlayerConsider>()?.CmdConsider(considerNi);
+                        }
+                    }
                 }
             }
         }
@@ -303,11 +326,28 @@ public class NetworkedPlayer : NetworkBehaviour
             ? info.collider.GetComponentInParent<Targetable>()
             : null;
 
+        ApplyTarget(hit);
+    }
+
+    /// <summary>5.4 follow-up — players now carry Targetable too (a Cleric needs to be able to select a
+    /// groupmate to heal them), so F-key group-targeting (PartyFrameUI) can route through this exact same
+    /// path — highlight, TargetFrame, server sync — instead of a separate, narrower mechanism.</summary>
+    public void SetTargetByIdentity(NetworkIdentity target)
+        => ApplyTarget(target != null ? target.GetComponent<Targetable>() : null);
+
+    void ApplyTarget(Targetable hit)
+    {
         if (hit == _currentTarget) return; // no change
 
         _currentTarget?.SetHighlight(false);
         _currentTarget = hit;
-        _currentTarget?.SetHighlight(true);
+        if (_currentTarget != null)
+        {
+            // Players are never "hostile" — no PvP exists — so they get a distinct friendly highlight
+            // instead of the same red used for enemies/NPCs.
+            bool hostile = _currentTarget.GetComponentInParent<NetworkedPlayer>() == null;
+            _currentTarget.SetHighlight(true, hostile);
+        }
 
         OnTargetChanged?.Invoke(_currentTarget);
 
@@ -546,6 +586,23 @@ public class NetworkedPlayer : NetworkBehaviour
     [Command]
     public void CmdSetTarget(NetworkIdentity target) => _serverTarget = target;
 
+    // ── Threat reverse-index (5.4, AG4) ─────────────────────────────────────────
+
+    [Server] public void RegisterThreateningMob(EnemyAI mob)   => _threateningMobs.Add(mob);
+    [Server] public void UnregisterThreateningMob(EnemyAI mob) => _threateningMobs.Remove(mob);
+
+    /// <summary>Tell every mob that currently has this player threat-listed to flip their entry's status,
+    /// then forget them — the reverse-index's only job is finding who to notify at the moment of
+    /// departure. Null-checks each mob (Unity's overridden equality) since a mob could itself have been
+    /// destroyed since registering without unregistering (harmless either way, just a defensive guard).</summary>
+    [Server]
+    void MarkDepartedFromThreatLists(EnemyAI.ThreatStatus status)
+    {
+        foreach (var mob in _threateningMobs)
+            if (mob != null) mob.MarkThreatStatus(netIdentity, status);
+        _threateningMobs.Clear();
+    }
+
     // ── Death handling ────────────────────────────────────────────────────────
 
     [Server]
@@ -554,6 +611,11 @@ public class NetworkedPlayer : NetworkBehaviour
         var health = GetComponent<Health>();
         if (health.IsImmune) return;
         health.SetImmunity(10f);
+
+        // 5.4 (AG4) — the character survives (respawns below), so unlike a destroyed-on-disconnect
+        // identity this needs an explicit push: tell every mob that had this player threat-listed to stop
+        // treating them as a live threat, while preserving their damage for 5.3's kill-credit purposes.
+        MarkDepartedFromThreatLists(EnemyAI.ThreatStatus.Dead);
 
         var inv = GetComponent<PlayerInventory>();
         var exp = GetComponent<PlayerExperience>();
@@ -641,7 +703,11 @@ public class NetworkedPlayer : NetworkBehaviour
     [Server]
     public void SetZone(string zoneId)
     {
-        if (!string.IsNullOrEmpty(zoneId)) _zoneId = zoneId;
+        if (string.IsNullOrEmpty(zoneId) || zoneId == _zoneId) return; // no real transition
+        // 5.4 (AG4) — same reasoning as HandlePlayerDeath: the identity survives a zone move, so mobs that
+        // had this player threat-listed need an explicit push, not just a reactive null-check.
+        MarkDepartedFromThreatLists(EnemyAI.ThreatStatus.Zoned);
+        _zoneId = zoneId;
     }
 
     /// <summary>Server-authoritative teleport used by zone transitions, respawn, and character-select
@@ -876,9 +942,14 @@ public class NetworkedPlayer : NetworkBehaviour
 
     // ── Ability commands ──────────────────────────────────────────────────────
 
+    // No client-supplied target parameter, deliberately — casting reads the server's own
+    // authoritative ServerTarget (set by CmdSetTarget, from either click-targeting or F-key group-
+    // targeting) instead of trusting whatever NetworkIdentity a client claims. Also what makes F-key
+    // group-targeting actually usable for heals/buffs (a groupmate isn't Targetable, so the client-side
+    // CurrentTargetIdentity used elsewhere can never resolve to one).
     [Command]
-    public void CmdCastAbility(int hotbarSlot, NetworkIdentity target)
-        => GetComponent<PlayerAbilities>().TryCast(hotbarSlot, target);
+    public void CmdCastAbility(int hotbarSlot)
+        => GetComponent<PlayerAbilities>().TryCast(hotbarSlot, _serverTarget);
 
     [Command]
     public void CmdSetHotbarSlot(int slot, string abilityId)

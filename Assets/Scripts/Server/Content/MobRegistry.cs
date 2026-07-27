@@ -76,6 +76,10 @@ public static class MobRegistry
         def.avoidanceAgility   = s.AvoidanceAgility;
         def.avoidanceDexterity = s.AvoidanceDexterity;
 
+        // 5.4 (AG3) — social aggro.
+        def.socialAggroEnabled = s.SocialAggroEnabled;
+        def.socialAggroRadius  = s.SocialAggroRadius;
+
         // M2.7.1: faction hits on kill — resolve each faction by id (factions load before mobs).
         def.factionHits = new List<MobDefinition.FactionHit>();
         if (s.FactionHits != null)

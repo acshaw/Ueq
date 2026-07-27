@@ -55,6 +55,12 @@ public class MobDefinition : ScriptableObject
     public float perceptionRadius = 20f;
     public int   baseAggroThreat  = 1;
 
+    // 5.4 (AG3) — social aggro: opt-in per mob (default false — ships with zero behavior change to any
+    // existing mob). When enabled, entering Combat pulls in nearby same-faction-or-allied mobs within
+    // socialAggroRadius, skipping their own perception check. Radius only matters when enabled.
+    public bool  socialAggroEnabled = false;
+    public float socialAggroRadius  = 20f;
+
     [Header("Faction")]
     // M2.5: DB mobs reference a faction by id (resolved via FactionRegistry once factions land at 2.6);
     // the SO ref is set at runtime when resolvable. Until then `faction` stays null (no faction behavior).

@@ -9,9 +9,10 @@ public class PlayerFrame : MonoBehaviour
     [SerializeField] TMP_Text healthText;
     [SerializeField] Image    combatBorder; // red rim, pulses while in combat (1.6.1)
 
-    Health      _health;
-    CombatState _combat;
-    bool        _inCombat;
+    Health          _health;
+    CombatState     _combat;
+    bool            _inCombat;
+    NetworkedPlayer _player;
 
     // Bind via the central LocalPlayer service (1.7) instead of polling FindObjectsByType.
     void OnEnable()
@@ -33,6 +34,7 @@ public class PlayerFrame : MonoBehaviour
 
     void OnLocalSpawned(NetworkedPlayer p)
     {
+        _player = p;
         _health = p.GetComponent<Health>();
         var np = p.GetComponent<Nameplate>();
         nameLabel.text = np?.Label;
@@ -57,6 +59,7 @@ public class PlayerFrame : MonoBehaviour
         if (_combat != null) _combat.OnCombatChanged -= OnCombatChanged;
         _health = null;
         _combat = null;
+        _player = null;
         OnCombatChanged(false);
     }
 
@@ -73,6 +76,17 @@ public class PlayerFrame : MonoBehaviour
         // client/server pair — root mechanism not fully pinned down), bind as soon as a local
         // player exists instead of staying unbound for the rest of the session.
         if (_health == null && LocalPlayer.Current != null) OnLocalSpawned(LocalPlayer.Current);
+
+        // The character name arrives via a SyncVar shortly after spawn, not synchronously with it — the
+        // one-shot read in OnLocalSpawned can race ahead of it over real network latency (MPPM/dedicated
+        // server, not same-process Host), permanently sticking on the "Player" fallback. Keep this in sync
+        // with the live value instead of caching a possibly-stale/blank read once.
+        if (_player != null)
+        {
+            var np = _player.GetComponent<Nameplate>();
+            if (np != null && !string.IsNullOrEmpty(np.Label) && nameLabel.text != np.Label)
+                nameLabel.text = np.Label;
+        }
 
         if (_inCombat && combatBorder != null)
             SetBorderAlpha(0.35f + 0.45f * Mathf.Abs(Mathf.Sin(Time.time * 4f)));

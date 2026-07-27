@@ -191,6 +191,10 @@ GameObject:
   - component: {fileID: 195297009008590989}
   - component: {fileID: 3924168027244488984}
   - component: {fileID: 4682708417519488209}
+  - component: {fileID: 183011473615941900}
+  - component: {fileID: 4647708242301644972}
+  - component: {fileID: 7814102929349921299}
+  - component: {fileID: 3376023059450819577}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -628,3 +632,63 @@ MonoBehaviour:
   _capBase: 5
   _capPerLevel: 5
   _riseChance: 0.08
+--- !u!114 &183011473615941900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8017854748638574047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a23f92d9c8cc9844b55a68bfb270298, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerParty
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &4647708242301644972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8017854748638574047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b27ff5aaf58df42b800954ea3bf493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerConsider
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &7814102929349921299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8017854748638574047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa302c0c8e28e864aa755968ec87f04a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Nameplate
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  heightOffset: 2.2
+  fontSize: 3
+  labelColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &3376023059450819577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8017854748638574047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 566f5bc12c9be2748936673e6cdb9e92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Targetable

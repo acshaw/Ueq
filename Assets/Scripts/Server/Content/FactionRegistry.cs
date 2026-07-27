@@ -32,7 +32,7 @@ public static class FactionRegistry
         Thresholds.name = "DbThresholds";
         Thresholds.Thresholds = (content.Thresholds ?? new List<FactionThresholdSnapshot>())
             .OrderBy(t => t.SortOrder)
-            .Select(t => new FactionThreshold { Name = t.Name, MinScore = t.MinScore })
+            .Select(t => new FactionThreshold { Name = t.Name, MinScore = t.MinScore, ConsiderText = t.ConsiderText })
             .ToList();
 
         // 2) Faction instances (empty relation lists; FactionId is the score/lookup key per DF2).

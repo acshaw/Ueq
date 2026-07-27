@@ -266,21 +266,38 @@ public static class DatabaseSeeder
     // ── Factions (M2.6) — migrate the existing SO faction assets + shared threshold ladder ──
     static void SeedFactions(NpgsqlConnection conn)
     {
-        // Shared named-threshold ladder (from DefaultThresholds.asset).
-        var thresholds = new (string name, int min, int order)[]
+        // Shared named-threshold ladder (from DefaultThresholds.asset). considerText = the 5.4 (AG1)
+        // "consider" message, composed client-facing as "{target} {considerText}." — fully re-editable
+        // per-faction afterward in the Faction Editor like every other seeded default here.
+        var thresholds = new (string name, int min, int order, string considerText)[]
         {
-            ("KOS", -10000, 0), ("Threatening", -750, 1), ("Dubious", -500, 2),
-            ("Apprehensive", -100, 3), ("Indifferent", 0, 4), ("Amiable", 100, 5),
-            ("Kindly", 500, 6), ("Warmly", 750, 7), ("Ally", 1100, 8),
+            ("KOS", -10000, 0, "would attack you on sight"),
+            ("Threatening", -750, 1, "glares at you with naked hostility"),
+            ("Dubious", -500, 2, "eyes you with deep suspicion"),
+            ("Apprehensive", -100, 3, "watches you warily"),
+            ("Indifferent", 0, 4, "regards you indifferently"),
+            ("Amiable", 100, 5, "looks upon you with mild favor"),
+            ("Kindly", 500, 6, "smiles kindly at you"),
+            ("Warmly", 750, 7, "greets you warmly"),
+            ("Ally", 1100, 8, "looks upon you as a true and trusted ally"),
         };
-        foreach (var (name, min, order) in thresholds)
+        // ON CONFLICT DO UPDATE (backfill-if-blank), not DO NOTHING: a plain DO NOTHING would never
+        // populate consider_text on a threshold row that already existed before 5.4 (i.e. any dev/prod
+        // database seeded before this session) — the row "conflicts" on name and the whole insert, new
+        // column included, is skipped. Only touches consider_text, and only when still blank, so a future
+        // web-authored edit is never clobbered (same "web edits are never overwritten" rule this file's
+        // header comment states for name/min_score elsewhere).
+        foreach (var (name, min, order, considerText) in thresholds)
         {
             using var cmd = new NpgsqlCommand(
-                "INSERT INTO faction_thresholds (name, min_score, sort_order) VALUES (@n, @m, @o) " +
-                "ON CONFLICT (name) DO NOTHING", conn);
+                "INSERT INTO faction_thresholds (name, min_score, sort_order, consider_text) " +
+                "VALUES (@n, @m, @o, @c) " +
+                "ON CONFLICT (name) DO UPDATE SET consider_text = @c " +
+                "WHERE faction_thresholds.consider_text = ''", conn);
             cmd.Parameters.AddWithValue("n", name);
             cmd.Parameters.AddWithValue("m", min);
             cmd.Parameters.AddWithValue("o", order);
+            cmd.Parameters.AddWithValue("c", considerText);
             cmd.ExecuteNonQuery();
         }
 
@@ -526,13 +543,26 @@ public static class DatabaseSeeder
             SeedAbilityTagRef(conn, "Taunt", "martialability", 0);
             SeedAbilityCooldownLink(conn, "Taunt", "martialability", 20f, 0);
         }
+        // 5.4 (AG5) — Taunt originally shipped with zero effects (a real hotbar slot that mechanically did
+        // nothing). Backfilled OUTSIDE the header-newly-created gate above, since Taunt already exists in
+        // any database seeded before this session — ability_effects has no natural uniqueness constraint to
+        // lean an ON CONFLICT clause on, so this is guarded by its own explicit existence check instead.
+        if (!SeedAbilityEffectExists(conn, "Taunt", "threat"))
+            SeedAbilityEffect(conn, "Taunt", "threat", 50, (int)ScalingStatType.None, 0f, 0);
 
         if (SeedAbility(conn, "fire_bolt", "Fire Bolt", "A bolt of fire that scorches a single enemy.",
                 targetingType: 1, range: 20, manaCost: 10, animTrigger: "Cast"))
             SeedAbilityEffect(conn, "fire_bolt", "damage", 12, (int)ScalingStatType.Int, 0.5f, 0);
 
-        if (SeedAbility(conn, "minor_heal", "Minor Heal", "Channels a mending light, restoring your own health.",
-                targetingType: 0, range: 0, manaCost: 10, animTrigger: "Cast"))
+        // 5.4 follow-up: SingleTarget (was Self) so it can heal a targeted group member, not just yourself
+        // — self-heal now goes through F1 (target self) like everything else instead of being implicit.
+        // Fresh-install default only: an existing "minor_heal" row from before this change needs a one-
+        // time edit via the web Ability Editor (Targeting → SingleTarget, Range → 20) — SeedAbility's
+        // ON CONFLICT DO NOTHING never touches an existing header row, and unlike the consider-text/Taunt
+        // backfills this is a genuine content change to something already fully editable there, not a
+        // "born with missing data" gap worth a seeder-side special case.
+        if (SeedAbility(conn, "minor_heal", "Minor Heal", "Channels a mending light, restoring health.",
+                targetingType: 1, range: 20, manaCost: 10, animTrigger: "Cast"))
             SeedAbilityEffect(conn, "minor_heal", "heal", 20, (int)ScalingStatType.Wis, 0.5f, 0);
 
         Debug.Log("[DB] Seed: abilities ready (kick, Taunt, fire_bolt, minor_heal).");
@@ -584,6 +614,18 @@ public static class DatabaseSeeder
         cmd.Parameters.AddWithValue("d", duration);
         cmd.Parameters.AddWithValue("o", order);
         cmd.ExecuteNonQuery();
+    }
+
+    // 5.4 (AG5) — existence check backing the Taunt effect backfill above (ability_effects has no unique
+    // constraint on (ability_id, effect_type) to lean an ON CONFLICT clause on).
+    static bool SeedAbilityEffectExists(NpgsqlConnection conn, string abilityId, string effectType)
+    {
+        using var cmd = new NpgsqlCommand(
+            "SELECT 1 FROM ability_effects WHERE ability_id = @a AND effect_type = @t LIMIT 1", conn);
+        cmd.Parameters.AddWithValue("a", abilityId);
+        cmd.Parameters.AddWithValue("t", effectType);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read();
     }
 
     static void SeedAbilityEffect(NpgsqlConnection conn, string abilityId, string effectType,

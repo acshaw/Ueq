@@ -87,6 +87,8 @@ public class MobsController : ControllerBase
         m.AttackIsParryable = input.AttackIsParryable;
         m.AvoidanceAgility = input.AvoidanceAgility;
         m.AvoidanceDexterity = input.AvoidanceDexterity;
+        m.SocialAggroEnabled = input.SocialAggroEnabled;
+        m.SocialAggroRadius = input.SocialAggroRadius;
         Normalize(m);
         m.UpdatedAt = DateTime.UtcNow;
 

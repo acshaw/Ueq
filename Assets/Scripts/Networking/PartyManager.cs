@@ -23,7 +23,7 @@ public class PartyManager : MonoBehaviour
         public readonly List<NetworkIdentity> Members = new();
     }
 
-    class Invite
+    class PendingInvite
     {
         public NetworkIdentity Inviter;
         public float ExpiresAt;
@@ -32,7 +32,7 @@ public class PartyManager : MonoBehaviour
     uint _nextPartyId = 1;
     readonly Dictionary<uint, Party> _parties = new();
     readonly Dictionary<NetworkIdentity, uint> _partyOf = new();          // member -> party id
-    readonly Dictionary<NetworkIdentity, Invite> _invites = new();        // invited player -> pending invite
+    readonly Dictionary<NetworkIdentity, PendingInvite> _invites = new(); // invited player -> pending invite
     readonly List<NetworkIdentity> _expiredScratch = new();               // Update() scratch, no per-tick alloc
 
     // ── Lifecycle (called by GameNetworkManager) ─────────────────────────────────
@@ -90,7 +90,7 @@ public class PartyManager : MonoBehaviour
         if (targetParty != null && targetParty.InParty)
         { Msg(inviter, $"{targetName} is already in a group."); return; }
 
-        _invites[target] = new Invite { Inviter = inviter, ExpiresAt = Time.time + InviteTimeoutSeconds };
+        _invites[target] = new PendingInvite { Inviter = inviter, ExpiresAt = Time.time + InviteTimeoutSeconds };
 
         Msg(inviter, $"You invite {targetName} to your group.");
         Msg(target, $"{inviter.name} invited you to a group. Type /accept to join.");

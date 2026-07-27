@@ -38,8 +38,18 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     NpcEventDispatcher   _dispatcher;
     INpcMovementBehavior _movementBehavior;
 
-    readonly Dictionary<NetworkIdentity, int> _threatList = new();
-    readonly List<NetworkIdentity>            _zonedOut   = new(); // WR7 scratch — reused each prune, no alloc
+    // 5.4 (AG4) — a threat entry tracks damage AND status separately: Active entries are live combat
+    // threats (drive retargeting); Dead/Zoned entries are departed players whose damage still counts
+    // toward 5.3's kill-credit resolution, but who are never re-targeted and never keep the mob engaged.
+    public enum ThreatStatus { Active, Dead, Zoned }
+
+    class ThreatEntry
+    {
+        public int Damage;
+        public ThreatStatus Status = ThreatStatus.Active;
+    }
+
+    readonly Dictionary<NetworkIdentity, ThreatEntry> _threatList = new();
 
     void Awake()
     {
@@ -65,8 +75,6 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     void Update()
     {
         if (!isServer || _agent == null || !_agent.enabled) return;
-
-        PruneZonedOutThreats(); // WR7 — drop targets that changed zone (scene)
 
         if (_state == State.Combat && _currentTarget != null)
         {
@@ -111,16 +119,43 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         if (_state == State.Return) { Debug.Log($"[EnemyAI] {name} AddThreat blocked — State.Return"); return; }
         if (player == null) return;
 
-        if (!_threatList.ContainsKey(player))
-            SubscribeToPlayerDeath(player);
-
-        _threatList[player] = _threatList.GetValueOrDefault(player) + amount;
+        if (_threatList.TryGetValue(player, out var entry))
+        {
+            entry.Damage += amount; // status stays whatever it was (realistically always Active — a
+                                     // dead/zoned identity can't act, so this path won't re-fire for them)
+        }
+        else
+        {
+            entry = new ThreatEntry { Damage = amount, Status = ThreatStatus.Active };
+            _threatList[player] = entry;
+            // 5.4 (AG4) — reverse-index registration, replacing the old per-mob OnDied subscription: lets
+            // the player proactively tell every mob that has them threat-listed when they depart (death/
+            // zone), instead of each mob independently subscribing to that player's own death event.
+            player.GetComponent<NetworkedPlayer>()?.RegisterThreateningMob(this);
+        }
 
         var top = GetTopThreat();
         if (top != null && top != _currentTarget)
             SwitchTarget(top);
         else if (_currentTarget == null && top != null)
             SwitchTarget(top);
+    }
+
+    /// <summary>5.4 (AG4) — called by a departing player (NetworkedPlayer) on every mob that has them
+    /// threat-listed. Flips status rather than removing the entry, so 5.3's ResolveCreditedGroup can still
+    /// credit their damage at eventual kill time. If they were the current target and no Active threat
+    /// remains, reassess/return exactly like the old removal path did.</summary>
+    [Server]
+    public void MarkThreatStatus(NetworkIdentity player, ThreatStatus status)
+    {
+        if (player == null || !_threatList.TryGetValue(player, out var entry)) return;
+        entry.Status = status;
+
+        if (player != _currentTarget) return;
+
+        var next = GetTopThreat();
+        if (next != null) SwitchTarget(next);
+        else EnterReturn();
     }
 
     // ── IOnAttacked — damage dealt becomes threat ─────────────────────────────
@@ -161,6 +196,7 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
             {
                 _state = State.Combat;
                 _agent.ResetPath();
+                BroadcastSocialAggro(); // 5.4 (AG3) — edge-triggered, once per Chase→Combat transition
                 StartCoroutine(CombatLoop());
                 yield break;
             }
@@ -244,6 +280,14 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
                 _state = State.Idle;
                 _dispatcher.ResetPerception();
                 _movementBehavior?.Resume();
+
+                // 5.4 (AG4) — fully disengaged: wipe the whole list (including Dead/Zoned entries kept
+                // around for kill-credit purposes) so a completely unrelated future encounter starts
+                // genuinely fresh instead of inheriting stale history.
+                foreach (var ni in _threatList.Keys)
+                    ni?.GetComponent<NetworkedPlayer>()?.UnregisterThreateningMob(this);
+                _threatList.Clear();
+
                 yield break;
             }
             yield return new WaitForSeconds(0.15f);
@@ -282,62 +326,51 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         StartCoroutine(ReturnLoop(anchor));
     }
 
-    // WR7: a player who zones is moved to another scene (~5000u away) without being destroyed, so _currentTarget
-    // stays non-null and the mob would otherwise chase toward the far-off position forever. Treat "target in a
-    // different scene" as target-loss. Prune all zoned-out entries first, then reassess ONCE via the existing
-    // threat-list logic (next same-zone threat, else return) — the same coroutine-safe path player-death uses,
-    // called from Update (outside the movement coroutines). No fresh perception scan for a new bystander (that's
-    // 3.4). Runs while the mob is alive + active (Update's guards), so it's cheap and idle mobs skip it (no threat).
-    void PruneZonedOutThreats()
-    {
-        if (_threatList.Count == 0) return;
-
-        _zonedOut.Clear();
-        foreach (var ni in _threatList.Keys)
-            if (ni == null || ni.gameObject.scene != gameObject.scene)
-                _zonedOut.Add(ni);
-        if (_zonedOut.Count == 0) return;
-
-        bool droppedCurrent = false;
-        foreach (var ni in _zonedOut)
-        {
-            _threatList.Remove(ni);
-            if (_currentTarget != null && ni == _currentTarget) droppedCurrent = true;
-        }
-
-        // Only reassess if the mob was actively engaged with a target that just left the zone. If it was already
-        // returning/idle (_currentTarget null), pruning stale entries is enough — don't spuriously re-engage.
-        if (!droppedCurrent) return;
-
-        var next = GetTopThreat();
-        if (next != null) SwitchTarget(next);
-        else              EnterReturn();
-    }
-
+    // 5.4 (AG4) — only Active entries are live combat threats; Dead/Zoned entries are kept (for 5.3's
+    // kill-credit purposes, see ResolveCreditedGroup) but never picked here. A departed player's identity
+    // going null (e.g. disconnect, which destroys the character) is also naturally skipped — no explicit
+    // handling needed for that case, Unity's overridden null-equality on a destroyed Object already covers
+    // it, same as the coroutines' own `_currentTarget == null` checks.
     NetworkIdentity GetTopThreat()
     {
         NetworkIdentity top      = null;
         int             topValue = int.MinValue;
 
-        foreach (var (ni, threat) in _threatList)
+        foreach (var (ni, entry) in _threatList)
         {
             if (ni == null) continue;
-            if (ni.GetComponent<Health>()?.IsDead == true) continue;
-            if (threat > topValue) { topValue = threat; top = ni; }
+            if (entry.Status != ThreatStatus.Active) continue;
+            if (entry.Damage > topValue) { topValue = entry.Damage; top = ni; }
         }
 
         return top;
     }
 
-    void RemoveFromThreatList(NetworkIdentity player)
+    // 5.4 (AG3) — social aggro: pulls in nearby same-faction-or-allied mobs when this mob enters Combat,
+    // if socialAggroEnabled (opt-in per mob, default off). Each eligible ally adds threat against the SAME
+    // target directly (skipping its own independent perception check), per the design doc's spec.
+    [Server]
+    void BroadcastSocialAggro()
     {
-        _threatList.Remove(player);
+        var def = GetComponent<MobApplicator>()?.Definition;
+        if (def == null || !def.socialAggroEnabled || _currentTarget == null) return;
 
-        if (player != _currentTarget) return;
+        var myFaction = GetComponent<NpcFaction>()?.Faction;
+        if (myFaction == null) return;
 
-        var next = GetTopThreat();
-        if (next != null) SwitchTarget(next);
-        else EnterReturn();
+        var notified = new HashSet<EnemyAI>();
+        var hits = Physics.OverlapSphere(transform.position, def.socialAggroRadius);
+        foreach (var hit in hits)
+        {
+            var otherAI = hit.GetComponentInParent<EnemyAI>();
+            if (otherAI == null || otherAI == this || !notified.Add(otherAI)) continue;
+
+            var theirFaction = otherAI.GetComponent<NpcFaction>()?.Faction;
+            if (theirFaction == null) continue;
+            if (theirFaction != myFaction && !myFaction.IsAllyWith(theirFaction)) continue;
+
+            otherAI.AddThreat(_currentTarget, otherAI.BaseAggroThreat);
+        }
     }
 
     // ── 5.3 (GP5) — multi-group kill-credit resolution ────────────────────────
@@ -353,12 +386,15 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         var groupDamage = new Dictionary<uint, int>();
         var soloDamage  = new Dictionary<NetworkIdentity, int>();
 
-        foreach (var (ni, dmg) in _threatList)
+        // 5.4 (AG4): sums Damage across EVERY entry regardless of status — a dead/zoned group member's
+        // contribution still counts toward their group winning the majority-damage contest; their personal
+        // XP share is still separately gated by 5.3's own same-zone/in-range filter (GP4).
+        foreach (var (ni, entry) in _threatList)
         {
             if (ni == null) continue;
             uint partyId = ni.GetComponent<PlayerParty>()?.PartyId ?? 0;
-            if (partyId != 0) groupDamage[partyId] = groupDamage.GetValueOrDefault(partyId) + dmg;
-            else               soloDamage[ni]      = soloDamage.GetValueOrDefault(ni) + dmg;
+            if (partyId != 0) groupDamage[partyId] = groupDamage.GetValueOrDefault(partyId) + entry.Damage;
+            else               soloDamage[ni]      = soloDamage.GetValueOrDefault(ni) + entry.Damage;
         }
 
         uint            bestPartyId = 0;
@@ -410,19 +446,4 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         }
         _agent.SetDestination(destination);
     }
-
-    void SubscribeToPlayerDeath(NetworkIdentity player)
-    {
-        var h = player.GetComponent<Health>();
-        if (h == null) return;
-
-        System.Action<NetworkIdentity> handler = null;
-        handler = _ =>
-        {
-            h.OnDied -= handler;
-            RemoveFromThreatList(player);
-        };
-        h.OnDied += handler;
-    }
-
 }

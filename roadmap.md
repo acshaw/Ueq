@@ -254,6 +254,11 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 > also flagged a standing preference for **tooling that speeds up content creation without requiring
 > Unity-editor presence** (CLI/script-driven where possible) — worth factoring into how new tools get built
 > going forward, not just what gets built.
+> Cleanup (revised 2026-07-26): the old **5.6 (win/lose conditions) and 5.7 (balance pass) were removed
+> outright** — both were prematurely drafted reactive placeholders from early planning, not real scoped
+> milestones, and neither had a devplan or any implementation. Numbering intentionally left non-contiguous
+> (5.5 → 5.8) rather than renumbering everything after — 5.10/5.11 already have real devplans and extensive
+> history under those exact numbers, and renumbering is not worth the churn for a cosmetic gap.
 
 - [x] **5.1 — Combat & threat overhaul.** ✅ All four pipeline steps (5.1.1–5.1.4) verified in-editor 2026-07-15
   — tier-differentiated hits, avoidance, and mob auto-attack all confirmed working through the shared
@@ -304,10 +309,10 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   `/invite`+`/accept`, managed with
   `/kick`/`/leave`/`/disband`/`/makeleader`; group health frames (same-zone live, greyed placeholder
   elsewhere — Mirror's zone-scoped observation means cross-zone frames aren't free, unlike chat) plus F1–F6
-  quick group-targeting (F1 always = self, locally reordered per client — **scoped narrower during
-  implementation**: sets the server-side combat target directly rather than routing through the click-to-
-  target `Targetable` system, since players don't carry `Targetable` in this codebase and its highlight tint
-  means "hostile" — a clean follow-up if a future feature needs full click-parity); a group chat channel (`/g`,
+  quick group-targeting (F1 always = self, locally reordered per client — **initially scoped narrower**
+  during implementation, since players didn't carry `Targetable` at the time; **upgraded to full click-parity
+  during 5.4's verification** once that follow-up landed — see 5.4's entry, F-keys now route through the same
+  highlight/`TargetFrame`/server-sync path a mouse click uses); a group chat channel (`/g`,
   zone-independent like all chat); friendly-fire blocked via a two-layer guard (`Health.TakeDamage` backstop
   + a proactive refusal message at the attack call site); and — the one substantially reworked decision during
   review — **kill credit (XP split + exclusive loot rights) resolved by majority damage dealt**, grouping
@@ -315,10 +320,34 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   as its own party of one) so contested/multi-group pulls resolve sensibly, tie-broken by the killing blow's
   group. This is the **first** ownership restriction on mob-corpse looting — today any player in range can
   loot any mob corpse, no owner check exists. Session-only group state (no persistence/schema change).
-- [ ] **5.4 — Group threat/aggro tuning.**
+- [x] **5.4 — Aggro system.** ✅ Done 2026-07-26 — verified in-editor by the user
+  ([devplan](docs/devplans/5.4-aggro-system.md)). Retitled from "Group threat/aggro tuning" — that framing
+  wrongly presumed a working base threat/aggro system already existed to tune. It doesn't: today's is still
+  the 1:1-damage-mirror placeholder (retired from 3.4, folded into 5.1's scope note but never itself
+  devplanned). Grew substantially during review: a full player-triggered **Consider system** (`C` key or
+  right-click a live target → a per-faction-threshold message, data-driven via a new Faction Editor field, on
+  a dedicated chat channel — supersedes the original "automatic warning ping" idea); **social aggro**
+  (same-faction-or-allied mobs join an in-progress fight within a per-mob, opt-in-toggle, authored radius);
+  a **threat-status model** (`Active`/`Dead`/`Zoned` per entry, not just a removed/present record) replacing
+  three ad-hoc cleanup mechanisms with one reverse-index push from the departing player, deliberately
+  preserving a dead/zoned member's damage for 5.3's kill-credit purposes while still excluding them from live
+  retargeting — the whole list clears only once a mob fully disengages; and a real effect for the
+  previously-no-op **Taunt** ability. Explicitly **not** in scope: NPC-initiated greeting-on-perceive (needs
+  its own anti-spam design), a chase-distance leash (training to zone is intentional, not a bug), true
+  linkdead persistence on disconnect, tank-stance/threat-multiplier balance, continuous threat decay, and any
+  player-facing threat-meter UI — all flagged as separate future items.
+  **In-editor verification surfaced three more real fixes, all landed the same session:** (1) the
+  consider-text seed used `ON CONFLICT DO NOTHING`, so it never backfilled onto already-existing threshold
+  rows — fixed to a backfill-if-blank `DO UPDATE`; (2) a genuinely pre-existing, unrelated bug — `Nameplate`
+  had **never been added to the Player prefab at all** (only `Enemy.prefab` had it), so every player's HP
+  pane and floating name tag has always silently shown nothing/fallen back to "Player"; (3) the resulting
+  "how does a Cleric heal a groupmate" question exposed that players had no way to be targeted at all —
+  added a real `Targetable` follow-up (friendly/green highlight vs. the hostile/red used for mobs, ability
+  casting now reads the server-authoritative target instead of a client-supplied one so F-key group-
+  targeting and click-targeting share one path) plus a necessary companion: broadened the same-party-only
+  friendly-fire guard (GP6) into a blanket **no-PvP rule**, since targeting a player at all was physically
+  impossible before this and nothing had ever exercised player-vs-player damage outside a party.
 - [ ] **5.5 — More abilities per class.** *(Largely folded into 5.1/5.2; keep for the broader spellbook fill-out.)*
-- [ ] **5.6 — Goals / win-lose conditions.**
-- [ ] **5.7 — Balance pass** against real play data.
 - [ ] **5.8 — Character appearance & visible equipment (modular / Sidekick).** *(Future — logged 2026-07-04.)* Target ~**classic-EQ level** of customization: selectable **faces/hair** at character creation, **visible weapons** in hand, and **visible armor** that changes with equipped gear (tier/look swaps, not deep morphs). **Foundation = Synty's Sidekick modular character system** (part-based, one shared skeleton, runtime part-swap) — the pre-made packs used for the 3.1 onboarding vertical (POLYGON Fantasy Characters / PolygonAdventure / Fantasy Rivals) are **single-mesh** and can't swap armor pieces or faces, so players migrate to Sidekick here (those pre-made models stay as **NPCs/mobs**). User already owns **Fantasy Knights – Sidekick**; would expand Sidekick part libraries to cover the races (Human/Dwarf/…) + caster looks (Wizard/Cleric robes). **Weapon-swap is the cheap first slice** (attach a weapon mesh to the hand socket — works on any Synty rig, could land earlier as a small standalone win); armor-piece + face swapping is the modular part. Depends on: 3.1 onboarding done + the equipment system (M2, done) to drive which armor shows.
 
 - [ ] **5.9 — Presentation & economy polish vertical.** *(Added 2026-07-16, user-flagged as "what's needed

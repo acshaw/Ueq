@@ -100,6 +100,12 @@ public class AbilityRegistry : MonoBehaviour
                 fx.scalingFactor = e.ScalingFactor;
                 return fx;
             }
+            case "threat": // 5.4 (AG5) — flat, no scaling
+            {
+                var fx = ScriptableObject.CreateInstance<ThreatEffect>();
+                fx.baseAmount = e.BaseAmount;
+                return fx;
+            }
             default:
                 Debug.LogWarning($"[AbilityRegistry] Unknown effect_type '{e.EffectType}' — skipped.");
                 return null;

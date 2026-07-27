@@ -10,11 +10,12 @@ using UnityEngine.InputSystem;
 /// FROM THIS CLIENT'S OWN POINT OF VIEW — the roster is reordered locally (self first) so "group member 1"
 /// means "me" identically for every client, not a shared/global slot number.
 ///
-/// F-key targeting sets the server-side combat target (NetworkedPlayer.ServerTarget) directly — it
-/// deliberately does NOT route through the click-to-target Targetable/TargetFrame system: players aren't
-/// Targetable objects in this codebase, and that system's highlight tint already means "hostile," so reusing
-/// it for a friendly group member would be actively confusing. Live HP visibility for group members comes
-/// from this panel's own frames instead (GP7), not the TargetFrame.
+/// F-key targeting routes through NetworkedPlayer.SetTargetByIdentity — the same highlight/TargetFrame/
+/// server-sync path a mouse click uses (players gained a Targetable follow-up after 5.3 shipped, precisely
+/// so a Cleric could select a groupmate to heal them; SetTargetByIdentity applies the friendly, non-"hostile"
+/// highlight tint for a player target). Live HP visibility for group members still primarily comes from this
+/// panel's own frames (GP7 — same-zone live, placeholder elsewhere), independent of whichever mob/player the
+/// TargetFrame happens to be showing.
 /// </summary>
 public class PartyFrameUI : MonoBehaviour
 {
@@ -134,7 +135,7 @@ public class PartyFrameUI : MonoBehaviour
             if (!kb[GroupTargetKeys[i]].wasPressedThisFrame) continue;
             if (i >= _localOrder.Count || _localOrder[i] == null) return;
             _selectedIndex = i;
-            _player.CmdSetTarget(_localOrder[i]);
+            _player.SetTargetByIdentity(_localOrder[i]);
             return;
         }
     }
