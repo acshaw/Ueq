@@ -195,7 +195,11 @@
       "Bash(dotnet run *)",
       "Bash(/c/Users/acsha/AppData/Local/Temp/claude/C--Users-acsha-source-Ueq/7d245e5e-51fa-436e-8bc3-8b8944ca4f98/scratchpad/headtest/bin/Release/net10.0/win-x64/publish/headtest.exe *)",
       "Bash(rm -f \"/c/Users/acsha/AppData/Local/UeqGame/launcher-debug.log\")",
-      "Bash(\"/c/Users/acsha/source/Ueq/launcher/Ueq.Launcher/bin/Release/net10.0-windows/win-x64/publish/UeqLauncher.exe\")"
+      "Bash(\"/c/Users/acsha/source/Ueq/launcher/Ueq.Launcher/bin/Release/net10.0-windows/win-x64/publish/UeqLauncher.exe\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@angular/core/package.json'\\).version\\)\")",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(node *)",
+      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='node.exe'\\\\\" | Where-Object { \\\\$_.CommandLine -like '*ng serve*' -or \\\\$_.CommandLine -like '*vite*' } | ForEach-Object { Stop-Process -Id \\\\$_.ProcessId -Force; \\\\\"stopped \\\\$\\(\\\\$_.ProcessId\\)\\\\\" }\" 2>&1)"
     ]
   },
   "hooks": {

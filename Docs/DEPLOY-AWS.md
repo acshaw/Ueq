@@ -454,28 +454,36 @@ automatically the next time it restarts (including via a routine deploy), not ju
 (idempotent, versioned `.sql` files you already committed), just worth knowing it now runs against
 the real production DB too.
 
-### 14c. Build the Linux Dedicated Server locally
+### 14c. Build + package + upload the Linux Dedicated Server
 
-In the Unity Editor: **`Tools/Build/Build Linux Dedicated Server`** — builds to
-`C:\Builds\Ueq\ServerLinux` (binary `Ueq.x86_64` + `Ueq_Data/`). First run installs slower (fresh
-platform switch); confirm `Result: Succeeded` in the Console.
+**Recommended: `deploy\release.ps1`** (added after the 5.3/5.4 session — the old manual version of
+this section sent you to Git Bash just for `tar`, which Windows 10+ actually ships natively in
+PowerShell too, and a raw `& $unityPath ...` call doesn't even wait for Unity to finish since it's a
+GUI-subsystem executable). From PowerShell, with the Unity Editor **closed**:
 
-### 14d. Upload the build to S3
+```powershell
+$env:DEPLOY_BUCKET = 'ueq-deploy-artifacts-068000719896'
+.\deploy\release.ps1
+```
 
-The Linux server isn't built by CI (no Unity in GitHub Actions — DH7), so this step is manual, run
-locally whenever the server code changes.
+This stamps a new build id, builds the Linux Dedicated Server *and* the Windows client together (the
+compatibility-safe default — see §15b for a client-only release), packages both correctly, and
+uploads both to S3 in one pass. Skip straight to §14e once it prints "Upload complete." Pass
+`-SkipBuild` to just re-package/upload an existing `C:\Builds\Ueq` output without invoking Unity.
 
-**Use `tar`, not a Windows zip tool.** PowerShell's `Compress-Archive` can write backslash path
-separators inside the archive, which Linux's `unzip` can't parse for nested folders (`Ueq_Data/`
-specifically — this bit us on the first real deploy). `tar` has no such ambiguity and ships
-natively on both Windows 10+/Git Bash and Linux:
+**Manual fallback** (if the script fails, or to see what it's doing under the hood): in the Unity
+Editor, **`Tools/Build/Build Linux Dedicated Server`** — builds to `C:\Builds\Ueq\ServerLinux`
+(binary `Ueq.x86_64` + `Ueq_Data/`). First run installs slower (fresh platform switch); confirm
+`Result: Succeeded` in the Console. Then, from PowerShell (native `tar.exe`, no Git Bash needed —
+**use `tar`, not `Compress-Archive`**, since PowerShell's zip tool writes backslash path separators
+inside the archive that Linux's `unzip` can't parse for nested folders like `Ueq_Data/`, which bit us
+on the first real deploy):
 
-```bash
-# from Git Bash, so `tar` is guaranteed present
-cd "/c/Builds/Ueq/ServerLinux"
-tar czf ../gameserver.tar.gz .   # tars the folder's *contents*, not the folder itself
-
-aws s3 cp ../gameserver.tar.gz s3://$DEPLOY_BUCKET/gameserver.tar.gz
+```powershell
+cd C:\Builds\Ueq\ServerLinux
+tar czf ..\gameserver.tar.gz .   # tars the folder's *contents*, not the folder itself
+cd ..
+aws s3 cp gameserver.tar.gz s3://$env:DEPLOY_BUCKET/gameserver.tar.gz
 ```
 
 ### 14e. Trigger the deploy
@@ -521,25 +529,32 @@ sudo systemctl restart ueq-gameserver.service
 
 The launcher notices a new client automatically by checking `UeqClient.zip`'s own HTTP
 `ETag`/`Last-Modified` (Caddy's `file_server` sets these for any static file with zero extra
-config) — so a **routine client-only change doesn't need anything special**: just build, zip,
-upload, push.
+config) — so a **routine client-only change doesn't need anything special**.
 
+**Recommended:**
+```powershell
+$env:DEPLOY_BUCKET = 'ueq-deploy-artifacts-068000719896'
+.\deploy\release.ps1 -ClientOnly
+```
+`-ClientOnly` skips the build-id stamp and the server rebuild — **only safe if this change doesn't
+touch anything client/server need to agree on** (a scene/network-protocol change, not a UI tweak;
+that build id is what `AccountAuthenticator` compares at login, letting an old client fail with a
+clear "out of date" message instead of a confusing silent desync). If it *does* touch something
+compatibility-relevant, run `.\deploy\release.ps1` without `-ClientOnly` instead — same script,
+rebuilds and redeploys both client and server together (the established rule from 5.10/6.2), no need
+to separately revisit §14c.
+
+**Manual fallback:**
 ```powershell
 Compress-Archive -Path "C:\Builds\Ueq\Client\*" -DestinationPath "C:\Builds\Ueq\client.zip" -Force
 aws s3 cp "C:\Builds\Ueq\client.zip" "s3://$env:DEPLOY_BUCKET/client.zip"
 ```
-
 (`Compress-Archive` is fine here, unlike the gameserver artifact — this zip is only ever extracted
 by the launcher's own .NET code on a Windows machine, never by Linux `unzip`, so the
 backslash-path-separator issue from 6.2 doesn't apply.)
 
-**Only run `Tools/Build/Stamp New Build Id` first if this release changes something that could
-break client/server *compatibility*** (a scene/network-protocol change, not a UI tweak) — that's
-the separate id `AccountAuthenticator` compares at login, and it's what lets an old client fail
-with a clear "out of date" message instead of a confusing silent desync. If you do stamp, **rebuild
-and redeploy both client and server together** (the established rule from 5.10/6.2) and upload the
-rebuilt Linux server per §14d/e too. Push to trigger the deploy either way — it presigns/redeploys
-whatever changed alongside web/api/gameserver automatically (see `deploy.yml`).
+Push to trigger the deploy either way — it presigns/redeploys whatever changed alongside web/api/
+gameserver automatically (see `deploy.yml`).
 
 ### 15c. One-time: build and hand off the launcher itself
 
