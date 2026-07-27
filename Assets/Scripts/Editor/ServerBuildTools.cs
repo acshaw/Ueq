@@ -190,6 +190,32 @@ public static class ServerBuildTools
                    $"{report.summary.totalErrors} error(s), {report.summary.totalWarnings} warning(s)");
     }
 
+    // ── CLI entry points (batch-mode releases, no Editor interaction) ─────────────────────────
+    // Unity's -executeMethod requires a public static parameterless method — the three build methods
+    // above are private (menu-only), so these are thin public wrappers, not a duplicate implementation.
+    // Invoke from PowerShell (Editor must be closed first — Unity won't batch-build an open project):
+    //   & $unityPath -batchmode -quit -projectPath $projectPath -executeMethod ServerBuildTools.ReleaseAll -logFile $logFile
+    // See deploy/release.ps1, which wraps this plus packaging/upload into one command.
+
+    /// <summary>Full release: stamp + Linux server + Windows client together. Use this whenever the
+    /// change is compatibility-relevant (a new networked component, a changed Command signature, a scene
+    /// change) — anything client and server need to agree on.</summary>
+    [MenuItem("Tools/Build/Release (Stamp + Server + Client)")]
+    public static void ReleaseAll()
+    {
+        StampNewBuildId();
+        BuildLinuxDedicatedServer();
+        BuildStandaloneClient();
+    }
+
+    /// <summary>Client-only release — no stamp, no server rebuild. Only safe for a routine change that
+    /// doesn't touch anything client/server need to agree on (see DEPLOY-AWS.md §15b).</summary>
+    [MenuItem("Tools/Build/Release Client Only (no stamp, no server rebuild)")]
+    public static void ReleaseClientOnly()
+    {
+        BuildStandaloneClient();
+    }
+
     static string[] EnabledScenePaths()
     {
         return EditorBuildSettings.scenes
