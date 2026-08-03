@@ -98,14 +98,20 @@ public class Corpse : NetworkBehaviour, IOnDeath
         return c;
     }
 
+    // Returns the count of items that could NOT be taken (inventory full or an already-held LORE item) so
+    // the caller (NetworkedPlayer.CmdTakeLootAll) can tell the player why the corpse isn't fully empty,
+    // instead of the take silently doing nothing they can see.
     [Server]
-    public void TakeAll(PlayerInventory inv)
+    public int TakeAll(PlayerInventory inv)
     {
+        int blocked = 0;
         for (int i = _loot.Count - 1; i >= 0; i--)
         {
             // 3.2.1: enforce LORE — a dupe of a held LORE item just stays on the corpse.
             if (inv.AddItem(_loot[i].itemId, _loot[i].quantity, enforceLore: true))
                 _loot.RemoveAt(i);
+            else
+                blocked++;
         }
         if (_copper > 0)
         {
@@ -113,6 +119,7 @@ public class Corpse : NetworkBehaviour, IOnDeath
             _copper = 0;
         }
         CheckEmpty();
+        return blocked;
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────

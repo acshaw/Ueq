@@ -27,7 +27,27 @@ public class MobKillReward : NetworkBehaviour, IOnDeath
             ? enemyAI.ResolveCreditedGroup(attacker)
             : new List<NetworkIdentity> { attacker };
 
-        GetComponent<Corpse>()?.SetEligibleLooters(credited);
+        // Root-caused 2026-07-30: a solo player could kill a mob and then be denied looting their own
+        // kill. Cause — ResolveCreditedGroup sums damage across EVERY threat-list entry regardless of
+        // status (5.4/AG4, intentional, so a departed contributor still gets XP credit), but that list is
+        // only ever cleared when a mob fully disengages back to Idle; a mob that's been in ~continuous
+        // combat (common in testing, and plausible in real play too) can carry a stale/unrelated entry
+        // from an earlier, unconnected engagement with higher cumulative damage than the player who just
+        // delivered the actual killing blow. ResolveCreditedGroup's tie-break only favors the killer on an
+        // EXACT damage tie, so that stale entry "wins" majority-damage and the real killer gets excluded
+        // from loot rights entirely. Fix: loot eligibility always includes whoever/whichever party landed
+        // the kill, unioned with the majority-damage credit — the majority contest is meant to settle XP
+        // fairness between live, competing groups, not to lock the actual killer out of their own corpse.
+        // XP credit (below) is untouched — it still follows `credited` exactly as ResolveCreditedGroup
+        // resolved it.
+        var lootEligible = new List<NetworkIdentity>(credited);
+        if (!lootEligible.Contains(attacker)) lootEligible.Add(attacker);
+        var killerParty = attacker.GetComponent<PlayerParty>();
+        if (killerParty != null && killerParty.InParty)
+            foreach (var m in PartyManager.Instance?.MembersOf(killerParty.PartyId) ?? new List<NetworkIdentity>())
+                if (m != null && !lootEligible.Contains(m)) lootEligible.Add(m);
+
+        GetComponent<Corpse>()?.SetEligibleLooters(lootEligible);
 
         if (def.xpReward > 0)
         {

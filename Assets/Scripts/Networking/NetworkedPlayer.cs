@@ -862,11 +862,17 @@ public class NetworkedPlayer : NetworkBehaviour
 
     const float LootRange = 6f;
 
+    // Root-causing a real bug (2026-07-30): Loot All / per-slot Take could silently no-op — the corpse
+    // resolution helpers below returned a bare bool with no record of WHY, so every denial path (corpse
+    // gone, not eligible, out of range) looked identical to the player: nothing happens, no message, the
+    // loot window never closes. Every Cmd below now reports a specific reason instead of failing silently.
+    enum LootDenyReason { None, NotFound, NotEligible, OutOfRange }
+
     [Command]
     public void CmdTakeLootSlot(NetworkIdentity corpseId, int slotIndex)
     {
         var inv = GetComponent<PlayerInventory>();
-        if (TryGetMobCorpse(corpseId, out var mob))
+        if (TryGetMobCorpse(corpseId, out var mob, out var mobReason))
         {
             var slot = mob.PeekSlot(slotIndex);
             if (slot.IsEmpty) return;
@@ -874,13 +880,15 @@ public class NetworkedPlayer : NetworkBehaviour
             else SendSystemMsg(AcquireBlockedMsg(inv, slot.itemId));
             return;
         }
-        if (TryGetPlayerCorpse(corpseId, out var pc))
+        if (TryGetPlayerCorpse(corpseId, out var pc, out var pcReason))
         {
             var slot = pc.PeekSlot(slotIndex);
             if (slot.IsEmpty) return;
             if (inv.AddItem(slot.itemId, slot.quantity, enforceLore: true)) pc.RemoveSlot(slotIndex);
             else SendSystemMsg(AcquireBlockedMsg(inv, slot.itemId));
+            return;
         }
+        ReportLootDenied(corpseId, mobReason, pcReason);
     }
 
     // 3.2.1: the right refusal line for a blocked acquire — LORE dupe vs a plain full inventory.
@@ -895,44 +903,79 @@ public class NetworkedPlayer : NetworkBehaviour
     [Command]
     public void CmdTakeLootCopper(NetworkIdentity corpseId)
     {
-        if (TryGetMobCorpse(corpseId, out var mob))
+        if (TryGetMobCorpse(corpseId, out var mob, out var mobReason))
         {
             int c = mob.TakeCopper();
             if (c > 0) GetComponent<PlayerInventory>().AddCurrency(c);
             return;
         }
-        if (TryGetPlayerCorpse(corpseId, out var pc))
+        if (TryGetPlayerCorpse(corpseId, out var pc, out var pcReason))
         {
             int c = pc.TakeCopper();
             if (c > 0) GetComponent<PlayerInventory>().AddCurrency(c);
+            return;
         }
+        ReportLootDenied(corpseId, mobReason, pcReason);
     }
 
     [Command]
     public void CmdTakeLootAll(NetworkIdentity corpseId)
     {
         var inv = GetComponent<PlayerInventory>();
-        if (TryGetMobCorpse(corpseId, out var mob))  { mob.TakeAll(inv); return; }
-        if (TryGetPlayerCorpse(corpseId, out var pc)) { pc.TakeAll(inv); }
+        if (TryGetMobCorpse(corpseId, out var mob, out var mobReason))
+        {
+            int blocked = mob.TakeAll(inv);
+            if (blocked > 0) SendSystemMsg(BlockedCountMsg(blocked));
+            return;
+        }
+        if (TryGetPlayerCorpse(corpseId, out var pc, out var pcReason))
+        {
+            int blocked = pc.TakeAll(inv);
+            if (blocked > 0) SendSystemMsg(BlockedCountMsg(blocked));
+            return;
+        }
+        ReportLootDenied(corpseId, mobReason, pcReason);
     }
 
-    bool TryGetMobCorpse(NetworkIdentity id, out Corpse corpse)
+    static string BlockedCountMsg(int blocked) => blocked == 1
+        ? "One item could not be taken (inventory full or already held)."
+        : $"{blocked} items could not be taken (inventory full or already held).";
+
+    // Whichever corpse component actually exists on the target is the authoritative reason — a "NotFound"
+    // from the OTHER helper (checking for a component that was never there in the first place) is noise.
+    void ReportLootDenied(NetworkIdentity id, LootDenyReason mobReason, LootDenyReason pcReason)
+    {
+        bool isMob = id != null && id.GetComponent<Corpse>() != null;
+        var reason = isMob ? mobReason : pcReason;
+        string msg = reason switch
+        {
+            LootDenyReason.NotEligible => "You don't have looting rights to that corpse.",
+            LootDenyReason.OutOfRange  => "You are too far away to loot that.",
+            _                          => "That corpse is no longer there.",
+        };
+        Debug.Log($"[Loot] {name} denied looting {(id != null ? id.name : "null")} — reason: {reason} (isMob={isMob})");
+        SendSystemMsg(msg);
+    }
+
+    bool TryGetMobCorpse(NetworkIdentity id, out Corpse corpse, out LootDenyReason reason)
     {
         corpse = id?.GetComponent<Corpse>();
-        if (corpse == null || !corpse.IsActive) { corpse = null; return false; }
+        if (corpse == null || !corpse.IsActive) { corpse = null; reason = LootDenyReason.NotFound; return false; }
         // 5.3 (GP5) — exclusive to the group that dealt the majority of this mob's damage (snapshotted at
         // death); Corpse.CanLoot falls back to "anyone" if that resolution never ran (e.g. no MobKillReward).
-        if (!corpse.CanLoot(netIdentity)) { corpse = null; return false; }
-        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; return false; }
+        if (!corpse.CanLoot(netIdentity)) { corpse = null; reason = LootDenyReason.NotEligible; return false; }
+        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; reason = LootDenyReason.OutOfRange; return false; }
+        reason = LootDenyReason.None;
         return true;
     }
 
-    bool TryGetPlayerCorpse(NetworkIdentity id, out PlayerCorpse corpse)
+    bool TryGetPlayerCorpse(NetworkIdentity id, out PlayerCorpse corpse, out LootDenyReason reason)
     {
         corpse = id?.GetComponent<PlayerCorpse>();
-        if (corpse == null || !corpse.IsActive)      { corpse = null; return false; }
-        if (corpse.Owner != netIdentity)              { corpse = null; return false; }
-        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; return false; }
+        if (corpse == null || !corpse.IsActive)      { corpse = null; reason = LootDenyReason.NotFound; return false; }
+        if (corpse.Owner != netIdentity)              { corpse = null; reason = LootDenyReason.NotEligible; return false; }
+        if (Vector3.Distance(transform.position, id.transform.position) > LootRange) { corpse = null; reason = LootDenyReason.OutOfRange; return false; }
+        reason = LootDenyReason.None;
         return true;
     }
 

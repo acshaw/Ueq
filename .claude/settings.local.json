@@ -199,7 +199,9 @@
       "Bash(node -e \"console.log\\(require\\('./node_modules/@angular/core/package.json'\\).version\\)\")",
       "PowerShell(Get-NetTCPConnection *)",
       "Bash(node *)",
-      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='node.exe'\\\\\" | Where-Object { \\\\$_.CommandLine -like '*ng serve*' -or \\\\$_.CommandLine -like '*vite*' } | ForEach-Object { Stop-Process -Id \\\\$_.ProcessId -Force; \\\\\"stopped \\\\$\\(\\\\$_.ProcessId\\)\\\\\" }\" 2>&1)"
+      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='node.exe'\\\\\" | Where-Object { \\\\$_.CommandLine -like '*ng serve*' -or \\\\$_.CommandLine -like '*vite*' } | ForEach-Object { Stop-Process -Id \\\\$_.ProcessId -Force; \\\\\"stopped \\\\$\\(\\\\$_.ProcessId\\)\\\\\" }\" 2>&1)",
+      "Bash(xargs -I{} sh -c 'echo {}; grep -a \"guid:\" \"{}.meta\" 2>/dev/null | head -1')",
+      "Bash(find 'C:\\\\Users\\\\acsha/.claude' -maxdepth 2 -iname *.json)"
     ]
   },
   "hooks": {

@@ -320,6 +320,13 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   as its own party of one) so contested/multi-group pulls resolve sensibly, tie-broken by the killing blow's
   group. This is the **first** ownership restriction on mob-corpse looting — today any player in range can
   loot any mob corpse, no owner check exists. Session-only group state (no persistence/schema change).
+  **Bug found + fixed 2026-07-30** (✅ user-confirmed): a solo kill could get silently locked out of its own
+  loot — a stale/unrelated threat-list entry from an earlier disconnected engagement could out-tally the
+  actual killer's damage, and the majority-damage tie-break only favored the killer on an *exact* tie, so
+  `SetEligibleLooters` excluded them. Fixed by unioning the killing blow's own party into loot eligibility
+  unconditionally (XP-credit splitting untouched). Also hardened the loot commands to report a specific
+  denial reason (not eligible / out of range / corpse gone) instead of silently no-opping — see
+  `docs/devplans/5.3-player-grouping.md`'s bug-fix section for the full root-cause writeup.
 - [x] **5.4 — Aggro system.** ✅ Done 2026-07-26 — verified in-editor by the user
   ([devplan](docs/devplans/5.4-aggro-system.md)). Retitled from "Group threat/aggro tuning" — that framing
   wrongly presumed a working base threat/aggro system already existed to tune. It doesn't: today's is still
