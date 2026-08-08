@@ -30,6 +30,7 @@ public class ContentDbContext : DbContext
     public DbSet<Race> Races => Set<Race>();
     public DbSet<Class> Classes => Set<Class>();
     public DbSet<WebAdmin> WebAdmins => Set<WebAdmin>();
+    public DbSet<WorldClockSettings> WorldClockSettings => Set<WorldClockSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -477,6 +478,18 @@ public class ContentDbContext : DbContext
             e.Property(a => a.Username).HasColumnName("username");
             e.Property(a => a.PasswordHash).HasColumnName("password_hash");
             e.Property(a => a.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<WorldClockSettings>(e =>
+        {
+            e.ToTable("world_clock_settings");
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Id).HasColumnName("id").ValueGeneratedNever();
+            e.Property(s => s.DayLengthMinutes).HasColumnName("day_length_minutes");
+            e.Property(s => s.LunarCycleDays).HasColumnName("lunar_cycle_days");
+            e.Property(s => s.FogStartDistance).HasColumnName("fog_start_distance");
+            e.Property(s => s.FogEndDistance).HasColumnName("fog_end_distance");
+            e.Property(s => s.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

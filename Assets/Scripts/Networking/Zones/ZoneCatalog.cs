@@ -22,6 +22,12 @@ public class ZoneDefinition
     [Tooltip("True for the base scene that is already loaded when the server starts (the starter zone " +
              "under decision A). ZoneManager additively loads only the non-base zones.")]
     public bool isBaseScene = false;
+
+    [Tooltip("5.12 (DC7) — whether this zone renders the outdoor day/night sky cycle (sun/sky/moon). " +
+             "Default true for every outdoor zone; a future underground zone (e.g. Grukmar's " +
+             "Deep) can turn this off to keep static dungeon lighting instead. Read client-side per-peer " +
+             "via ZoneClientHelper — see its NOTE on the one untested assumption this relies on.")]
+    public bool usesDayNightCycle = true;
 }
 
 /// <summary>

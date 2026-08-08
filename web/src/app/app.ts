@@ -24,11 +24,12 @@ import { AbilityEditor } from './ability-editor';
 import { AbilityTagEditor } from './ability-tag-editor';
 import { RaceEditor } from './race-editor';
 import { ClassEditor } from './class-editor';
+import { WorldClockEditor } from './world-clock-editor';
 import { Documentation } from './documentation';
 import { PlayPage } from './play-page';
 
 type ViewId = 'play' | 'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp'
-  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'docs';
+  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'docs';
 
 interface NavItem { id: ViewId; label: string; icon: string; }
 
@@ -45,6 +46,7 @@ const CONTENT_NAV: NavItem[] = [
   { id: 'abilityTags', label: 'Ability Tags', icon: 'sell' },
   { id: 'races', label: 'Races', icon: 'diversity_3' },
   { id: 'classes', label: 'Classes', icon: 'military_tech' },
+  { id: 'worldClock', label: 'World Clock', icon: 'brightness_3' },
 ];
 
 /**
@@ -58,8 +60,8 @@ const CONTENT_NAV: NavItem[] = [
   selector: 'app-root',
   imports: [
     Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor,
-    XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, Documentation,
-    PlayPage,
+    XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, WorldClockEditor,
+    Documentation, PlayPage,
     MatSidenavModule, MatListModule, MatIconModule, MatButtonModule, MatToolbarModule,
     MatProgressBarModule, MatDividerModule,
   ],
@@ -140,6 +142,7 @@ const CONTENT_NAV: NavItem[] = [
               @case ('abilityTags')   { <app-ability-tag-editor /> }
               @case ('races')         { <app-race-editor /> }
               @case ('classes')       { <app-class-editor /> }
+              @case ('worldClock')    { <app-world-clock-editor /> }
               @case ('docs')          { <app-documentation /> }
             }
           </div>

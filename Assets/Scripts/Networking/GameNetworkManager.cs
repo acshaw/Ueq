@@ -18,6 +18,7 @@ public class GameNetworkManager : NetworkManager
             Database.InitializeServer();
             ContentLoader.LoadAll(); // 2.1 — load DB-backed content into registries before the world goes live
             GetComponent<ZoneManager>()?.ServerInitialize(); // 3.0 — additive zones + interest partitioning
+            GetComponent<WorldClock>()?.ServerInitialize(); // 5.12 — day/night + lunar clock reference
             GetComponent<PartyManager>()?.ServerInitialize(); // 5.3 — session-only party registry
             PersistenceService.Create();
             GetComponent<CharacterSelectController>()?.OnServerStarted(); // 1.5 select/create handlers
@@ -42,6 +43,7 @@ public class GameNetworkManager : NetworkManager
         CancelInvoke(nameof(AutosaveTick));
         GetComponent<CharacterSelectController>()?.OnServerStopped(); // 1.5 — unregister select handlers
         GetComponent<PartyManager>()?.ServerShutdown(); // 5.3 — session-only, nothing to persist
+        GetComponent<WorldClock>()?.ServerShutdown(); // 5.12 — clear the clock reference
         GetComponent<ZoneManager>()?.ServerShutdown(); // 3.0 — clear zone state (scenes torn down by Unity)
 
         // Save every connected character FIRST — Mirror destroys player objects during the
@@ -114,6 +116,9 @@ public class GameNetworkManager : NetworkManager
         // 3.0 — chat is delivered via a NetworkMessage (not an RPC) so it survives zone/scene interest
         // partitioning. Register the client-side receiver.
         NetworkClient.RegisterHandler<ChatDeliverMessage>(ChatManager.HandleDeliver);
+        // 5.12 (DC1) — one-time day/night clock reference; every peer computes DayFraction/LunarFraction
+        // locally off NetworkTime from here on, no ongoing sync traffic.
+        NetworkClient.RegisterHandler<WorldClock.WorldClockSyncMessage>(WorldClock.ApplySync);
     }
 
     public override void OnStopClient()
@@ -123,6 +128,7 @@ public class GameNetworkManager : NetworkManager
         NetworkClient.UnregisterHandler<ContentCatalog.RaceCatalogMessage>();
         NetworkClient.UnregisterHandler<ContentCatalog.ClassCatalogMessage>();
         NetworkClient.UnregisterHandler<ChatDeliverMessage>();
+        NetworkClient.UnregisterHandler<WorldClock.WorldClockSyncMessage>();
         base.OnStopClient();
     }
 
@@ -134,6 +140,7 @@ public class GameNetworkManager : NetworkManager
         conn.Send(ContentCatalog.BuildAbilities());
         conn.Send(ContentCatalog.BuildRaces());
         conn.Send(ContentCatalog.BuildClasses());
+        conn.Send(WorldClock.BuildSync()); // 5.12 (DC1)
         base.OnServerReady(conn);
     }
 

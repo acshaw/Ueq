@@ -92,5 +92,15 @@ public static class ContentLoader
         var xpTable = new XpRepository().LoadTable(conn);
         PlayerExperience.SetTable(xpTable);
         Debug.Log($"[Content] Loaded {(xpTable != null ? xpTable.Count : 0)} XP level(s) from the database.");
+
+        // ── World clock settings (5.12 follow-up — server-only; read by WorldClock.ServerInitialize,
+        // which runs right after this in GameNetworkManager) ─────────────────────────────
+        var clockSettings = new WorldClockSettingsRepository().Load(conn);
+        WorldClock.SetDbSettingsOverride(
+            clockSettings?.dayLengthMinutes, clockSettings?.lunarCycleDays,
+            clockSettings?.fogStartDistance, clockSettings?.fogEndDistance);
+        Debug.Log(clockSettings.HasValue
+            ? "[Content] Loaded world clock settings from the database."
+            : "[Content] No world_clock_settings row — falling back to the Resources asset/defaults.");
     }
 }

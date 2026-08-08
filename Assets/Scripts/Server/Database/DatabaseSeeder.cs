@@ -23,6 +23,7 @@ public static class DatabaseSeeder
         SeedFactions(conn);
         SeedLootTables(conn);
         SeedXpTable(conn);
+        SeedWorldClockSettings(conn);
         SeedMobs(conn);
         SeedMobFactionHits(conn);
         SeedSpawnTables(conn);
@@ -261,6 +262,22 @@ public static class DatabaseSeeder
             cmd.Parameters.AddWithValue("xp", values[i]);
             cmd.ExecuteNonQuery();
         }
+    }
+
+    // ── World clock settings (5.12 follow-up) — seed with the currently-tuned values (matches
+    // Resources/WorldClockSettings.asset) so a fresh DB doesn't silently regress the day/lunar pacing
+    // back to the ScriptableObject's own defaults the first time a server boots against it. ──────────
+    static void SeedWorldClockSettings(NpgsqlConnection conn)
+    {
+        using var cmd = new NpgsqlCommand(
+            "INSERT INTO world_clock_settings (id, day_length_minutes, lunar_cycle_days, " +
+            "fog_start_distance, fog_end_distance) VALUES (1, @day, @lunar, @fogStart, @fogEnd) " +
+            "ON CONFLICT (id) DO NOTHING", conn);
+        cmd.Parameters.AddWithValue("day", 2f);
+        cmd.Parameters.AddWithValue("lunar", 28f);
+        cmd.Parameters.AddWithValue("fogStart", 120f);
+        cmd.Parameters.AddWithValue("fogEnd", 520f);
+        cmd.ExecuteNonQuery();
     }
 
     // ── Factions (M2.6) — migrate the existing SO faction assets + shared threshold ladder ──
