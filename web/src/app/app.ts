@@ -27,9 +27,10 @@ import { ClassEditor } from './class-editor';
 import { WorldClockEditor } from './world-clock-editor';
 import { Documentation } from './documentation';
 import { PlayPage } from './play-page';
+import { CombatSimulator } from './combat-sim/combat-simulator';
 
 type ViewId = 'play' | 'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp'
-  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'docs';
+  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'combatSim' | 'docs';
 
 interface NavItem { id: ViewId; label: string; icon: string; }
 
@@ -61,7 +62,7 @@ const CONTENT_NAV: NavItem[] = [
   imports: [
     Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor,
     XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, WorldClockEditor,
-    Documentation, PlayPage,
+    Documentation, PlayPage, CombatSimulator,
     MatSidenavModule, MatListModule, MatIconModule, MatButtonModule, MatToolbarModule,
     MatProgressBarModule, MatDividerModule,
   ],
@@ -94,6 +95,16 @@ const CONTENT_NAV: NavItem[] = [
                 <span matListItemTitle>{{ item.label }}</span>
               </button>
             }
+          </mat-nav-list>
+          <mat-divider />
+
+          <div class="section-label">Tools</div>
+          <mat-nav-list>
+            <button mat-list-item [class.active]="view() === 'combatSim'"
+                    (click)="go('combatSim', drawer)">
+              <mat-icon matListItemIcon>swords</mat-icon>
+              <span matListItemTitle>Combat Simulator</span>
+            </button>
           </mat-nav-list>
           <mat-divider />
 
@@ -143,6 +154,7 @@ const CONTENT_NAV: NavItem[] = [
               @case ('races')         { <app-race-editor /> }
               @case ('classes')       { <app-class-editor /> }
               @case ('worldClock')    { <app-world-clock-editor /> }
+              @case ('combatSim')     { <app-combat-simulator /> }
               @case ('docs')          { <app-documentation /> }
             }
           </div>
