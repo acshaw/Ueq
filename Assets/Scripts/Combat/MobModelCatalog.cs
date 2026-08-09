@@ -27,6 +27,14 @@ public class MobModelCatalog : ScriptableObject
         [Tooltip("Optional. Leave blank for Humanoid bodies — they retarget the shared locomotion controller " +
                  "for free. Set this ONLY for non-Humanoid / Generic rigs that ship their own idle/walk clips.")]
         public RuntimeAnimatorController animatorController;
+
+        [Tooltip("Local position offset applied to the body. Synty bodies are authored feet-at-origin so this " +
+                 "stays zero; a non-Synty pack (e.g. a store-bought animal) may pivot elsewhere — nudge this if " +
+                 "the body floats or sinks relative to the placeholder cube.")]
+        public Vector3 offset;
+
+        [Tooltip("Local rotation offset (degrees), for bodies that don't face +Z by default.")]
+        public Vector3 eulerOffset;
     }
 
     public List<Entry> entries = new();

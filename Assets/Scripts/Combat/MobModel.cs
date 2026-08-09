@@ -72,10 +72,13 @@ public class MobModel : NetworkBehaviour
         // Resources/MobModels/<modelId> convention (zero-setup) → serialized fallback body.
         GameObject prefab;
         RuntimeAnimatorController controller = locomotionController;
+        Vector3 offset = Vector3.zero, eulerOffset = Vector3.zero;
         if (MobModelRegistry.TryGet(modelId, out var entry))
         {
             prefab = entry.prefab;
             if (entry.animatorController != null) controller = entry.animatorController; // non-Humanoid rig
+            offset      = entry.offset;
+            eulerOffset = entry.eulerOffset;
         }
         else
         {
@@ -105,6 +108,8 @@ public class MobModel : NetworkBehaviour
         if (_instance != null)
         {
             _instance.name = $"MobModel_{modelId}";
+            if (offset != Vector3.zero) _instance.transform.localPosition = offset;
+            if (eulerOffset != Vector3.zero) _instance.transform.localRotation = Quaternion.Euler(eulerOffset);
             FitTargetCollider(_instance);
         }
     }
