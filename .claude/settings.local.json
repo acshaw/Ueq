@@ -203,7 +203,8 @@
       "Bash(xargs -I{} sh -c 'echo {}; grep -a \"guid:\" \"{}.meta\" 2>/dev/null | head -1')",
       "Bash(find 'C:\\\\Users\\\\acsha/.claude' -maxdepth 2 -iname *.json)",
       "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
-      "Read(//proc/sys/kernel/random/**)"
+      "Read(//proc/sys/kernel/random/**)",
+      "Bash(awk -F: '{print $1}')"
     ]
   },
   "hooks": {
