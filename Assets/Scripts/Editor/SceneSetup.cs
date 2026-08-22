@@ -79,6 +79,8 @@ public static class SceneSetup
             typeof(PlayerSitting),
             typeof(PlayerAbilities),
             typeof(PlayerWeaponSkills),
+            typeof(PlayerOffense),
+            typeof(PlayerAvoidanceSkills),
             typeof(CharacterPersistence),
             typeof(NetworkedPlayer),
         };
@@ -133,6 +135,8 @@ public static class SceneSetup
             typeof(PlayerSitting),
             typeof(PlayerAbilities),
             typeof(PlayerWeaponSkills),
+            typeof(PlayerOffense),
+            typeof(PlayerAvoidanceSkills),
             typeof(PlayerParty),
             typeof(PlayerConsider),
             typeof(Nameplate), // long-standing gap, found 2026-07-26 — never on the Player prefab at all,
@@ -562,6 +566,8 @@ public static class SceneSetup
         player.AddComponent<PlayerSitting>();
         player.AddComponent<PlayerAbilities>();
         player.AddComponent<PlayerWeaponSkills>();
+        player.AddComponent<PlayerOffense>();
+        player.AddComponent<PlayerAvoidanceSkills>();
         player.AddComponent<PlayerParty>();
         player.AddComponent<PlayerConsider>();
         player.AddComponent<Nameplate>();

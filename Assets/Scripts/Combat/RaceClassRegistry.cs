@@ -92,17 +92,6 @@ public static class RaceClassRegistry
         def.baseManaRatio  = s.BaseManaRatio;
         def.manaGrowthRate = s.ManaGrowthRate;
 
-        def.combatTierTableLevel1 = new CombatTierTable
-        {
-            Miss = s.TierL1Miss, Glancing = s.TierL1Glancing, Hit = s.TierL1Hit,
-            SolidHit = s.TierL1Solid, GoodHit = s.TierL1Good, Critical = s.TierL1Critical, Crippling = s.TierL1Crippling,
-        };
-        def.combatTierTableLevel20 = new CombatTierTable
-        {
-            Miss = s.TierL20Miss, Glancing = s.TierL20Glancing, Hit = s.TierL20Hit,
-            SolidHit = s.TierL20Solid, GoodHit = s.TierL20Good, Critical = s.TierL20Critical, Crippling = s.TierL20Crippling,
-        };
-
         def.startingAbilities = new List<string>(s.StartingAbilityIds ?? new List<string>());
 
         return def;

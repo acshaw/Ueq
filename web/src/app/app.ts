@@ -25,12 +25,21 @@ import { AbilityTagEditor } from './ability-tag-editor';
 import { RaceEditor } from './race-editor';
 import { ClassEditor } from './class-editor';
 import { WorldClockEditor } from './world-clock-editor';
-import { Documentation } from './documentation';
+import { SpawnGuide } from './spawn-guide';
+import { ConversationGuide } from './conversation-guide';
+import { QuestGuide } from './quest-guide';
+import { CombatGuide } from './combat-guide';
+import { ToHitGuide } from './to-hit-guide';
+import { AbilitiesGuide } from './abilities-guide';
+import { RacesClassesGuide } from './races-classes-guide';
+import { BuildDeployGuide } from './build-deploy-guide';
 import { PlayPage } from './play-page';
 import { CombatSimulator } from './combat-sim/combat-simulator';
 
 type ViewId = 'play' | 'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp'
-  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'combatSim' | 'docs';
+  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'combatSim'
+  | 'docsSpawn' | 'docsConversation' | 'docsQuest' | 'docsCombat' | 'docsToHit' | 'docsAbilities'
+  | 'docsRacesClasses' | 'docsBuildDeploy';
 
 interface NavItem { id: ViewId; label: string; icon: string; }
 
@@ -50,6 +59,17 @@ const CONTENT_NAV: NavItem[] = [
   { id: 'worldClock', label: 'World Clock', icon: 'brightness_3' },
 ];
 
+const DOCS_NAV: NavItem[] = [
+  { id: 'docsSpawn', label: 'Spawn System', icon: 'place' },
+  { id: 'docsConversation', label: 'Conversations', icon: 'forum' },
+  { id: 'docsQuest', label: 'Quest Rewards', icon: 'inventory_2' },
+  { id: 'docsCombat', label: 'Combat Pipeline', icon: 'swords' },
+  { id: 'docsToHit', label: 'To-Hit Formula', icon: 'functions' },
+  { id: 'docsAbilities', label: 'Abilities', icon: 'auto_awesome' },
+  { id: 'docsRacesClasses', label: 'Races & Classes', icon: 'diversity_3' },
+  { id: 'docsBuildDeploy', label: 'Build & Deploy', icon: 'rocket_launch' },
+];
+
 /**
  * Shell for the Ueq content editors. A Material sidenav replaces the old flat top-bar of 13 buttons
  * (which overflowed horizontally on desktop) — permanent on wide viewports, a toggleable drawer on
@@ -62,7 +82,9 @@ const CONTENT_NAV: NavItem[] = [
   imports: [
     Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor,
     XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, WorldClockEditor,
-    Documentation, PlayPage, CombatSimulator,
+    SpawnGuide, ConversationGuide, QuestGuide, CombatGuide, ToHitGuide, AbilitiesGuide,
+    RacesClassesGuide, BuildDeployGuide,
+    PlayPage, CombatSimulator,
     MatSidenavModule, MatListModule, MatIconModule, MatButtonModule, MatToolbarModule,
     MatProgressBarModule, MatDividerModule,
   ],
@@ -108,12 +130,15 @@ const CONTENT_NAV: NavItem[] = [
           </mat-nav-list>
           <mat-divider />
 
+          <div class="section-label">Documentation</div>
           <mat-nav-list>
-            <button mat-list-item [class.active]="view() === 'docs'"
-                    (click)="go('docs', drawer)">
-              <mat-icon matListItemIcon>menu_book</mat-icon>
-              <span matListItemTitle>Documentation</span>
-            </button>
+            @for (item of docsNav; track item.id) {
+              <button mat-list-item [class.active]="view() === item.id"
+                      (click)="go(item.id, drawer)">
+                <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                <span matListItemTitle>{{ item.label }}</span>
+              </button>
+            }
           </mat-nav-list>
 
           <div class="spacer"></div>
@@ -155,7 +180,14 @@ const CONTENT_NAV: NavItem[] = [
               @case ('classes')       { <app-class-editor /> }
               @case ('worldClock')    { <app-world-clock-editor /> }
               @case ('combatSim')     { <app-combat-simulator /> }
-              @case ('docs')          { <app-documentation /> }
+              @case ('docsSpawn')        { <app-spawn-guide /> }
+              @case ('docsConversation') { <app-conversation-guide /> }
+              @case ('docsQuest')        { <app-quest-guide /> }
+              @case ('docsCombat')       { <app-combat-guide /> }
+              @case ('docsToHit')        { <app-to-hit-guide /> }
+              @case ('docsAbilities')    { <app-abilities-guide /> }
+              @case ('docsRacesClasses') { <app-races-classes-guide /> }
+              @case ('docsBuildDeploy')  { <app-build-deploy-guide /> }
             }
           </div>
         </mat-sidenav-content>
@@ -193,6 +225,7 @@ export class App implements OnInit {
 
   readonly view = signal<ViewId>('play');
   readonly contentNav = CONTENT_NAV;
+  readonly docsNav = DOCS_NAV;
 
   readonly isHandset = toSignal(
     this.breakpointObserver.observe(Breakpoints.Handset).pipe(map(r => r.matches)),

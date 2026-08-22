@@ -6,6 +6,10 @@ public class CharacterStats : NetworkBehaviour
     int _baseStr, _baseSta, _baseAgi, _baseDex, _baseInt, _baseWis, _baseCha;
     int _bonusStr, _bonusSta, _bonusAgi, _bonusDex, _bonusInt, _bonusWis, _bonusCha;
 
+    // 2026-08-21 (Mitigation) — AC has no class/race base, unlike the seven core stats above; it's
+    // purely a sum of equipped gear's armorClass, same AddEquipmentBonus/RemoveEquipmentBonus pipeline.
+    int _bonusAc;
+
     [SyncVar] int _totalStr;
     [SyncVar] int _totalSta;
     [SyncVar] int _totalAgi;
@@ -13,6 +17,7 @@ public class CharacterStats : NetworkBehaviour
     [SyncVar] int _totalInt;
     [SyncVar] int _totalWis;
     [SyncVar] int _totalCha;
+    [SyncVar] int _totalAc;
 
     public int Str => isServer ? _baseStr + _bonusStr : _totalStr;
     public int Sta => isServer ? _baseSta + _bonusSta : _totalSta;
@@ -21,6 +26,7 @@ public class CharacterStats : NetworkBehaviour
     public int Int => isServer ? _baseInt + _bonusInt : _totalInt;
     public int Wis => isServer ? _baseWis + _bonusWis : _totalWis;
     public int Cha => isServer ? _baseCha + _bonusCha : _totalCha;
+    public int Ac  => isServer ? _bonusAc : _totalAc;
 
     [Server]
     public void SetRaceClass(RaceDefinition race, ClassDefinition cls)
@@ -36,18 +42,18 @@ public class CharacterStats : NetworkBehaviour
     }
 
     [Server]
-    public void AddEquipmentBonus(int str, int sta, int agi, int dex, int int_, int wis, int cha)
+    public void AddEquipmentBonus(int str, int sta, int agi, int dex, int int_, int wis, int cha, int ac)
     {
         _bonusStr += str; _bonusSta += sta; _bonusAgi += agi; _bonusDex += dex;
-        _bonusInt += int_; _bonusWis += wis; _bonusCha += cha;
+        _bonusInt += int_; _bonusWis += wis; _bonusCha += cha; _bonusAc += ac;
         SyncTotals();
     }
 
     [Server]
-    public void RemoveEquipmentBonus(int str, int sta, int agi, int dex, int int_, int wis, int cha)
+    public void RemoveEquipmentBonus(int str, int sta, int agi, int dex, int int_, int wis, int cha, int ac)
     {
         _bonusStr -= str; _bonusSta -= sta; _bonusAgi -= agi; _bonusDex -= dex;
-        _bonusInt -= int_; _bonusWis -= wis; _bonusCha -= cha;
+        _bonusInt -= int_; _bonusWis -= wis; _bonusCha -= cha; _bonusAc -= ac;
         SyncTotals();
     }
 
@@ -60,5 +66,6 @@ public class CharacterStats : NetworkBehaviour
         _totalInt = _baseInt + _bonusInt;
         _totalWis = _baseWis + _bonusWis;
         _totalCha = _baseCha + _bonusCha;
+        _totalAc  = _bonusAc;
     }
 }

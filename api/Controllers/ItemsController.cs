@@ -63,7 +63,9 @@ public class ItemsController : ControllerBase
         row.BonusInt = input.BonusInt;
         row.BonusWis = input.BonusWis;
         row.BonusCha = input.BonusCha;
+        row.BonusAc = input.BonusAc;
         row.WeaponBaseDamage = input.WeaponBaseDamage;
+        row.WeaponBonusDamage = input.WeaponBonusDamage;
         row.WeaponDelay = input.WeaponDelay;
         row.WeaponRange = input.WeaponRange;
         row.WeaponCategory = input.WeaponCategory;

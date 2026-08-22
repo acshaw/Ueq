@@ -16,8 +16,10 @@ public struct ItemSnapshot
     public int    EquipSlot;      // EquipSlot enum
 
     public int    BonusStr, BonusSta, BonusAgi, BonusDex, BonusInt, BonusWis, BonusCha;
+    public int    BonusAc;
 
     public int    WeaponBaseDamage;
+    public int    WeaponBonusDamage;
     public float  WeaponDelay;
     public float  WeaponRange;
     public int    WeaponCategory;  // WeaponCategory enum

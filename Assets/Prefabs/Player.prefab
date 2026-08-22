@@ -629,7 +629,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  _capBase: 5
+  _capBase: 10
   _capPerLevel: 5
   _riseChance: 0.08
 --- !u!114 &183011473615941900

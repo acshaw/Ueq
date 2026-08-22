@@ -27,9 +27,11 @@ public class CharacterPersistence : NetworkBehaviour
     PlayerAbilities     _abilities;
     Health              _health;
     PlayerMana          _mana;
-    PlayerWeaponSkills  _weaponSkills;
-    NetworkedPlayer     _player;
-    Nameplate           _nameplate;
+    PlayerWeaponSkills    _weaponSkills;
+    PlayerOffense         _offense;
+    PlayerAvoidanceSkills _avoidance;
+    NetworkedPlayer       _player;
+    Nameplate             _nameplate;
 
     void Awake()
     {
@@ -41,6 +43,8 @@ public class CharacterPersistence : NetworkBehaviour
         _health       = GetComponent<Health>();
         _mana         = GetComponent<PlayerMana>();
         _weaponSkills = GetComponent<PlayerWeaponSkills>();
+        _offense      = GetComponent<PlayerOffense>();
+        _avoidance    = GetComponent<PlayerAvoidanceSkills>();
         _player       = GetComponent<NetworkedPlayer>();
         _nameplate    = GetComponent<Nameplate>();
     }
@@ -120,6 +124,9 @@ public class CharacterPersistence : NetworkBehaviour
 
         _exp?.LoadState(0, race, cls);             // base stats, max HP/mana, known abilities + default hotbar
         _exp?.SetGender(gender);                   // 3.1.4 — synced identity for the body model
+        _weaponSkills?.LoadState(1, 1);             // a level 1 character's weapon skill starts at 1, not 0
+        _offense?.LoadState(1);                     // same treatment — Offense starts at 1, not 0
+        _avoidance?.LoadState(1, 1, 1, 1);           // Defense/Dodge/Parry/Riposte all start at 1
         _faction?.Initialize(raceName);            // racial faction defaults for the chosen race
         ApplyName(name);
         _health?.ResetToFull();
@@ -179,6 +186,8 @@ public class CharacterPersistence : NetworkBehaviour
         else                      _health?.SetCurrent(s.CurrentHealth);
         _mana?.SetCurrent(s.CurrentMana);
         _weaponSkills?.LoadState(s.MightSkill, s.FinesseSkill);
+        _offense?.LoadState(s.Offense);
+        _avoidance?.LoadState(s.DefenseSkill, s.DodgeSkill, s.ParrySkill, s.RiposteSkill);
 
         // M3.0 Stage C: place the player into their persisted zone at their saved position. When ZoneManager
         // is active it owns scene assignment + the client's additive scene load + the warp, so we set the
@@ -260,6 +269,14 @@ public class CharacterPersistence : NetworkBehaviour
         {
             s.MightSkill   = _weaponSkills.Might;
             s.FinesseSkill = _weaponSkills.Finesse;
+        }
+        if (_offense != null) s.Offense = _offense.Value;
+        if (_avoidance != null)
+        {
+            s.DefenseSkill = _avoidance.Defense;
+            s.DodgeSkill   = _avoidance.Dodge;
+            s.ParrySkill   = _avoidance.Parry;
+            s.RiposteSkill = _avoidance.Riposte;
         }
 
         var pos  = transform.position;

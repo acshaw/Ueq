@@ -38,17 +38,15 @@ public class ClassDefinition : ScriptableObject
     public float baseManaRatio  = 0.23f;
     public float manaGrowthRate = 0f;
 
-    [Header("Combat Tier Table (5.1.1)")]
-    [Tooltip("Level 1 hit-tier weighted table (design doc §2.5). Seeded via Tools/Combat/Seed Class " +
-             "Combat Tables — Warrior's numbers are given verbatim by the doc; Cleric/Wizard are a " +
-             "budget-ratio-scaled placeholder pending real hand-authored tables.")]
-    public CombatTierTable combatTierTableLevel1 = CombatTierTable.WarriorLevel1;
-    [Tooltip("Level 20 target table (design doc §2.11 for Warrior; scaled placeholder for other " +
-             "classes). CombatResolver interpolates Level 1 → Level 20 by the character's level.")]
-    public CombatTierTable combatTierTableLevel20 = new()
-    {
-        Miss = 2f, Glancing = 13f, Hit = 20f, SolidHit = 35f, GoodHit = 25f, Critical = 3f, Crippling = 2f,
-    };
+    // Offense (5.1.5) is no longer authored per class (2026-08-11) — ATK = EffectiveSkill (trained
+    // weapon skill + relevant stat × 0.1, §2.10) + trained Offense (a persisted per-character stat,
+    // PlayerOffense.cs, 2026-08-13 follow-up). A class's ATK differentiates purely through its base
+    // stats now, not a separate authored knob.
+    //
+    // Defense (5.1.5 follow-up) is likewise no longer authored per class as of 2026-08-13 — it's a
+    // trained per-character stat mirroring Offense exactly (PlayerAvoidanceSkills.cs), not a class
+    // formula. classes.defense_base/defense_per_level remain in the DB, unmapped, same treatment as
+    // offense_base/offense_per_level before them.
 
     [Header("Abilities")]
     [Tooltip("Ability ids granted at character creation (PlayerAbilities.SetRaceClass populates the " +

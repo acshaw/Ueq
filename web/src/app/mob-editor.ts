@@ -135,32 +135,29 @@ import { ADMIN_STYLES } from './shared/admin-styles';
         <section>
           <h3>Combat Pipeline (5.1)</h3>
           <div class="grid">
-            <label>Weapon category
+            <label>Weapon category <span class="soon">(vestigial as of 5.1.5 — no longer read by the resolver)</span>
               <select [(ngModel)]="model.weaponCategory" name="weaponCategory">
                 <option [ngValue]="0">Might</option>
                 <option [ngValue]="1">Finesse</option>
               </select>
             </label>
-            <label>Weapon skill <input type="number" [(ngModel)]="model.weaponSkill" name="weaponSkill" /></label>
             <label>Attack parryable
               <select [(ngModel)]="model.attackIsParryable" name="attackIsParryable">
                 <option [ngValue]="true">Yes (weapon-style)</option>
                 <option [ngValue]="false">No (beast/unarmed-style)</option>
               </select>
             </label>
-            <label>Avoidance Agility <input type="number" step="0.1" [(ngModel)]="model.avoidanceAgility" name="avoidanceAgility" /></label>
-            <label>Avoidance Dexterity <input type="number" step="0.1" [(ngModel)]="model.avoidanceDexterity" name="avoidanceDexterity" /></label>
+            <label>Avoidance Dodge <input type="number" step="0.1" [(ngModel)]="model.avoidanceDodge" name="avoidanceDodge" /></label>
+            <label>Avoidance Parry <input type="number" step="0.1" [(ngModel)]="model.avoidanceParry" name="avoidanceParry" /></label>
+            <label>Avoidance Riposte <input type="number" step="0.1" [(ngModel)]="model.avoidanceRiposte" name="avoidanceRiposte" /></label>
+            <label>ATK <input type="number" step="0.1" [(ngModel)]="model.atk" name="atk" /></label>
+            <label>AC <input type="number" step="0.1" [(ngModel)]="model.ac" name="ac" /></label>
           </div>
-          <p class="soon">Hit-tier weighted table (design doc §2.2) — this mob's own weights, not derived from level.</p>
-          <div class="grid">
-            <label>Miss <input type="number" step="0.1" [(ngModel)]="model.tierMiss" name="tierMiss" /></label>
-            <label>Glancing <input type="number" step="0.1" [(ngModel)]="model.tierGlancing" name="tierGlancing" /></label>
-            <label>Hit <input type="number" step="0.1" [(ngModel)]="model.tierHit" name="tierHit" /></label>
-            <label>Solid Hit <input type="number" step="0.1" [(ngModel)]="model.tierSolid" name="tierSolid" /></label>
-            <label>Good Hit <input type="number" step="0.1" [(ngModel)]="model.tierGood" name="tierGood" /></label>
-            <label>Critical <input type="number" step="0.1" [(ngModel)]="model.tierCritical" name="tierCritical" /></label>
-            <label>Crippling <input type="number" step="0.1" [(ngModel)]="model.tierCrippling" name="tierCrippling" /></label>
-          </div>
+          <p class="soon">ATK (5.1.5) — this mob's hit-tier potency, authored directly as one number (mobs have no
+            stats to derive it from). Feeds the same shared ATK curve a player's ATK does — tune it in the Combat
+            Simulator (left nav) before saving here.</p>
+          <p class="soon">AC (Mitigation, 2026-08-21) — this mob's sole mitigation lever, authored directly as one
+            number. Feeds the same shared diminishing-returns mitigation curve a player's AC does.</p>
         </section>
 
         <section>

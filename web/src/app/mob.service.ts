@@ -45,19 +45,19 @@ export interface Mob {
 
   factionHits: MobFactionHit[];
 
-  // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob.
+  // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob. weaponCategory/
+  // weaponSkill are no longer consumed by the resolver as of 5.1.5 (superseded by atk) — kept for now,
+  // candidates for a future cleanup pass.
   weaponCategory: number; // WeaponCategory: 0 Might, 1 Finesse
   weaponSkill: number;
-  tierMiss: number;
-  tierGlancing: number;
-  tierHit: number;
-  tierSolid: number;
-  tierGood: number;
-  tierCritical: number;
-  tierCrippling: number;
+  // 5.1.5 (AD3) — this mob's ATK, authored directly as one number (replaces the old 7-field tier table).
+  atk: number;
   attackIsParryable: boolean;
-  avoidanceAgility: number;
-  avoidanceDexterity: number;
+  avoidanceDodge: number;
+  avoidanceParry: number;
+  avoidanceRiposte: number;
+  // 2026-08-21 (Mitigation) — this mob's AC, authored directly as one number (same treatment as atk).
+  ac: number;
 
   updatedAt?: string;
 }
@@ -73,11 +73,12 @@ export function emptyMob(): Mob {
     conversationSetId: null, lootTableId: null, xpReward: 0,
     vendorId: null, vendorOpenKeyword: 'wares',
     factionHits: [],
-    // Defaults mirror the Warrior Level 1 starting table (design doc §2.5) — a new mob starts from a
-    // valid, non-degenerate hit-tier table.
     weaponCategory: 0, weaponSkill: 0,
-    tierMiss: 17.5, tierGlancing: 40, tierHit: 30, tierSolid: 10, tierGood: 2.5, tierCritical: 0, tierCrippling: 0,
-    attackIsParryable: true, avoidanceAgility: 20, avoidanceDexterity: 20,
+    // 5.1.5 (AD3) — defaults to the shared curve's MinAtk floor (see combat-sim/combat-math.ts), the
+    // same "start from a sane, non-degenerate baseline" spirit as the old tier-table default.
+    atk: 10,
+    attackIsParryable: true, avoidanceDodge: 20, avoidanceParry: 20, avoidanceRiposte: 20,
+    ac: 0,
   };
 }
 

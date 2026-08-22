@@ -8,10 +8,12 @@ import { ADMIN_STYLES } from './shared/admin-styles';
 
 /**
  * The web Class Editor (M2.10). Mirrors the retired Unity Race & Class Editor's section order:
- * Identity → XP → Base Stats → HP Formula → Mana Formula → Combat Tier Table (Level 1 / Level 20, side
- * by side — CombatResolver interpolates between them by character level, 5.1.1) → Starting Abilities
- * (ordered ability-id rows, same shape as the Ability Editor's tag rows). Weapon-prop cosmetic fields do
- * NOT appear here (RC4 — they're pure Unity-asset wiring on CharacterRoster, authored in-editor).
+ * Identity → XP → Base Stats → HP Formula → Mana Formula → Starting Abilities (ordered ability-id rows,
+ * same shape as the Ability Editor's tag rows). ATK's Offense and Avoidance's Defense are no longer
+ * per-class authored (2026-08-11 / 2026-08-13) — both are trained per-character stats now
+ * (PlayerOffense.cs / PlayerAvoidanceSkills.cs), so there's no Offense/Defense section here anymore.
+ * Weapon-prop cosmetic fields do NOT appear here either (RC4 — they're pure Unity-asset wiring on
+ * CharacterRoster, authored in-editor).
  */
 @Component({
   selector: 'app-class-editor',
@@ -87,33 +89,6 @@ import { ADMIN_STYLES } from './shared/admin-styles';
         </section>
 
         <section>
-          <h3>Combat tier table (5.1.1)</h3>
-          <p class="muted">Level 1 and Level 20 hit-tier weighted tables (design doc §2.5/§2.11). CombatResolver interpolates between them by character level.</p>
-          <div class="tiercols">
-            <div class="tiercol">
-              <h4>Level 1</h4>
-              <label>Miss <input type="number" step="0.1" [(ngModel)]="model.tierL1Miss" name="tierL1Miss" /></label>
-              <label>Glancing <input type="number" step="0.1" [(ngModel)]="model.tierL1Glancing" name="tierL1Glancing" /></label>
-              <label>Hit <input type="number" step="0.1" [(ngModel)]="model.tierL1Hit" name="tierL1Hit" /></label>
-              <label>Solid Hit <input type="number" step="0.1" [(ngModel)]="model.tierL1Solid" name="tierL1Solid" /></label>
-              <label>Good Hit <input type="number" step="0.1" [(ngModel)]="model.tierL1Good" name="tierL1Good" /></label>
-              <label>Critical <input type="number" step="0.1" [(ngModel)]="model.tierL1Critical" name="tierL1Critical" /></label>
-              <label>Crippling <input type="number" step="0.1" [(ngModel)]="model.tierL1Crippling" name="tierL1Crippling" /></label>
-            </div>
-            <div class="tiercol">
-              <h4>Level 20</h4>
-              <label>Miss <input type="number" step="0.1" [(ngModel)]="model.tierL20Miss" name="tierL20Miss" /></label>
-              <label>Glancing <input type="number" step="0.1" [(ngModel)]="model.tierL20Glancing" name="tierL20Glancing" /></label>
-              <label>Hit <input type="number" step="0.1" [(ngModel)]="model.tierL20Hit" name="tierL20Hit" /></label>
-              <label>Solid Hit <input type="number" step="0.1" [(ngModel)]="model.tierL20Solid" name="tierL20Solid" /></label>
-              <label>Good Hit <input type="number" step="0.1" [(ngModel)]="model.tierL20Good" name="tierL20Good" /></label>
-              <label>Critical <input type="number" step="0.1" [(ngModel)]="model.tierL20Critical" name="tierL20Critical" /></label>
-              <label>Crippling <input type="number" step="0.1" [(ngModel)]="model.tierL20Crippling" name="tierL20Crippling" /></label>
-            </div>
-          </div>
-        </section>
-
-        <section>
           <div class="rowhead"><h3>Starting abilities</h3><button (click)="addAbility()">+ Ability</button></div>
           @for (id of model.startingAbilityIds; track $index; let i = $index) {
             <div class="row">
@@ -131,9 +106,6 @@ import { ADMIN_STYLES } from './shared/admin-styles';
   styles: [ADMIN_STYLES, `
     .row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
     .row select { flex: 1; }
-    .tiercols { display: flex; gap: 1.5rem; }
-    .tiercol { flex: 1; }
-    .tiercol h4 { margin: 0 0 0.4rem; }
   `],
 })
 export class ClassEditor implements OnInit {

@@ -62,10 +62,17 @@ public struct CombatTierTable
         Crippling = Mathf.Lerp(a.Crippling, b.Crippling, t),
     };
 
-    // Design doc §2.5 — Warrior Level 1 starting table. Used as the default for newly authored mobs
-    // (HR5) and as a last-resort fallback when a class has no table configured.
+    // Design doc §2.5 — Warrior Level 1 starting table. 5.1.5 (AD4): the MinAtk end of the shared
+    // ATK-driven curve — reused verbatim since it's the only real doc-backed hit-tier data in the
+    // system. Also still the last-resort fallback when a combatant has no class/ATK configured.
     public static CombatTierTable WarriorLevel1 => new()
     {
         Miss = 17.5f, Glancing = 40f, Hit = 30f, SolidHit = 10f, GoodHit = 2.5f, Critical = 0f, Crippling = 0f,
+    };
+
+    // Design doc §2.11 — Warrior Level 20 target table. 5.1.5 (AD4): the MaxAtk end of the shared curve.
+    public static CombatTierTable WarriorLevel20 => new()
+    {
+        Miss = 2f, Glancing = 13f, Hit = 20f, SolidHit = 35f, GoodHit = 25f, Critical = 3f, Crippling = 2f,
     };
 }

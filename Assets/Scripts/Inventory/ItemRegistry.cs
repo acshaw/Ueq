@@ -58,7 +58,9 @@ public class ItemRegistry : MonoBehaviour
         def.bonusInt         = s.BonusInt;
         def.bonusWis         = s.BonusWis;
         def.bonusCha         = s.BonusCha;
-        def.weaponBaseDamage = s.WeaponBaseDamage;
+        def.bonusAc           = s.BonusAc;
+        def.weaponBaseDamage  = s.WeaponBaseDamage;
+        def.weaponBonusDamage = s.WeaponBonusDamage;
         def.weaponDelay      = s.WeaponDelay;
         def.weaponRange      = s.WeaponRange;
         def.weaponCategory   = (WeaponCategory)s.WeaponCategory;

@@ -18,28 +18,44 @@ public static class CombatResolver
     const float MaxLevelFutilityWeight = 100f; // weight units transferred at "full futility"
     const float LevelAdvantageScale    = 0.5f; // disadvantage hurts faster than advantage helps (§2.7)
 
-    // HR4 — Skill Differential (design doc §2.8): perfect-square scaling, capped at ±5.
-    const int SkillDifferentialCap = 5;
-
     // HR6 / §2.9 — Position Modifier: rear attack pulls this many weight units into SolidHit only.
     const float RearAttackWeight = 50f;
 
     // AV4 — Riposte counter-attack damage, relative to a normal Solid-Hit-tier result (doc: TBD %).
     const float RiposteDamageMultiplier = 0.5f;
 
-    // 3.1.5-era class base-level interpolation range: Level 1 → Level 20 target table (§2.11).
-    // Levels above 20 hold at the Level 20 table until real high-level data exists.
-    const int ClassTableTopLevel = 20;
+    // 5.1.5 (AD1) — §2.10 Stat Contribution: EffectiveSkill = trained weapon skill + relevant stat × ratio.
+    const float StatToSkillRatio = 0.1f;
+
+    // 2026-08-21 — Damage step rework: RelevantStat converts to a percentage (STR/DEX × 0.01, no cap —
+    // itemization determines the practical ceiling) applied to WeaponBonusDamage (a weapon's
+    // stat-scalable portion), then added to WeaponBaseDamage (its flat portion). Replaces the old
+    // WeaponBaseDamage × (1 + RelevantStat/400) term, which scaled a weapon's entire damage instead of
+    // letting itemization decide how much of it is flat vs. stat-scaled.
+    const float StatToDamagePercentRatio = 0.01f;
+
+    // 5.1.5 (AD4/AD9) — shared ATK band the Hit Roll base table is interpolated across (MinAtk →
+    // WarriorLevel1, MaxAtk → WarriorLevel20). Placeholder, tuned via the Combat Simulator, not locked
+    // by the design doc.
+    const float MinAtk = 10f;
+    const float MaxAtk = 150f;
 
     // ── Public shapes ────────────────────────────────────────────────────────────────────────────────
 
     public struct Combatant
     {
-        public CombatTierTable BaseTable;
+        public float Atk;   // 5.1.5 — replaces BaseTable + Skill; the base table is now derived from this
         public int   Level;
-        public int   Skill;
-        public float Agility;
-        public float Dexterity;
+
+        // 2026-08-13 follow-up — three independent, fully-resolved avoidance values (already includes
+        // AvoidanceBase for Dodge; Parry/Riposte stand alone — see BuildCombatant). Replaces the old
+        // Agility/Dexterity pair, which fed Dodge and Riposte+Parry (identically) off two raw stats.
+        public float Dodge;
+        public float Parry;
+        public float Riposte;
+
+        // 2026-08-21 (Mitigation) — AC, this combatant's sole mitigation lever (MitigationCurve).
+        public float Ac;
     }
 
     public struct AttackContext
@@ -49,6 +65,7 @@ public static class CombatResolver
         public bool  IsRearAttack;
         public bool  IsParryable;
         public float WeaponBaseDamage;
+        public float WeaponBonusDamage; // stat-scalable portion of the weapon's damage (2026-08-21)
         public float RelevantStat; // attacker STR (Might weapon) or DEX (Finesse weapon); 0 for mobs
     }
 
@@ -64,10 +81,13 @@ public static class CombatResolver
 
     /// <summary>
     /// Builds a <see cref="Combatant"/> from whichever side owns <paramref name="go"/> — a mob (reads its
-    /// authored <see cref="MobDefinition"/> combat fields, HR5/AV3) or a player (interpolates the
-    /// character's class table by level, HR2, and reads weapon skill for <paramref name="category"/>).
-    /// <paramref name="category"/> is the weapon category of the swing being resolved — used to look up
-    /// this combatant's skill in that category, whether they're attacking or defending.
+    /// authored <see cref="MobDefinition"/> ATK/Dodge/Parry/Riposte directly, AD3/AV3) or a player
+    /// (derives ATK from trained weapon skill + the relevant stat + trained Offense, and Dodge/Parry/
+    /// Riposte from Agility + trained Defense/Dodge/Parry/Riposte, AD1/AD2). <paramref name="category"/>
+    /// is the weapon category of the swing being resolved — used to look up this combatant's skill/stat
+    /// in that category, whether they're attacking or defending (the defender's resulting Atk goes
+    /// unused downstream since 5.1.5 retired the Skill Differential step, but is still computed here to
+    /// keep this method symmetric for both roles).
     /// </summary>
     public static Combatant BuildCombatant(GameObject go, WeaponCategory category)
     {
@@ -77,33 +97,74 @@ public static class CombatResolver
             var def = mobApp.Definition;
             return new Combatant
             {
-                BaseTable = def.combatTable,
-                Level     = def.mobLevel,
-                Skill     = def.weaponSkill,
-                Agility   = def.avoidanceAgility,
-                Dexterity = def.avoidanceDexterity,
+                Atk     = def.atk, // AD3 — authored directly, no EffectiveSkill/Offense split
+                Level   = def.mobLevel,
+                // AV3 (2026-08-13 follow-up) — mobs author all three avoidance checks directly as flat
+                // numbers, no formula, same reasoning as ATK: mobs have nothing to derive them from.
+                Dodge   = def.avoidanceDodge,
+                Parry   = def.avoidanceParry,
+                Riposte = def.avoidanceRiposte,
+                Ac      = def.ac,
             };
         }
 
-        var exp   = go.GetComponent<PlayerExperience>();
-        var pws   = go.GetComponent<PlayerWeaponSkills>();
-        var stats = go.GetComponent<CharacterStats>();
+        var exp       = go.GetComponent<PlayerExperience>();
+        var pws       = go.GetComponent<PlayerWeaponSkills>();
+        var offense   = go.GetComponent<PlayerOffense>();
+        var avoidance = go.GetComponent<PlayerAvoidanceSkills>();
+        var stats     = go.GetComponent<CharacterStats>();
         int level = exp != null ? exp.Level : 1;
         var cls   = exp != null ? exp.CurrentClass : null;
 
-        CombatTierTable table = cls != null
-            ? CombatTierTable.Lerp(cls.combatTierTableLevel1, cls.combatTierTableLevel20,
-                Mathf.Clamp01((Mathf.Min(level, ClassTableTopLevel) - 1) / (float)(ClassTableTopLevel - 1)))
-            : CombatTierTable.WarriorLevel1;
-
-        return new Combatant
+        // 5.1.5 (AD1/AD2): ATK = EffectiveSkill (trained skill + relevant stat × ratio, §2.10) +
+        // trained Offense (a persisted stat like WeaponSkill, follow-up 2026-08-13 — no longer a fixed
+        // level×OffensePerLevel formula; see PlayerOffense.cs).
+        //
+        // Avoidance (2026-08-13 follow-up, replaces the 2026-08-11 EffectiveDefense design):
+        //   AvoidanceBase = Agility × StatToSkillRatio + Defense    (Defense: trained, PlayerAvoidanceSkills)
+        //   EffectiveDodge   = AvoidanceBase + Dodge                 (works even with Dodge untrained — an
+        //                                                             innate/reflexive check)
+        //   EffectiveParry   = Parry                                 (stands alone — genuinely ~0% until
+        //   EffectiveRiposte = Riposte                                trained; no AvoidanceBase contribution)
+        // Dexterity no longer feeds Avoidance at all — it's purely offensive now (ATK/Damage for a
+        // Finesse weapon). No class assigned (e.g. pre-4.x testing) falls back to MinAtk / raw Agility
+        // for Dodge only, Parry/Riposte = 0 (nothing trained yet).
+        float atk, dodge, parry, riposte;
+        if (cls != null)
         {
-            BaseTable = table,
-            Level     = level,
-            Skill     = pws != null ? pws.For(category) : 0,
-            Agility   = stats != null ? stats.Agi : 0f,
-            Dexterity = stats != null ? stats.Dex : 0f,
-        };
+            int   weaponSkill    = pws != null ? pws.For(category) : 0;
+            float relevantStat   = stats != null ? (category == WeaponCategory.Might ? stats.Str : stats.Dex) : 0f;
+            float effectiveSkill = weaponSkill + relevantStat * StatToSkillRatio;
+            int   offenseValue   = offense != null ? offense.Value : 0;
+            atk = effectiveSkill + offenseValue;
+
+            float statAgi        = stats != null ? stats.Agi : 0f;
+            int   defenseValue   = avoidance != null ? avoidance.Defense : 0;
+            float avoidanceBase  = statAgi * StatToSkillRatio + defenseValue;
+            dodge   = avoidanceBase + (avoidance != null ? avoidance.Dodge : 0);
+            parry   = avoidance != null ? avoidance.Parry   : 0;
+            riposte = avoidance != null ? avoidance.Riposte : 0;
+        }
+        else
+        {
+            atk     = MinAtk;
+            dodge   = stats != null ? stats.Agi : 0f;
+            parry   = 0f;
+            riposte = 0f;
+        }
+
+        // 2026-08-21 (Mitigation) — AC has no class/race base, unlike Dodge's AvoidanceBase; it's purely
+        // the sum of equipped gear (CharacterStats.Ac), independent of the cls != null branch above.
+        float ac = stats != null ? stats.Ac : 0f;
+
+        return new Combatant { Atk = atk, Level = level, Dodge = dodge, Parry = parry, Riposte = riposte, Ac = ac };
+    }
+
+    // 5.1.5 (AD4) — re-keys the (unchanged) table lerp from "by level" to "by ATK".
+    static CombatTierTable ResolveAtkTable(float atk)
+    {
+        float fraction = Mathf.Clamp01((atk - MinAtk) / (MaxAtk - MinAtk));
+        return CombatTierTable.Lerp(CombatTierTable.WarriorLevel1, CombatTierTable.WarriorLevel20, fraction);
     }
 
     public static bool IsRearAttack(Transform attacker, Transform defender)
@@ -119,9 +180,8 @@ public static class CombatResolver
     public static AttackResult ResolveAttack(AttackContext ctx)
     {
         // Step 1 — Hit Roll
-        var table = ctx.Attacker.BaseTable;
+        var table = ResolveAtkTable(ctx.Attacker.Atk);
         ApplyLevelDifferential(ref table, ctx.Attacker.Level, ctx.Defender.Level);
-        ApplySkillDifferential(ref table, ctx.Attacker.Skill - ctx.Defender.Skill);
         if (ctx.IsRearAttack) ApplyPositionModifier(ref table);
         HitTier tier = WeightedPick(table);
 
@@ -138,7 +198,7 @@ public static class CombatResolver
         }
 
         // Step 3 — Damage
-        int damage = tier == HitTier.Miss ? 0 : ComputeDamage(tier, ctx.WeaponBaseDamage, ctx.RelevantStat);
+        int damage = tier == HitTier.Miss ? 0 : ComputeDamage(tier, ctx.WeaponBaseDamage, ctx.WeaponBonusDamage, ctx.RelevantStat);
 
         // Step 4 — Mitigation (5.1.4, stub — no-op seam)
         damage = ApplyMitigation(damage, ctx.Defender);
@@ -148,7 +208,7 @@ public static class CombatResolver
         {
             // AV4: the counter attack uses Step 3 only — bypasses Step 2 (already resolved) and Step 4
             // (no mitigation), at a reduced multiplier relative to a normal Solid Hit.
-            riposteDamage = ComputeDamage(HitTier.SolidHit, ctx.WeaponBaseDamage, ctx.RelevantStat, RiposteDamageMultiplier);
+            riposteDamage = ComputeDamage(HitTier.SolidHit, ctx.WeaponBaseDamage, ctx.WeaponBonusDamage, ctx.RelevantStat, RiposteDamageMultiplier);
         }
 
         return new AttackResult { Tier = tier, Damage = damage, Riposted = riposted, RiposteDamage = riposteDamage };
@@ -178,16 +238,6 @@ public static class CombatResolver
         return LevelBandIncrements[0];
     }
 
-    static void ApplySkillDifferential(ref CombatTierTable table, int skillDiff)
-    {
-        if (skillDiff == 0) return;
-        int clamped  = Mathf.Clamp(skillDiff, -SkillDifferentialCap, SkillDifferentialCap);
-        float weight = clamped * clamped; // perfect-square scaling, sign handled below
-
-        if (clamped > 0) ShiftTowardPotency(ref table, weight);
-        else             ShiftTowardFutility(ref table, weight);
-    }
-
     static void ApplyPositionModifier(ref CombatTierTable table)
     {
         // §2.9: rear attack pulls weight from Miss/Glancing/Hit into SolidHit only — reliability, not
@@ -206,10 +256,11 @@ public static class CombatResolver
         table.SolidHit += takeMiss + takeGlancing + takeHit;
     }
 
-    // Shared directional-weight-transfer helpers, reused by both Level and Skill differential (they both
-    // push the same table "toward futility" or "toward potency" — only the magnitude differs). Crippling
-    // never receives weight here — it's class-passive-unlock-only (§2.3/§2.11) and no passive system
-    // exists yet; the doc itself says pre-unlock those points redistribute into Critical instead.
+    // Shared directional-weight-transfer helpers — push the table "toward futility" or "toward potency"
+    // by a given weight (currently only Level Differential uses these; Skill Differential was retired in
+    // 5.1.5 since weapon skill's influence now flows through ATK instead). Crippling never receives
+    // weight here — it's class-passive-unlock-only (§2.3/§2.11) and no passive system exists yet; the
+    // doc itself says pre-unlock those points redistribute into Critical instead.
     static readonly HitTier[] FutilityDrainOrder = { HitTier.Crippling, HitTier.Critical, HitTier.GoodHit, HitTier.SolidHit, HitTier.Hit };
     static readonly HitTier[] FutilityFillOrder  = { HitTier.Miss, HitTier.Glancing };
     static readonly HitTier[] PotencyDrainOrder  = { HitTier.Miss, HitTier.Glancing, HitTier.Hit };
@@ -259,16 +310,17 @@ public static class CombatResolver
 
     static (bool avoided, bool riposted) ResolveAvoidance(Combatant defender, bool isParryable)
     {
-        // Riposte
-        if (Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Dexterity))
+        // Riposte — its own independently-trained value (2026-08-13 follow-up), no longer sharing
+        // Parry's number.
+        if (Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Riposte))
             return (true, true);
 
         // Parry — skipped for non-parryable attacks (beast bites, etc., AV3), falls through to Dodge.
-        if (isParryable && Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Dexterity))
+        if (isParryable && Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Parry))
             return (true, false);
 
-        // Dodge
-        if (Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Agility))
+        // Dodge — includes AvoidanceBase (Agility + Defense), so this is nonzero even untrained.
+        if (Random.Range(0f, 100f) < AvoidanceCurve.Evaluate(defender.Dodge))
             return (true, false);
 
         return (false, false);
@@ -276,7 +328,7 @@ public static class CombatResolver
 
     // ── Step 3 — Damage (5.1.3) ──────────────────────────────────────────────────────────────────────
 
-    static int ComputeDamage(HitTier tier, float weaponBaseDamage, float relevantStat, float extraMultiplier = 1f)
+    static int ComputeDamage(HitTier tier, float weaponBaseDamage, float weaponBonusDamage, float relevantStat, float extraMultiplier = 1f)
     {
         if (tier == HitTier.Miss) return 0;
 
@@ -284,14 +336,20 @@ public static class CombatResolver
         float pct      = config.PercentFor(tier);
         float variance = 1f + Random.Range(-config.variance, config.variance);
 
-        float baseDmg = weaponBaseDamage * (1f + relevantStat / 400f);
+        float baseDmg = relevantStat * StatToDamagePercentRatio * weaponBonusDamage + weaponBaseDamage;
         float raw     = baseDmg * pct * variance * extraMultiplier;
         return Mathf.Max(1, Mathf.RoundToInt(raw));
     }
 
-    // ── Step 4 — Mitigation (5.1.4, stub) ────────────────────────────────────────────────────────────
+    // ── Step 4 — Mitigation (2026-08-21) ─────────────────────────────────────────────────────────────
 
-    // MT1 — named seam, exercised every attack, currently a pass-through. Filled in once the armor/
-    // mitigation design session (doc §5) produces a real formula.
-    static int ApplyMitigation(int rawDamage, Combatant defender) => rawDamage;
+    // MT1 — AC is the sole lever, converted to a % via MitigationCurve's diminishing-returns curve.
+    // A Miss (rawDamage 0) passes through unchanged; any landed hit still deals at least 1, same floor
+    // Step 3 already enforces (mitigation cannot create invulnerability, per the design doc's §5 notes).
+    static int ApplyMitigation(int rawDamage, Combatant defender)
+    {
+        if (rawDamage <= 0) return rawDamage;
+        float pct = MitigationCurve.Evaluate(defender.Ac);
+        return Mathf.Max(1, Mathf.RoundToInt(rawDamage * (1f - pct / 100f)));
+    }
 }

@@ -29,21 +29,10 @@ public class Class
     public float BaseManaRatio { get; set; } = 0.23f;
     public float ManaGrowthRate { get; set; }
 
-    public float TierL1Miss { get; set; } = 17.5f;
-    public float TierL1Glancing { get; set; } = 40f;
-    public float TierL1Hit { get; set; } = 30f;
-    public float TierL1Solid { get; set; } = 10f;
-    public float TierL1Good { get; set; } = 2.5f;
-    public float TierL1Critical { get; set; }
-    public float TierL1Crippling { get; set; }
-
-    public float TierL20Miss { get; set; } = 2f;
-    public float TierL20Glancing { get; set; } = 13f;
-    public float TierL20Hit { get; set; } = 20f;
-    public float TierL20Solid { get; set; } = 35f;
-    public float TierL20Good { get; set; } = 25f;
-    public float TierL20Critical { get; set; } = 3f;
-    public float TierL20Crippling { get; set; } = 2f;
+    // Offense/Defense are no longer authored per class (2026-08-11 / 2026-08-13) — both are trained
+    // per-character stats now (PlayerOffense.cs / PlayerAvoidanceSkills.cs). classes.offense_base/
+    // offense_per_level/defense_base/defense_per_level are still present in the DB but unmapped, same
+    // as the tier_l1_*/tier_l20_* columns from before them, pending a follow-up cleanup migration.
 
     public DateTime UpdatedAt { get; set; }
 
@@ -86,22 +75,6 @@ public class ClassDto
     public int ManaCap { get; set; }
     public float BaseManaRatio { get; set; } = 0.23f;
     public float ManaGrowthRate { get; set; }
-
-    public float TierL1Miss { get; set; } = 17.5f;
-    public float TierL1Glancing { get; set; } = 40f;
-    public float TierL1Hit { get; set; } = 30f;
-    public float TierL1Solid { get; set; } = 10f;
-    public float TierL1Good { get; set; } = 2.5f;
-    public float TierL1Critical { get; set; }
-    public float TierL1Crippling { get; set; }
-
-    public float TierL20Miss { get; set; } = 2f;
-    public float TierL20Glancing { get; set; } = 13f;
-    public float TierL20Hit { get; set; } = 20f;
-    public float TierL20Solid { get; set; } = 35f;
-    public float TierL20Good { get; set; } = 25f;
-    public float TierL20Critical { get; set; } = 3f;
-    public float TierL20Crippling { get; set; } = 2f;
 
     public List<string> StartingAbilityIds { get; set; } = new();
 }

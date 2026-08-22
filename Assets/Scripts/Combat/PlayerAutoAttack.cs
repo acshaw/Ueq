@@ -7,7 +7,8 @@ public enum WeaponCategory { Might, Finesse }
 [RequireComponent(typeof(NetworkedPlayer))]
 public class PlayerAutoAttack : NetworkBehaviour
 {
-    [SerializeField] int            _weaponBaseDamage = 10;
+    [SerializeField] int            _weaponBaseDamage  = 10;
+    [SerializeField] int            _weaponBonusDamage = 0;
     [SerializeField] float          _weaponDelay      = 2f;
     [SerializeField] float          _attackRange      = 3f;
     [SerializeField] WeaponCategory _weaponCategory   = WeaponCategory.Might;
@@ -20,6 +21,7 @@ public class PlayerAutoAttack : NetworkBehaviour
     PlayerEquipment    _equipment;
     PlayerAnimator     _animator;
     PlayerWeaponSkills _weaponSkills;
+    PlayerOffense      _offense;
 
     void Awake()
     {
@@ -28,6 +30,7 @@ public class PlayerAutoAttack : NetworkBehaviour
         _equipment    = GetComponent<PlayerEquipment>();
         _animator     = GetComponentInChildren<PlayerAnimator>();
         _weaponSkills = GetComponent<PlayerWeaponSkills>();
+        _offense      = GetComponent<PlayerOffense>();
     }
 
     // Read weapon stats from equipped weapon; fall back to serialized inspector values
@@ -35,6 +38,7 @@ public class PlayerAutoAttack : NetworkBehaviour
     float             EffectiveDelay  => Weapon?.weaponDelay      ?? _weaponDelay;
     float             EffectiveRange  => Weapon?.weaponRange       ?? _attackRange;
     int               EffectiveDamage => Weapon?.weaponBaseDamage  ?? _weaponBaseDamage;
+    int               EffectiveBonusDamage => Weapon?.weaponBonusDamage ?? _weaponBonusDamage;
     WeaponCategory    EffectiveCat    => Weapon != null ? Weapon.weaponCategory : _weaponCategory;
 
     void Update()
@@ -105,11 +109,25 @@ public class PlayerAutoAttack : NetworkBehaviour
             Defender         = CombatResolver.BuildCombatant(target.gameObject, cat),
             IsRearAttack     = CombatResolver.IsRearAttack(transform, target.transform),
             IsParryable      = true, // player weapon auto-attack is always parryable (AV3)
-            WeaponBaseDamage = EffectiveDamage,
-            RelevantStat     = cat == WeaponCategory.Might ? (_stats?.Str ?? 0) : (_stats?.Dex ?? 0),
+            WeaponBaseDamage  = EffectiveDamage,
+            WeaponBonusDamage = EffectiveBonusDamage,
+            RelevantStat      = cat == WeaponCategory.Might ? (_stats?.Str ?? 0) : (_stats?.Dex ?? 0),
         };
         var result = CombatResolver.ResolveAttack(ctx);
-        _weaponSkills?.RollSkillUp(cat); // SK4 — chance to rise on every swing, regardless of outcome
+        _weaponSkills?.RollSkillUp(cat);  // SK4 — chance to rise on every swing, regardless of outcome
+        _offense?.RollOffenseUp();        // OF4 — same treatment, not tied to a weapon category
+
+        // 2026-08-13 follow-up — Avoidance trains on the DEFENDER's side, the same "every attempt,
+        // regardless of outcome" rule as weapon skill/Offense. Only meaningful if the target is a player
+        // (mobs have no PlayerAvoidanceSkills — a null target defense skips silently, PvP included).
+        var defenderAvoidance = target.GetComponent<PlayerAvoidanceSkills>();
+        if (defenderAvoidance != null)
+        {
+            defenderAvoidance.RollDefenseUp();
+            defenderAvoidance.RollDodgeUp();
+            defenderAvoidance.RollRiposteUp();
+            if (ctx.IsParryable) defenderAvoidance.RollParryUp();
+        }
 
         string targetName = target.GetComponent<Nameplate>()?.Label ?? target.gameObject.name;
         if (result.Tier == HitTier.Miss)

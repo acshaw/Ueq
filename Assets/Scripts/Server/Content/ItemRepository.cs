@@ -15,8 +15,8 @@ public sealed class ItemRepository : IRepository
         using var cmd = new NpgsqlCommand(
             "SELECT item_id, display_name, description, max_stack_size, " +
             "is_equippable, equip_slot, " +
-            "bonus_str, bonus_sta, bonus_agi, bonus_dex, bonus_int, bonus_wis, bonus_cha, " +
-            "weapon_base_damage, weapon_delay, weapon_range, weapon_category, " +
+            "bonus_str, bonus_sta, bonus_agi, bonus_dex, bonus_int, bonus_wis, bonus_cha, bonus_ac, " +
+            "weapon_base_damage, weapon_bonus_damage, weapon_delay, weapon_range, weapon_category, " +
             "buy_price, sell_price, icon_address, lore " +
             "FROM items ORDER BY item_id", conn, tx);
         using var reader = cmd.ExecuteReader();
@@ -24,27 +24,29 @@ public sealed class ItemRepository : IRepository
         {
             rows.Add(new ItemSnapshot
             {
-                ItemId           = reader.GetString(0),
-                DisplayName      = reader.GetString(1),
-                Description      = reader.GetString(2),
-                MaxStackSize     = reader.GetInt32(3),
-                IsEquippable     = reader.GetBoolean(4),
-                EquipSlot        = reader.GetInt32(5),
-                BonusStr         = reader.GetInt32(6),
-                BonusSta         = reader.GetInt32(7),
-                BonusAgi         = reader.GetInt32(8),
-                BonusDex         = reader.GetInt32(9),
-                BonusInt         = reader.GetInt32(10),
-                BonusWis         = reader.GetInt32(11),
-                BonusCha         = reader.GetInt32(12),
-                WeaponBaseDamage = reader.GetInt32(13),
-                WeaponDelay      = reader.GetFloat(14),
-                WeaponRange      = reader.GetFloat(15),
-                WeaponCategory   = reader.GetInt32(16),
-                BuyPrice         = reader.GetInt32(17),
-                SellPrice        = reader.GetInt32(18),
-                IconAddress      = reader.IsDBNull(19) ? null : reader.GetString(19),
-                Lore             = reader.GetBoolean(20),
+                ItemId            = reader.GetString(0),
+                DisplayName       = reader.GetString(1),
+                Description       = reader.GetString(2),
+                MaxStackSize      = reader.GetInt32(3),
+                IsEquippable      = reader.GetBoolean(4),
+                EquipSlot         = reader.GetInt32(5),
+                BonusStr          = reader.GetInt32(6),
+                BonusSta          = reader.GetInt32(7),
+                BonusAgi          = reader.GetInt32(8),
+                BonusDex          = reader.GetInt32(9),
+                BonusInt          = reader.GetInt32(10),
+                BonusWis          = reader.GetInt32(11),
+                BonusCha          = reader.GetInt32(12),
+                BonusAc           = reader.GetInt32(13),
+                WeaponBaseDamage  = reader.GetInt32(14),
+                WeaponBonusDamage = reader.GetInt32(15),
+                WeaponDelay       = reader.GetFloat(16),
+                WeaponRange       = reader.GetFloat(17),
+                WeaponCategory    = reader.GetInt32(18),
+                BuyPrice          = reader.GetInt32(19),
+                SellPrice         = reader.GetInt32(20),
+                IconAddress       = reader.IsDBNull(21) ? null : reader.GetString(21),
+                Lore              = reader.GetBoolean(22),
             });
         }
         return rows;

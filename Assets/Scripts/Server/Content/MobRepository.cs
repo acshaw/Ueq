@@ -36,12 +36,14 @@ public struct MobSnapshot
 
     public List<MobFactionHitSnapshot> FactionHits;   // M2.7.1
 
-    // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob.
+    // 5.1.1 (HR5) / 5.1.2 (AV3) / 2.12 (SK5) — combat pipeline data, authored per mob. WeaponCategory/
+    // WeaponSkill are no longer consumed by the resolver as of 5.1.5 (superseded by Atk).
     public int   WeaponCategory;
     public int   WeaponSkill;
-    public float TierMiss, TierGlancing, TierHit, TierSolid, TierGood, TierCritical, TierCrippling;
+    public float Atk; // 5.1.5 (AD3)
     public bool  AttackIsParryable;
-    public float AvoidanceAgility, AvoidanceDexterity;
+    public float AvoidanceDodge, AvoidanceParry, AvoidanceRiposte; // 2026-08-13 follow-up (AV3)
+    public float Ac; // 2026-08-21 (Mitigation) — authored directly, same reasoning as Atk/Avoidance*
 
     // 5.4 (AG3) — social aggro, opt-in per mob.
     public bool  SocialAggroEnabled;
@@ -77,9 +79,8 @@ public sealed class MobRepository : IRepository
             "faction_id, aggro_max_standing, warning_max_standing, " +
             "conversation_set_id, loot_table_id, xp_reward, " +
             "vendor_id, vendor_open_keyword, " +
-            "weapon_category, weapon_skill, " +
-            "tier_miss, tier_glancing, tier_hit, tier_solid, tier_good, tier_critical, tier_crippling, " +
-            "attack_is_parryable, avoidance_agility, avoidance_dexterity, " +
+            "weapon_category, weapon_skill, atk, " +
+            "attack_is_parryable, avoidance_dodge, avoidance_parry, avoidance_riposte, ac, " +
             "social_aggro_enabled, social_aggro_radius " +
             "FROM mobs ORDER BY mob_id", conn, tx))
         using (var reader = cmd.ExecuteReader())
@@ -114,18 +115,14 @@ public sealed class MobRepository : IRepository
                     VendorOpenKeyword  = reader.GetString(22),
                     WeaponCategory     = reader.GetInt32(23),
                     WeaponSkill        = reader.GetInt32(24),
-                    TierMiss           = reader.GetFloat(25),
-                    TierGlancing       = reader.GetFloat(26),
-                    TierHit            = reader.GetFloat(27),
-                    TierSolid          = reader.GetFloat(28),
-                    TierGood           = reader.GetFloat(29),
-                    TierCritical       = reader.GetFloat(30),
-                    TierCrippling      = reader.GetFloat(31),
-                    AttackIsParryable  = reader.GetBoolean(32),
-                    AvoidanceAgility   = reader.GetFloat(33),
-                    AvoidanceDexterity = reader.GetFloat(34),
-                    SocialAggroEnabled = reader.GetBoolean(35),
-                    SocialAggroRadius  = reader.GetFloat(36),
+                    Atk                = reader.GetFloat(25),
+                    AttackIsParryable  = reader.GetBoolean(26),
+                    AvoidanceDodge     = reader.GetFloat(27),
+                    AvoidanceParry     = reader.GetFloat(28),
+                    AvoidanceRiposte   = reader.GetFloat(29),
+                    Ac                 = reader.GetFloat(30),
+                    SocialAggroEnabled = reader.GetBoolean(31),
+                    SocialAggroRadius  = reader.GetFloat(32),
                     FactionHits        = new List<MobFactionHitSnapshot>(),
                 };
                 order.Add(id);

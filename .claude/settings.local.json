@@ -204,7 +204,11 @@
       "Bash(find 'C:\\\\Users\\\\acsha/.claude' -maxdepth 2 -iname *.json)",
       "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
       "Read(//proc/sys/kernel/random/**)",
-      "Bash(awk -F: '{print $1}')"
+      "Bash(awk -F: '{print $1}')",
+      "Bash(xargs -I{} echo {})",
+      "Bash(xargs -I{} wc -l {})",
+      "Bash(netstat -ano)",
+      "Bash(powershell -NoProfile -Command \"[guid]::NewGuid\\(\\).ToString\\('N'\\)\")"
     ]
   },
   "hooks": {

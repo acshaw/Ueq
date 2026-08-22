@@ -21,11 +21,9 @@ export interface Class {
   classBaseMana: number; manaPerLevel: number; manaCap: number;
   baseManaRatio: number; manaGrowthRate: number;
 
-  tierL1Miss: number; tierL1Glancing: number; tierL1Hit: number;
-  tierL1Solid: number; tierL1Good: number; tierL1Critical: number; tierL1Crippling: number;
-
-  tierL20Miss: number; tierL20Glancing: number; tierL20Hit: number;
-  tierL20Solid: number; tierL20Good: number; tierL20Critical: number; tierL20Crippling: number;
+  // Offense is no longer authored per class (2026-08-11, was offenseBase/offensePerLevel, itself
+  // renamed from classAtkBase/atkPerLevel) — it's a fixed universal Offense(level) = level × 5
+  // (combat-sim/combat-math.ts's OFFENSE_PER_LEVEL), same treatment weapon skill's cap already gets.
 
   startingAbilityIds: string[];
 }
@@ -36,8 +34,6 @@ export function emptyClass(): Class {
     baseStr: 10, baseSta: 10, baseAgi: 10, baseDex: 10, baseInt: 10, baseWis: 10, baseCha: 10,
     classBaseHP: 15, hpPerLevel: 4, staCap: 255, baseStaRatio: 0.23, staGrowthRate: 0.15,
     manaStatType: 0, classBaseMana: 0, manaPerLevel: 0, manaCap: 0, baseManaRatio: 0.23, manaGrowthRate: 0,
-    tierL1Miss: 17.5, tierL1Glancing: 40, tierL1Hit: 30, tierL1Solid: 10, tierL1Good: 2.5, tierL1Critical: 0, tierL1Crippling: 0,
-    tierL20Miss: 2, tierL20Glancing: 13, tierL20Hit: 20, tierL20Solid: 35, tierL20Good: 25, tierL20Critical: 3, tierL20Crippling: 2,
     startingAbilityIds: [],
   };
 }

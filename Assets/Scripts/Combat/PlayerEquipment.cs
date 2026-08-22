@@ -111,8 +111,8 @@ public class PlayerEquipment : NetworkBehaviour
         var def = ItemRegistry.Instance?.Get(itemId);
         if (def == null) return;
         if (remove)
-            _stats.RemoveEquipmentBonus(def.bonusStr, def.bonusSta, def.bonusAgi, def.bonusDex, def.bonusInt, def.bonusWis, def.bonusCha);
+            _stats.RemoveEquipmentBonus(def.bonusStr, def.bonusSta, def.bonusAgi, def.bonusDex, def.bonusInt, def.bonusWis, def.bonusCha, def.bonusAc);
         else
-            _stats.AddEquipmentBonus(def.bonusStr, def.bonusSta, def.bonusAgi, def.bonusDex, def.bonusInt, def.bonusWis, def.bonusCha);
+            _stats.AddEquipmentBonus(def.bonusStr, def.bonusSta, def.bonusAgi, def.bonusDex, def.bonusInt, def.bonusWis, def.bonusCha, def.bonusAc);
     }
 }

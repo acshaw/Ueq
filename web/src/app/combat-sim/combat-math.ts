@@ -47,17 +47,100 @@ export function lerpTable(a: TierTable, b: TierTable, f: number): TierTable {
   return out;
 }
 
-/** Warrior Level 1 starting table (design doc §2.5) — last-resort fallback, mirrors CombatTierTable.WarriorLevel1. */
+/** Design doc §2.5 — Warrior Level 1 starting table. The MinAtk end of the shared ATK-driven curve
+ * (5.1.5 AD4) — reused verbatim since it's the only real doc-backed hit-tier data in the system. */
 export const WARRIOR_LEVEL_1: TierTable = {
   miss: 17.5, glancing: 40, hit: 30, solid: 10, good: 2.5, critical: 0, crippling: 0,
 };
 
-/** 3.1.5-era class interpolation range: Level 1 → Level 20 target table; holds at L20 above that. */
-const CLASS_TABLE_TOP_LEVEL = 20;
+/** Design doc §2.11 — Warrior Level 20 target table. The MaxAtk end of the shared curve (5.1.5 AD4). */
+export const WARRIOR_LEVEL_20: TierTable = {
+  miss: 2, glancing: 13, hit: 20, solid: 35, good: 25, critical: 3, crippling: 2,
+};
 
-export function interpolateClassTable(l1: TierTable, l20: TierTable, level: number): TierTable {
-  const f = Math.max(0, Math.min(1, (Math.min(level, CLASS_TABLE_TOP_LEVEL) - 1) / (CLASS_TABLE_TOP_LEVEL - 1)));
-  return lerpTable(l1, l20, f);
+// ── ATK-derived Hit Roll base table (5.1.5) ───────────────────────────────────────────────────────
+//
+// Replaces the old per-class/per-mob authored 14/7-field tables. Weapon skill + the relevant combat
+// stat collapse into one derived ATK score (AD1/AD2), which then picks a point along ONE shared
+// curve between the Warrior L1/L20 reference tables (AD4) instead of each class/mob authoring its
+// own table. Mobs skip the whole EffectiveSkill/Offense formula — their `atk` is authored directly as
+// one number (AD3); the simulator represents this via an explicit override rather than a formula trick
+// (see `manualAtk` on CombatantForm in combatant-form.ts).
+//
+// Follow-up (2026-08-11): Offense is no longer a per-class authored formula (offenseBase/
+// offensePerLevel) — it's not tied to class at all. A class's ATK differentiates purely through its
+// base stats (STR/DEX feeding EffectiveSkill), not a separate authored knob.
+//
+// Follow-up (2026-08-13): Offense is a trainable stat, not a fixed function of level — mirrors
+// WeaponSkill exactly (starts at 1, earned through use, PlayerOffense.cs), just capped at level×5
+// (OFFENSE_PER_LEVEL, no flat base) rather than WeaponSkill's level×5+5. The simulator has no
+// progression to simulate, so it assumes always-at-cap, same convention as autoWeaponSkill below.
+//
+// Follow-up (2026-08-13, Avoidance rework): replaces the 2026-08-11 "EffectiveDefense = Defense(level)
+// + Agility/Dexterity" design (which made Parry and Riposte mechanically identical — both read the same
+// Dexterity-derived value). Now:
+//
+//   Defense(level)   = trained, capped at level×5 (defenseCap below) — mirrors Offense exactly.
+//   AvoidanceBase    = Agility × STAT_TO_SKILL_RATIO + Defense       — feeds Dodge ONLY.
+//   EffectiveDodge   = AvoidanceBase + Dodge     (trained, capped level×5+5 — nonzero even untrained,
+//                                                  an innate/reflexive check)
+//   EffectiveParry   = Parry                     (trained, capped level×5+5 — stands ALONE, no base;
+//   EffectiveRiposte = Riposte                    genuinely ~0% until trained)
+//
+// Dexterity no longer feeds Avoidance at all — purely offensive now (ATK/Damage for a Finesse weapon).
+// Mobs skip the whole formula, same as ATK — they author all three (Dodge/Parry/Riposte) directly as
+// flat numbers (AV3), via `manualDodge`/`manualParry`/`manualRiposte` on CombatantForm.
+
+/** §2.10 — Stat Contribution: "effective weapon skill = trained skill + relevant stat × 0.1". */
+export const STAT_TO_SKILL_RATIO = 0.1;
+
+export function effectiveSkill(weaponSkill: number, relevantStatForAtk: number): number {
+  return weaponSkill + relevantStatForAtk * STAT_TO_SKILL_RATIO;
+}
+
+/** OF-equivalent of SK3 — offenseCap(level) = level × OFFENSE_PER_LEVEL. No flat base term (unlike
+ * weaponSkillCap's capBase + capPerLevel×(level−1)) — Offense caps at exactly level×5, not level×5+5. */
+export const OFFENSE_PER_LEVEL = 5;
+
+export function offenseCap(level: number): number {
+  return level * OFFENSE_PER_LEVEL;
+}
+
+export function computeAtk(weaponSkill: number, relevantStatForAtk: number, offense: number): number {
+  return effectiveSkill(weaponSkill, relevantStatForAtk) + offense;
+}
+
+/** OF-equivalent cap for Defense — same shape as offenseCap (level × 5, no flat base). */
+export const DEFENSE_PER_LEVEL = 5;
+
+export function defenseCap(level: number): number {
+  return level * DEFENSE_PER_LEVEL;
+}
+
+/** AvoidanceBase = Agility × ratio + Defense — feeds Dodge only (see the note above). */
+export function avoidanceBase(agi: number, defense: number): number {
+  return agi * STAT_TO_SKILL_RATIO + defense;
+}
+
+/** EffectiveDodge = AvoidanceBase + trained Dodge skill — nonzero even at dodgeSkill=0. */
+export function effectiveDodge(agi: number, defense: number, dodgeSkill: number): number {
+  return avoidanceBase(agi, defense) + dodgeSkill;
+}
+
+// EffectiveParry/EffectiveRiposte have no formula — they're just the raw trained Parry/Riposte value,
+// used directly by callers (no wrapper function needed).
+
+/** AD9 — placeholder band, tuned via this very simulator (not locked by the design doc). */
+export const MIN_ATK = 10;
+export const MAX_ATK = 150;
+
+export function atkFraction(atk: number): number {
+  return Math.max(0, Math.min(1, (atk - MIN_ATK) / (MAX_ATK - MIN_ATK)));
+}
+
+/** AD4 — re-keys the (unchanged) table lerp from "by level" to "by ATK". */
+export function resolveAtkTable(atk: number): TierTable {
+  return lerpTable(WARRIOR_LEVEL_1, WARRIOR_LEVEL_20, atkFraction(atk));
 }
 
 // ── Avoidance curve (AV1/AV2, design doc §3.3) ────────────────────────────────────────────────────
@@ -82,6 +165,31 @@ export function avoidanceChance(stat: number): number {
   return pts[pts.length - 1][1];
 }
 
+// ── Mitigation curve (MT1, 2026-08-21 — doc §5 was "NAMED — UNDEFINED", no numbers to port) ──────────
+//
+// AC is the sole mitigation lever. Piecewise-linear diminishing-returns curve, same mechanism as
+// AVOIDANCE_POINTS above — placeholder breakpoints, tuned via this simulator, asymptoting at 50% (well
+// under 100%) per the doc's own requirement that mitigation cannot create invulnerability.
+
+const MITIGATION_POINTS: [ac: number, pct: number][] = [
+  [0, 0], [50, 10], [100, 20], [200, 32], [400, 42], [800, 50],
+];
+
+export function mitigationChance(ac: number): number {
+  const pts = MITIGATION_POINTS;
+  if (ac <= pts[0][0]) return pts[0][1];
+  if (ac >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [a0, p0] = pts[i];
+    const [a1, p1] = pts[i + 1];
+    if (ac >= a0 && ac <= a1) {
+      const t = (ac - a0) / (a1 - a0);
+      return p0 + (p1 - p0) * t;
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+
 // ── Damage config (DM1, design doc §4.1) ──────────────────────────────────────────────────────────
 
 export const TIER_DAMAGE_PERCENT: Record<HitTier, number> = {
@@ -89,13 +197,17 @@ export const TIER_DAMAGE_PERCENT: Record<HitTier, number> = {
 };
 export const DAMAGE_VARIANCE = 0.125; // ± band per swing
 
+/** 2026-08-21 — RelevantStat converts to a percentage (STR/DEX × 0.01, no cap — itemization determines
+ * the practical ceiling) applied to WeaponBonusDamage (a weapon's stat-scalable portion), then added to
+ * WeaponBaseDamage (its flat portion). Replaces the old WeaponBaseDamage × (1 + RelevantStat/400) term. */
+export const STAT_TO_DAMAGE_PERCENT_RATIO = 0.01;
+
 // ── Tuning constants (named per CombatResolver.cs) ────────────────────────────────────────────────
 
 const LEVEL_BAND_FLOOR = [1, 2, 3, 5, 8, 13];
 const LEVEL_BAND_INCREMENTS = [1, 1, 2, 3, 5, 8];
 const MAX_LEVEL_FUTILITY_WEIGHT = 100;
 const LEVEL_ADVANTAGE_SCALE = 0.5;
-const SKILL_DIFFERENTIAL_CAP = 5;
 const REAR_ATTACK_WEIGHT = 50;
 const RIPOSTE_DAMAGE_MULTIPLIER = 0.5;
 
@@ -140,14 +252,6 @@ function applyLevelDifferential(table: TierTable, attackerLevel: number, defende
   else shiftTowardPotency(table, fraction * MAX_LEVEL_FUTILITY_WEIGHT * LEVEL_ADVANTAGE_SCALE);
 }
 
-function applySkillDifferential(table: TierTable, skillDiff: number): void {
-  if (skillDiff === 0) return;
-  const clamped = Math.max(-SKILL_DIFFERENTIAL_CAP, Math.min(SKILL_DIFFERENTIAL_CAP, skillDiff));
-  const weight = clamped * clamped;
-  if (clamped > 0) shiftTowardPotency(table, weight);
-  else shiftTowardFutility(table, weight);
-}
-
 function applyPositionModifier(table: TierTable): void {
   const pool = table.miss + table.glancing + table.hit;
   if (pool <= 0) return;
@@ -176,11 +280,14 @@ function weightedPick(table: TierTable, rng: () => number): HitTier {
 // ── Combatant / attack shapes ──────────────────────────────────────────────────────────────────────
 
 export interface Combatant {
-  baseTable: TierTable;
+  atk: number;   // 5.1.5 — replaces baseTable + skill; the base table is now derived from this
   level: number;
-  skill: number;
-  agility: number;
-  dexterity: number;
+  // 2026-08-13 follow-up — three independent, fully-resolved avoidance values (dodge already includes
+  // AvoidanceBase; parry/riposte stand alone). Replaces the old agility/dexterity pair.
+  dodge: number;
+  parry: number;
+  riposte: number;
+  ac: number; // 2026-08-21 — sole Mitigation lever, no class/race base (equipment-only)
 }
 
 export interface AttackContext {
@@ -189,6 +296,7 @@ export interface AttackContext {
   isRearAttack: boolean;
   isParryable: boolean;
   weaponBaseDamage: number;
+  weaponBonusDamage: number;
   relevantStat: number;
 }
 
@@ -204,32 +312,34 @@ export interface AttackResult {
 }
 
 function resolveAvoidance(defender: Combatant, isParryable: boolean, rng: () => number): { avoided: boolean; riposted: boolean; cause: AvoidCause } {
-  if (rng() * 100 < avoidanceChance(defender.dexterity)) return { avoided: true, riposted: true, cause: 'riposte' };
-  if (isParryable && rng() * 100 < avoidanceChance(defender.dexterity)) return { avoided: true, riposted: false, cause: 'parry' };
-  if (rng() * 100 < avoidanceChance(defender.agility)) return { avoided: true, riposted: false, cause: 'dodge' };
+  if (rng() * 100 < avoidanceChance(defender.riposte)) return { avoided: true, riposted: true, cause: 'riposte' };
+  if (isParryable && rng() * 100 < avoidanceChance(defender.parry)) return { avoided: true, riposted: false, cause: 'parry' };
+  if (rng() * 100 < avoidanceChance(defender.dodge)) return { avoided: true, riposted: false, cause: 'dodge' };
   return { avoided: false, riposted: false, cause: 'none' };
 }
 
-function computeDamage(tier: HitTier, weaponBaseDamage: number, relevantStat: number, extraMultiplier: number, rng: () => number): number {
+function computeDamage(tier: HitTier, weaponBaseDamage: number, weaponBonusDamage: number, relevantStat: number, extraMultiplier: number, rng: () => number): number {
   if (tier === 'miss') return 0;
   const pct = TIER_DAMAGE_PERCENT[tier];
   const variance = 1 + (rng() * 2 - 1) * DAMAGE_VARIANCE; // Random.Range(-v, v)
-  const baseDmg = weaponBaseDamage * (1 + relevantStat / 400);
+  const baseDmg = relevantStat * STAT_TO_DAMAGE_PERCENT_RATIO * weaponBonusDamage + weaponBaseDamage;
   const raw = baseDmg * pct * variance * extraMultiplier;
   return Math.max(1, Math.round(raw));
 }
 
-/** Step 4 — Mitigation (5.1.4, stub in the C# too). Named seam kept for parity; no-op today. */
-function applyMitigation(damage: number, _defender: Combatant): number {
-  return damage;
+/** Step 4 — Mitigation (2026-08-21). AC converts to a % via mitigationChance's diminishing-returns
+ * curve. A Miss (damage 0) passes through unchanged; any landed hit still deals at least 1. */
+function applyMitigation(damage: number, defender: Combatant): number {
+  if (damage <= 0) return damage;
+  const pct = mitigationChance(defender.ac);
+  return Math.max(1, Math.round(damage * (1 - pct / 100)));
 }
 
 /** Mirrors CombatResolver.ResolveAttack exactly. `rng` defaults to Math.random; pass a seeded PRNG
  * for reproducible runs. */
 export function resolveAttack(ctx: AttackContext, rng: () => number = Math.random): AttackResult {
-  const table = cloneTable(ctx.attacker.baseTable);
+  const table = resolveAtkTable(ctx.attacker.atk);
   applyLevelDifferential(table, ctx.attacker.level, ctx.defender.level);
-  applySkillDifferential(table, ctx.attacker.skill - ctx.defender.skill);
   if (ctx.isRearAttack) applyPositionModifier(table);
 
   const rawTier = weightedPick(table, rng);
@@ -246,15 +356,145 @@ export function resolveAttack(ctx: AttackContext, rng: () => number = Math.rando
     }
   }
 
-  let damage = tier === 'miss' ? 0 : computeDamage(tier, ctx.weaponBaseDamage, ctx.relevantStat, 1, rng);
+  let damage = tier === 'miss' ? 0 : computeDamage(tier, ctx.weaponBaseDamage, ctx.weaponBonusDamage, ctx.relevantStat, 1, rng);
   damage = applyMitigation(damage, ctx.defender);
 
   let riposteDamage = 0;
   if (riposted) {
-    riposteDamage = computeDamage('solid', ctx.weaponBaseDamage, ctx.relevantStat, RIPOSTE_DAMAGE_MULTIPLIER, rng);
+    riposteDamage = computeDamage('solid', ctx.weaponBaseDamage, ctx.weaponBonusDamage, ctx.relevantStat, RIPOSTE_DAMAGE_MULTIPLIER, rng);
   }
 
   return { rawTier, tier, avoidCause, damage, riposted, riposteDamage };
+}
+
+// ── Single-swing trace (5.1.5 — "piece by piece" breakdown, mirrors resolveAttack stage-by-stage) ──
+
+export interface AttackTraceStage {
+  label: string;
+  table: TierTable;
+  note: string;
+}
+
+export interface AttackTrace {
+  atk: number;
+  atkFraction: number;
+  stages: AttackTraceStage[];       // Step 1: base table -> level differential -> position modifier
+
+  rollValue: number;
+  rollTotal: number;
+  rawTier: HitTier;
+
+  riposteChance: number; riposteRoll: number; riposted: boolean;
+  parryChecked: boolean; parryChance: number; parryRoll: number; parried: boolean;
+  dodgeChecked: boolean; dodgeChance: number; dodgeRoll: number; dodged: boolean;
+
+  finalTier: HitTier;
+  tierPercent: number;
+  varianceMultiplier: number;
+  baseDamageWithStat: number;
+  rawDamage: number;
+  preMitigationDamage: number; // Step 3's final output, before AC is applied
+  defenderAc: number;
+  mitigationPct: number;
+  damage: number;              // post-mitigation final
+  riposteDamage: number;
+}
+
+/** Runs the exact same pipeline as resolveAttack, but returns every intermediate value instead of
+ * just the final result — the "piece by piece" complement to simulateSwings' aggregate Monte Carlo
+ * view. Not used by the live game; a simulator-only diagnostic. */
+export function traceAttack(ctx: AttackContext, rng: () => number = Math.random): AttackTrace {
+  const stages: AttackTraceStage[] = [];
+
+  const table = resolveAtkTable(ctx.attacker.atk);
+  stages.push({
+    label: 'Base table (from ATK)',
+    table: cloneTable(table),
+    note: `ATK ${ctx.attacker.atk.toFixed(1)} → ${(atkFraction(ctx.attacker.atk) * 100).toFixed(0)}% of the way from the Level 1 to the Level 20 reference table`,
+  });
+
+  const gap = ctx.attacker.level - ctx.defender.level;
+  applyLevelDifferential(table, ctx.attacker.level, ctx.defender.level);
+  if (gap !== 0) {
+    stages.push({
+      label: 'Level differential',
+      table: cloneTable(table),
+      note: `Level gap ${gap > 0 ? '+' : ''}${gap} (attacker ${ctx.attacker.level} vs defender ${ctx.defender.level})`,
+    });
+  }
+
+  if (ctx.isRearAttack) {
+    applyPositionModifier(table);
+    stages.push({
+      label: 'Position modifier (rear attack)',
+      table: cloneTable(table),
+      note: 'Up to 50 weight units pulled from Miss/Glancing/Hit into Solid Hit only',
+    });
+  }
+
+  const rollTotal = tierTotal(table);
+  const rollValue = rng() * rollTotal;
+  let cumulative = 0;
+  let rawTier: HitTier = 'crippling';
+  for (const t of TIER_ORDER) {
+    cumulative += table[t];
+    if (rollValue < cumulative) { rawTier = t; break; }
+  }
+
+  let finalTier = rawTier;
+  let riposted = false, parried = false, dodged = false;
+  let riposteChance = 0, riposteRoll = 0;
+  let parryChecked = false, parryChance = 0, parryRoll = 0;
+  let dodgeChecked = false, dodgeChance = 0, dodgeRoll = 0;
+
+  if (rawTier !== 'miss') {
+    riposteChance = avoidanceChance(ctx.defender.riposte);
+    riposteRoll = rng() * 100;
+    riposted = riposteRoll < riposteChance;
+
+    if (!riposted && ctx.isParryable) {
+      parryChecked = true;
+      parryChance = avoidanceChance(ctx.defender.parry);
+      parryRoll = rng() * 100;
+      parried = parryRoll < parryChance;
+    }
+
+    if (!riposted && !parried) {
+      dodgeChecked = true;
+      dodgeChance = avoidanceChance(ctx.defender.dodge);
+      dodgeRoll = rng() * 100;
+      dodged = dodgeRoll < dodgeChance;
+    }
+
+    if (riposted || parried || dodged) finalTier = 'miss';
+  }
+
+  let tierPercent = 0, varianceMultiplier = 1, baseDamageWithStat = 0, rawDamage = 0, preMitigationDamage = 0;
+  if (finalTier !== 'miss') {
+    tierPercent = TIER_DAMAGE_PERCENT[finalTier];
+    varianceMultiplier = 1 + (rng() * 2 - 1) * DAMAGE_VARIANCE;
+    baseDamageWithStat = ctx.relevantStat * STAT_TO_DAMAGE_PERCENT_RATIO * ctx.weaponBonusDamage + ctx.weaponBaseDamage;
+    rawDamage = baseDamageWithStat * tierPercent * varianceMultiplier;
+    preMitigationDamage = Math.max(1, Math.round(rawDamage));
+  }
+  const defenderAc = ctx.defender.ac;
+  const mitigationPct = finalTier !== 'miss' ? mitigationChance(defenderAc) : 0;
+  const damage = applyMitigation(preMitigationDamage, ctx.defender);
+
+  const riposteDamage = riposted
+    ? computeDamage('solid', ctx.weaponBaseDamage, ctx.weaponBonusDamage, ctx.relevantStat, RIPOSTE_DAMAGE_MULTIPLIER, rng)
+    : 0;
+
+  return {
+    atk: ctx.attacker.atk, atkFraction: atkFraction(ctx.attacker.atk), stages,
+    rollValue, rollTotal, rawTier,
+    riposteChance, riposteRoll, riposted,
+    parryChecked, parryChance, parryRoll, parried,
+    dodgeChecked, dodgeChance, dodgeRoll, dodged,
+    finalTier, tierPercent, varianceMultiplier, baseDamageWithStat, rawDamage,
+    preMitigationDamage, defenderAc, mitigationPct, damage,
+    riposteDamage,
+  };
 }
 
 // ── Monte Carlo: single-direction swing statistics ────────────────────────────────────────────────
@@ -316,6 +556,7 @@ export function simulateSwings(ctx: AttackContext, weaponDelay: number, trials: 
 export interface FightSide {
   combatant: Combatant;
   weaponBaseDamage: number;
+  weaponBonusDamage: number;
   weaponDelay: number;
   relevantStat: number;
   isParryable: boolean; // whether THIS side's attack can be parried by the opponent
@@ -349,7 +590,7 @@ export function simulateFight(a: FightSide, b: FightSide, trials: number, maxSec
         const r = resolveAttack({
           attacker: a.combatant, defender: b.combatant,
           isRearAttack: false, isParryable: a.isParryable,
-          weaponBaseDamage: a.weaponBaseDamage, relevantStat: a.relevantStat,
+          weaponBaseDamage: a.weaponBaseDamage, weaponBonusDamage: a.weaponBonusDamage, relevantStat: a.relevantStat,
         }, rng);
         hpB -= r.damage;
         if (r.riposted) hpA -= r.riposteDamage;
@@ -359,7 +600,7 @@ export function simulateFight(a: FightSide, b: FightSide, trials: number, maxSec
         const r = resolveAttack({
           attacker: b.combatant, defender: a.combatant,
           isRearAttack: false, isParryable: b.isParryable,
-          weaponBaseDamage: b.weaponBaseDamage, relevantStat: b.relevantStat,
+          weaponBaseDamage: b.weaponBaseDamage, weaponBonusDamage: b.weaponBonusDamage, relevantStat: b.relevantStat,
         }, rng);
         hpA -= r.damage;
         if (r.riposted) hpB -= r.riposteDamage;
@@ -403,7 +644,7 @@ export function computeClassHp(inp: HpFormulaInputs, level: number): number {
   return Math.round(inp.classBaseHP + (level - 1) * inp.hpPerLevel + effectiveSta * staModifier);
 }
 
-/** SK3 — skillCap(level) = base + perLevel × (level − 1), mirrors PlayerWeaponSkills.Cap. */
-export function weaponSkillCap(level: number, capBase = 5, capPerLevel = 5): number {
+/** SK3 — skillCap(level) = base + perLevel × (level − 1) = level×5 + 5, mirrors PlayerWeaponSkills.Cap. */
+export function weaponSkillCap(level: number, capBase = 10, capPerLevel = 5): number {
   return capBase + capPerLevel * Math.max(0, level - 1);
 }

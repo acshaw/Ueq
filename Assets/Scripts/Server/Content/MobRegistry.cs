@@ -67,14 +67,12 @@ public static class MobRegistry
         // 5.1.1/5.1.2/2.12(SK5) — combat pipeline data.
         def.weaponCategory     = (WeaponCategory)s.WeaponCategory;
         def.weaponSkill        = s.WeaponSkill;
-        def.combatTable        = new CombatTierTable
-        {
-            Miss = s.TierMiss, Glancing = s.TierGlancing, Hit = s.TierHit, SolidHit = s.TierSolid,
-            GoodHit = s.TierGood, Critical = s.TierCritical, Crippling = s.TierCrippling,
-        };
+        def.atk                = s.Atk; // 5.1.5 (AD3)
         def.attackIsParryable  = s.AttackIsParryable;
-        def.avoidanceAgility   = s.AvoidanceAgility;
-        def.avoidanceDexterity = s.AvoidanceDexterity;
+        def.avoidanceDodge     = s.AvoidanceDodge;
+        def.avoidanceParry     = s.AvoidanceParry;
+        def.avoidanceRiposte   = s.AvoidanceRiposte;
+        def.ac                 = s.Ac;
 
         // 5.4 (AG3) — social aggro.
         def.socialAggroEnabled = s.SocialAggroEnabled;

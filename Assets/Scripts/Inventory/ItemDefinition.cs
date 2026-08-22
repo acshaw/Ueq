@@ -17,9 +17,14 @@ public class ItemDefinition : ScriptableObject
 
     [Header("Stat Bonuses")]
     public int bonusStr, bonusSta, bonusAgi, bonusDex, bonusInt, bonusWis, bonusCha;
+    // 2026-08-21 (Mitigation) — AC is the sole mitigation lever; equipment-only, no class/race base.
+    public int bonusAc = 0;
 
     [Header("Weapon Stats")]
-    public int            weaponBaseDamage = 10;
+    public int            weaponBaseDamage  = 10;
+    // 2026-08-21 — the stat-scalable portion of this weapon's damage: Damage = (RelevantStat x 0.01 x
+    // weaponBonusDamage) + weaponBaseDamage. weaponBaseDamage stays flat regardless of STR/DEX.
+    public int            weaponBonusDamage = 0;
     public float          weaponDelay      = 2f;
     public float          weaponRange      = 3f;
     public WeaponCategory weaponCategory   = WeaponCategory.Might;

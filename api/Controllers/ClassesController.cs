@@ -26,10 +26,6 @@ public class ClassesController : ControllerBase
         BaseStaRatio = c.BaseStaRatio, StaGrowthRate = c.StaGrowthRate,
         ManaStatType = c.ManaStatType, ClassBaseMana = c.ClassBaseMana, ManaPerLevel = c.ManaPerLevel,
         ManaCap = c.ManaCap, BaseManaRatio = c.BaseManaRatio, ManaGrowthRate = c.ManaGrowthRate,
-        TierL1Miss = c.TierL1Miss, TierL1Glancing = c.TierL1Glancing, TierL1Hit = c.TierL1Hit,
-        TierL1Solid = c.TierL1Solid, TierL1Good = c.TierL1Good, TierL1Critical = c.TierL1Critical, TierL1Crippling = c.TierL1Crippling,
-        TierL20Miss = c.TierL20Miss, TierL20Glancing = c.TierL20Glancing, TierL20Hit = c.TierL20Hit,
-        TierL20Solid = c.TierL20Solid, TierL20Good = c.TierL20Good, TierL20Critical = c.TierL20Critical, TierL20Crippling = c.TierL20Crippling,
         StartingAbilityIds = c.StartingAbilities.OrderBy(a => a.SortOrder).Select(a => a.AbilityId).ToList(),
     };
 
@@ -101,12 +97,6 @@ public class ClassesController : ControllerBase
         row.ManaStatType = input.ManaStatType; row.ClassBaseMana = input.ClassBaseMana;
         row.ManaPerLevel = input.ManaPerLevel; row.ManaCap = input.ManaCap;
         row.BaseManaRatio = input.BaseManaRatio; row.ManaGrowthRate = input.ManaGrowthRate;
-        row.TierL1Miss = input.TierL1Miss; row.TierL1Glancing = input.TierL1Glancing; row.TierL1Hit = input.TierL1Hit;
-        row.TierL1Solid = input.TierL1Solid; row.TierL1Good = input.TierL1Good;
-        row.TierL1Critical = input.TierL1Critical; row.TierL1Crippling = input.TierL1Crippling;
-        row.TierL20Miss = input.TierL20Miss; row.TierL20Glancing = input.TierL20Glancing; row.TierL20Hit = input.TierL20Hit;
-        row.TierL20Solid = input.TierL20Solid; row.TierL20Good = input.TierL20Good;
-        row.TierL20Critical = input.TierL20Critical; row.TierL20Crippling = input.TierL20Crippling;
 
         int i = 0;
         foreach (var abilityId in input.StartingAbilityIds ?? new List<string>())

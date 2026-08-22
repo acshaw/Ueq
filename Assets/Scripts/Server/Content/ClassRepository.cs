@@ -17,9 +17,7 @@ public sealed class ClassRepository : IRepository
             "SELECT class_id, class_name, xp_modifier, " +
             "base_str, base_sta, base_agi, base_dex, base_int, base_wis, base_cha, " +
             "class_base_hp, hp_per_level, sta_cap, base_sta_ratio, sta_growth_rate, " +
-            "mana_stat_type, class_base_mana, mana_per_level, mana_cap, base_mana_ratio, mana_growth_rate, " +
-            "tier_l1_miss, tier_l1_glancing, tier_l1_hit, tier_l1_solid, tier_l1_good, tier_l1_critical, tier_l1_crippling, " +
-            "tier_l20_miss, tier_l20_glancing, tier_l20_hit, tier_l20_solid, tier_l20_good, tier_l20_critical, tier_l20_crippling " +
+            "mana_stat_type, class_base_mana, mana_per_level, mana_cap, base_mana_ratio, mana_growth_rate " +
             "FROM classes ORDER BY class_id", conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
@@ -49,20 +47,6 @@ public sealed class ClassRepository : IRepository
                     ManaCap          = reader.GetInt32(18),
                     BaseManaRatio    = reader.GetFloat(19),
                     ManaGrowthRate   = reader.GetFloat(20),
-                    TierL1Miss       = reader.GetFloat(21),
-                    TierL1Glancing   = reader.GetFloat(22),
-                    TierL1Hit        = reader.GetFloat(23),
-                    TierL1Solid      = reader.GetFloat(24),
-                    TierL1Good       = reader.GetFloat(25),
-                    TierL1Critical   = reader.GetFloat(26),
-                    TierL1Crippling  = reader.GetFloat(27),
-                    TierL20Miss      = reader.GetFloat(28),
-                    TierL20Glancing  = reader.GetFloat(29),
-                    TierL20Hit       = reader.GetFloat(30),
-                    TierL20Solid     = reader.GetFloat(31),
-                    TierL20Good      = reader.GetFloat(32),
-                    TierL20Critical  = reader.GetFloat(33),
-                    TierL20Crippling = reader.GetFloat(34),
                     StartingAbilityIds = new List<string>(),
                 };
                 order.Add(id);

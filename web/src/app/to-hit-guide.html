@@ -1,0 +1,399 @@
+<article class="doc">
+  <h1>To-Hit &amp; Damage — Formula Reference</h1>
+  <p class="lead">The complete, variable-by-variable formula chain for a single swing —
+    <strong>Hit Roll → Avoidance → Damage → Mitigation</strong> — written out symbol by symbol, with every
+    symbol defined in the Glossary below. This page is a <em>reference</em>, not a how-to — for authoring
+    recipes ("how do I make a boss mob"), see the <strong>Combat Pipeline</strong> guide; for interactively
+    watching these formulas run against real numbers, use the <strong>Combat Simulator</strong>'s "Swing
+    trace" panel.</p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>How to read this page</li>
+      <li>Pipeline at a glance</li>
+      <li>Step 1 — Hit Roll (the formula)</li>
+      <li>Step 2 — Avoidance (the formula)</li>
+      <li>Step 3 — Damage (the formula)</li>
+      <li>Step 4 — Mitigation</li>
+      <li>Glossary — every variable</li>
+      <li>Constants reference</li>
+    </ol>
+  </nav>
+
+  <h2>1. How to read this page</h2>
+  <p>Every variable below is tagged one of two ways:</p>
+  <ul>
+    <li><span class="raw">Raw</span> — a value that's simply <em>stored</em> somewhere (a character stat,
+      an authored field on a class/mob/item). It isn't computed from anything else in this pipeline. If
+      it's a plain character stat like STR, that's all it is — a number sitting on the character.</li>
+    <li><span class="derived">Derived</span> — computed from other variables via a formula given right
+      next to it in the Glossary. Follow the formula's own inputs to see what <em>they</em> are (Raw or
+      also Derived) — the chain always bottoms out at Raw values.</li>
+  </ul>
+  <div class="note"><strong>Players vs. mobs:</strong> players compute ATK and Defense from real character
+    stats + trained weapon skill (Steps below). Mobs have no <code>CharacterStats</code> — they skip that
+    derivation entirely and author ATK / avoidance stand-ins as flat Raw numbers instead. Both feed the
+    exact same downstream pipeline from that point on.</div>
+
+  <h2>2. Pipeline at a glance</h2>
+  <table>
+    <tr><th>Step</th><th>Answers</th><th>Reads</th><th>Produces</th></tr>
+    <tr><td><strong>1. Hit Roll</strong></td><td>Which of the 7 tiers (Miss…Crippling) did this swing land
+      at, before either side's avoidance is checked?</td><td>Attacker's ATK, both combatants' Level, whether
+      this is a rear attack</td><td><code>RawTier</code></td></tr>
+    <tr><td><strong>2. Avoidance</strong></td><td>Did the defender turn that tier into a Miss (and possibly
+      counter-attack)?</td><td>Defender's three independent Dodge/Parry/Riposte values (or mob stand-ins),
+      whether the attack is parryable</td><td><code>FinalTier</code>, <code>Riposted</code></td></tr>
+    <tr><td><strong>3. Damage</strong></td><td>How much HP does that tier actually take off?</td>
+      <td>Weapon base damage, attacker's relevant stat, <code>FinalTier</code></td>
+      <td><code>Damage</code> (and <code>RiposteDamage</code> if riposted)</td></tr>
+    <tr><td><strong>4. Mitigation</strong></td><td>Does the defender's armor reduce that number?</td>
+      <td><code>Damage</code></td><td><code>FinalDamage</code></td></tr>
+  </table>
+  <div class="note"><strong>Step 4 is a no-op today.</strong> <code>FinalDamage = Damage</code>, unchanged
+    — there is no armor/mitigation formula implemented yet (design doc §5, still open). It's kept as a named
+    seam in the code so nothing else needs to change when it's built.</div>
+
+  <h2>3. Step 1 — Hit Roll (the formula)</h2>
+  <pre class="formula"><span class="c">// ATK — where this combatant's base table sits (players: derived from skill+stat+trained Offense; mobs: authored)</span>
+EffectiveSkill   = WeaponSkill + RelevantStatForAtk × StatToSkillRatio      <span class="c">// players only, §2.10</span>
+ATK              = EffectiveSkill + Offense                                <span class="c">// players — Offense is trained, see §7.2/§7.6</span>
+ATK              = MobAtk                                                  <span class="c">// mobs — authored directly, no formula</span>
+
+<span class="c">// Base table — ATK picks a point along ONE shared curve</span>
+AtkFraction      = clamp01( (ATK − MinAtk) / (MaxAtk − MinAtk) )
+BaseTable        = lerp( Level1Table, Level20Table, AtkFraction )          <span class="c">// 7 weights, sum = 100</span>
+
+<span class="c">// Level Differential — reshapes BaseTable using the actual opponent's level</span>
+LevelGap         = AttackerLevel − DefenderLevel
+LowLevel         = min( AttackerLevel, DefenderLevel )
+Increments       = IncrementsToFutility( LowLevel )                        <span class="c">// Fibonacci band lookup</span>
+LevelFraction    = clamp01( |LevelGap| / Increments )
+
+Table = BaseTable
+if LevelGap &lt; 0:  Table = ShiftTowardFutility( Table, LevelFraction × MaxLevelFutilityWeight )
+if LevelGap &gt; 0:  Table = ShiftTowardPotency ( Table, LevelFraction × MaxLevelFutilityWeight × LevelAdvantageScale )
+<span class="c">// LevelGap == 0 → Table unchanged</span>
+
+<span class="c">// Position Modifier — only if the attacker is behind the defender's facing</span>
+if IsRearAttack:  Table = ApplyPositionModifier( Table, RearAttackWeight )
+
+<span class="c">// The actual dice roll</span>
+RawTier          = WeightedPick( Table )    <span class="c">// random draw, weighted by the 7 final tier values</span></pre>
+  <p><strong><code>ShiftTowardFutility</code> / <code>ShiftTowardPotency</code>:</strong> move <code>amount</code>
+    weight units out of a fixed set of "drain" tiers — proportional to how much weight each drain tier
+    currently holds — into a fixed set of "fill" tiers, split evenly. Futility drains
+    Crippling→Critical→Good→Solid→Hit and fills Miss/Glancing (a level <em>disadvantage</em> makes the worst
+    outcomes more likely). Potency drains Miss/Glancing/Hit and fills Solid/Good/Critical (a level
+    <em>advantage</em> makes the best outcomes more likely, but only at half strength —
+    <code>LevelAdvantageScale</code>). Crippling never <em>gains</em> weight from this — it only ever
+    loses it.</p>
+  <p><strong><code>ApplyPositionModifier</code>:</strong> pulls up to <code>RearAttackWeight</code> weight
+    units — proportionally from whatever Miss/Glancing/Hit currently hold — and moves all of it into Solid
+    Hit only. A rear attack makes a clean, reliable hit more likely; it does not push toward
+    Good/Critical/Crippling.</p>
+
+  <h2>4. Step 2 — Avoidance (the formula)</h2>
+  <pre class="formula"><span class="c">// Checked in this order — first success wins, and it's binary (nothing partial)</span>
+RiposteChance = AvoidanceChance( Defender.Riposte )
+Riposted      = roll(0,100) &lt; RiposteChance
+
+if not Riposted and IsParryable:
+    ParryChance = AvoidanceChance( Defender.Parry )     <span class="c">// independently trained — no longer shares Riposte's value</span>
+    Parried     = roll(0,100) &lt; ParryChance
+
+if not Riposted and not Parried:
+    DodgeChance = AvoidanceChance( Defender.Dodge )
+    Dodged      = roll(0,100) &lt; DodgeChance
+
+FinalTier = Miss     if Riposted or Parried or Dodged
+          = RawTier  otherwise</pre>
+  <p>Defender.Dodge/Parry/Riposte here are three independent, fully-resolved values (players: derived from
+    Agility + trained Defense/Dodge/Parry/Riposte skills; mobs: authored directly, AV3) — see the Glossary's
+    Avoidance sections. <code>AvoidanceChance(stat)</code> is a fixed piecewise-linear curve, not a simple
+    formula — see §8.</p>
+  <div class="note">If <code>IsParryable</code> is false (a beast bite/claw, unarmed strike), the Parry
+    check is skipped entirely and falls straight through to Dodge — Riposte is unaffected either way.</div>
+
+  <h2>5. Step 3 — Damage (the formula)</h2>
+  <pre class="formula">if FinalTier == Miss:
+    Damage = 0
+else:
+    TierPercent        = TierDamagePercent[ FinalTier ]                    <span class="c">// fixed lookup table</span>
+    VarianceMultiplier = 1 + rand(−1, +1) × DamageVariance
+    BaseDamageWithStat = ( RelevantStat × StatToDamagePercentRatio × WeaponBonusDamage ) + WeaponBaseDamage
+    RawDamage          = BaseDamageWithStat × TierPercent × VarianceMultiplier × ExtraMultiplier
+    Damage             = max( 1, round(RawDamage) )                        <span class="c">// floor of 1 on any non-Miss hit</span>
+
+<span class="c">// Riposte counter-attack — computed only if Riposted (Step 2), bypasses Step 2 and Step 4 entirely</span>
+if Riposted:
+    RiposteDamage = <span class="c">(the Damage formula above, with FinalTier forced to Solid Hit</span>
+                     <span class="c">and ExtraMultiplier = RiposteDamageMultiplier)</span></pre>
+  <div class="note"><strong>RelevantStat here is the raw stat, not EffectiveSkill/ATK.</strong> It's the
+    attacker's raw STR (Might weapon) or DEX (Finesse weapon) — the same stat that feeds ATK's
+    EffectiveSkill term upstream, but plugged into a completely separate formula here. ATK itself does
+    not appear anywhere in the Damage step. <strong>2026-08-21 rework:</strong> a weapon's damage now
+    splits into two authored numbers — <code>WeaponBaseDamage</code> (flat, unaffected by stats) and
+    <code>WeaponBonusDamage</code> (the stat-scalable portion). <code>RelevantStat</code> converts to a
+    percentage via <code>× StatToDamagePercentRatio</code> (0.01 — so STR/DEX 100 = 100%) with
+    <strong>no cap</strong>; that percentage of <code>WeaponBonusDamage</code> is added to
+    <code>WeaponBaseDamage</code>. Itemization determines the practical ceiling by choosing how much of
+    a weapon's damage lives in each field. <strong>For mob attackers, RelevantStat is always 0</strong>
+    — mobs have no <code>CharacterStats</code>, so a mob's <code>Attack damage</code> field (mapped to
+    <code>WeaponBaseDamage</code>) is treated as already representing its full power; the
+    <code>WeaponBonusDamage</code> term is always a no-op for mobs regardless of its value.</div>
+
+  <h2>6. Step 4 — Mitigation</h2>
+  <pre class="formula">FinalDamage = ApplyMitigation( Damage, Defender ) = Damage   <span class="c">// stub — always a no-op today</span></pre>
+  <p>Named seam only. There is currently no way for armor, buffs, or any defender property to reduce a
+    landed hit's damage after Step 3 computes it. See the Combat Pipeline guide §8 for what this means in
+    practice for mob authoring.</p>
+
+  <h2>7. Glossary — every variable</h2>
+
+  <h3>7.1 Raw — character stats (players)</h3>
+  <table>
+    <tr><th>Variable</th><th>Meaning</th><th>Bounds</th><th>Stored in</th></tr>
+    <tr><td><code>STR</code></td><td>Strength. Feeds ATK/Damage when the weapon category is Might.</td>
+      <td>class base + race modifier + equipment bonus; no hard-coded min/max</td>
+      <td><code>CharacterStats</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>AGI</code></td><td>Agility. Feeds a player's <code>AvoidanceBase</code>, which in turn feeds
+      Dodge only. Does not affect Parry or Riposte.</td>
+      <td>same as STR</td><td><code>CharacterStats</code></td></tr>
+    <tr><td><code>DEX</code></td><td>Dexterity. Feeds ATK/Damage when the weapon category is Finesse.
+      <strong>Purely offensive</strong> as of the 2026-08-13 Avoidance rework — no longer feeds Parry or
+      Riposte (those are now independently trained skills with no stat input at all).</td><td>same as STR</td>
+      <td><code>CharacterStats</code></td></tr>
+    <tr><td><code>STA</code>, <code>INT</code>, <code>WIS</code>, <code>CHA</code></td>
+      <td>Also raw character stats, but <strong>not consumed anywhere in this pipeline</strong> — STA
+      feeds the HP formula, INT/WIS feed the Mana formula, CHA is unused by combat. Listed here only to be
+      explicit that they're intentionally absent below.</td><td>—</td><td><code>CharacterStats</code></td></tr>
+  </table>
+
+  <h3>7.2 Raw — player progression</h3>
+  <table>
+    <tr><th>Variable</th><th>Meaning</th><th>Bounds</th><th>Stored in</th></tr>
+    <tr><td><code>WeaponSkill</code></td><td>Trained skill in the swing's weapon category (Might or
+      Finesse) — earned through use (2.12), not authored.</td>
+      <td>starts at 1 on character creation; capped at <code>WeaponSkillCap(Level)</code> (§8)</td>
+      <td><code>PlayerWeaponSkills</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Offense</code></td><td>Trained general combat aptitude — earned through use, same
+      mechanic as WeaponSkill (a chance to rise on every swing), but a single value, not split by weapon
+      category.</td>
+      <td>starts at 1 on character creation; capped at <code>OffenseCap(Level)</code> (§8)</td>
+      <td><code>PlayerOffense</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Defense</code></td><td>Trained general avoidance aptitude — mirrors Offense exactly
+      (same mechanic, same cap shape: <code>Level × 5</code>, no flat base, unlike the skills below).
+      Feeds <code>AvoidanceBase</code>, which feeds Dodge only.</td>
+      <td>starts at 1 on character creation; capped at <code>DefenseCap(Level)</code> (§8)</td>
+      <td><code>PlayerAvoidanceSkills</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Dodge</code></td><td>Trained skill added on top of <code>AvoidanceBase</code> — same
+      mechanic and cap shape as WeaponSkill. Nonzero even untrained, since AvoidanceBase alone already
+      contributes.</td>
+      <td>starts at 1; capped at <code>WeaponSkillCap(Level)</code> (§8, same formula as WeaponSkill)</td>
+      <td><code>PlayerAvoidanceSkills</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Parry</code></td><td>Trained skill standing completely alone — no AvoidanceBase
+      contribution, genuinely ~0% until trained. Same mechanic and cap shape as WeaponSkill.</td>
+      <td>starts at 1; capped at <code>WeaponSkillCap(Level)</code></td>
+      <td><code>PlayerAvoidanceSkills</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Riposte</code></td><td>Same treatment as Parry — its own standalone trained value.</td>
+      <td>starts at 1; capped at <code>WeaponSkillCap(Level)</code></td>
+      <td><code>PlayerAvoidanceSkills</code> (SyncVar, persisted)</td></tr>
+    <tr><td><code>Level</code></td><td>Character level (players) / <code>MobLevel</code> (mobs) — the
+      swing's attacker AND defender each have their own.</td>
+      <td>players: 1–50 (<code>MaxLevel</code>); mobs: author's choice, unbounded</td>
+      <td><code>PlayerExperience</code> / <code>MobDefinition.mobLevel</code></td></tr>
+  </table>
+
+  <h3>7.3 Raw — weapon / attack inputs</h3>
+  <table>
+    <tr><th>Variable</th><th>Meaning</th><th>Bounds</th><th>Stored in</th></tr>
+    <tr><td><code>WeaponBaseDamage</code></td><td>Step 3's flat damage input — unaffected by the
+      wielder's stats. For a player, their equipped weapon's authored base damage; for a mob, its
+      <code>Attack damage</code> field.</td>
+      <td>hand-authored, no enforced bounds (5.1.5 AD10 leaves itemization unformalized — see the live
+      damage/delay ratio readout in the Item Editor)</td><td><code>ItemDefinition</code> /
+      <code>MobDefinition</code></td></tr>
+    <tr><td><code>WeaponBonusDamage</code></td><td>Step 3's stat-scalable damage input (2026-08-21) — the
+      portion of a weapon's damage that scales with <code>RelevantStat</code>. Zero for mobs' effective
+      contribution, since mob <code>RelevantStat</code> is always 0.</td>
+      <td>hand-authored, no enforced bounds — no cap on the resulting stat percentage either, itemization
+      determines the practical ceiling</td><td><code>ItemDefinition.weaponBonusDamage</code></td></tr>
+    <tr><td><code>WeaponCategory</code></td><td>Might or Finesse — not itself numeric; <em>selects</em>
+      which stat is <code>RelevantStatForAtk</code>/<code>RelevantStat</code> (STR for Might, DEX for
+      Finesse).</td><td>Might | Finesse</td><td><code>ItemDefinition</code> (weapon)</td></tr>
+    <tr><td><code>IsParryable</code></td><td>Whether this specific swing can be Parried. Player
+      auto-attack is always <code>true</code>; a mob reads its own <code>attackIsParryable</code> flag
+      (false = beast/unarmed-style — bite, claw, ram).</td><td>true | false</td>
+      <td>hardcoded (players) / <code>MobDefinition.attackIsParryable</code> (mobs)</td></tr>
+    <tr><td><code>IsRearAttack</code></td><td>Whether the attacker is positioned behind the defender's
+      facing. <strong>Not a stored stat</strong> — recomputed from live Transform positions every single
+      swing.</td><td>true | false</td><td>computed each swing, <code>CombatResolver.IsRearAttack</code></td></tr>
+  </table>
+
+  <h3>7.4 Raw — mob-authored inputs</h3>
+  <table>
+    <tr><th>Variable</th><th>Meaning</th><th>Bounds</th><th>Stored in</th></tr>
+    <tr><td><code>MobAtk</code></td><td>A mob's ATK, authored directly — no EffectiveSkill/Offense
+      derivation, since mobs have no stats or weapon skill to derive it from.</td>
+      <td>author's choice; recommended in the <code>MinAtk</code>–<code>MaxAtk</code> band, not
+      enforced</td><td><code>MobDefinition.atk</code></td></tr>
+    <tr><td><code>AvoidanceDodge</code> / <code>AvoidanceParry</code> / <code>AvoidanceRiposte</code></td>
+      <td>A mob's stand-ins for a player's fully-resolved Dodge/Parry/Riposte — read directly by the
+      Avoidance step with no formula applied, one flat number per check (no shared base between them,
+      matching how a mob's Parry and Riposte are independent even though a player's aren't tied together
+      either as of the 2026-08-13 rework).</td><td>author's choice; low defaults (20/20/20) sit in the
+      avoidance curve's near-zero floor</td><td><code>MobDefinition.avoidanceDodge</code> /
+      <code>avoidanceParry</code> / <code>avoidanceRiposte</code></td></tr>
+  </table>
+
+  <div class="note">Defense is <strong>no longer class-authored</strong> (2026-08-13 rework) — like
+  Offense, it's a per-character trained stat now (<code>PlayerAvoidanceSkills</code>, §7.2), not a
+  per-class formula. There is no "class-authored inputs" section anymore on the Avoidance side.</div>
+
+  <h3>7.5 Derived — Offense &amp; ATK</h3>
+  <table>
+    <tr><th>Variable</th><th>Formula</th><th>Notes</th></tr>
+    <tr><td><code>RelevantStatForAtk</code></td><td><code>STR</code> if WeaponCategory = Might,
+      <code>DEX</code> if Finesse</td><td>A selection, not arithmetic — picks which raw stat feeds
+      EffectiveSkill.</td></tr>
+    <tr><td><code>EffectiveSkill</code></td><td><code>WeaponSkill + RelevantStatForAtk × StatToSkillRatio</code></td>
+      <td>Design doc §2.10. Players only.</td></tr>
+    <tr><td><code>OffenseCap(Level)</code></td><td><code>Level × OffensePerLevel</code></td>
+      <td>Not the value itself — the <em>ceiling</em> Offense can be trained up to. Not authored per
+      class, not tied to class at all.</td></tr>
+    <tr><td><code>ATK</code> (players)</td><td><code>EffectiveSkill + Offense</code></td>
+      <td>Offense is the raw trained value (§7.2), not <code>OffenseCap</code> — a fresh character's
+      Offense starts at 1, well under cap. Feeds Step 1's <code>AtkFraction</code>.</td></tr>
+    <tr><td><code>ATK</code> (mobs)</td><td><code>MobAtk</code></td><td>Direct passthrough — no formula.</td></tr>
+    <tr><td><code>ATK</code> (no class assigned)</td><td><code>MinAtk</code></td><td>Fallback for a player
+      with no class yet (e.g. pre-character-creation testing).</td></tr>
+  </table>
+
+  <h3>7.6 Derived — Avoidance base &amp; per-check values</h3>
+  <table>
+    <tr><th>Variable</th><th>Formula</th><th>Notes</th></tr>
+    <tr><td><code>DefenseCap(Level)</code></td><td><code>Level × 5</code></td>
+      <td>Not the value itself — the <em>ceiling</em> Defense can be trained up to. Mirrors
+      <code>OffenseCap</code> exactly (§7.5).</td></tr>
+    <tr><td><code>AvoidanceBase</code></td><td><code>AGI × StatToSkillRatio + Defense</code></td>
+      <td>Defense is the raw trained value (§7.2), not <code>DefenseCap</code>. Feeds Dodge only — Parry
+      and Riposte never read this.</td></tr>
+    <tr><td>Defender.Dodge (players)</td><td><code>AvoidanceBase + Dodge</code> (the trained skill)</td>
+      <td>Nonzero even if the Dodge skill itself is untrained (0), since AvoidanceBase alone already
+      contributes — an innate/reflexive check.</td></tr>
+    <tr><td>Defender.Parry (players)</td><td><code>Parry</code> (the trained skill, used directly)</td>
+      <td>No AvoidanceBase contribution — genuinely ~0% until trained.</td></tr>
+    <tr><td>Defender.Riposte (players)</td><td><code>Riposte</code> (the trained skill, used directly)</td>
+      <td>Same treatment as Parry — independently trained, no shared base.</td></tr>
+    <tr><td>Defender.Dodge / Parry / Riposte (mobs)</td><td><code>AvoidanceDodge</code> /
+      <code>AvoidanceParry</code> / <code>AvoidanceRiposte</code></td><td>Direct passthrough — mobs skip
+      the whole AvoidanceBase/trained-skill derivation entirely, same treatment as mob ATK.</td></tr>
+  </table>
+
+  <h3>7.7 Derived — Hit Roll table shaping</h3>
+  <table>
+    <tr><th>Variable</th><th>Formula</th><th>Bounds</th></tr>
+    <tr><td><code>AtkFraction</code></td><td><code>clamp01((ATK − MinAtk) / (MaxAtk − MinAtk))</code></td>
+      <td>[0, 1]</td></tr>
+    <tr><td><code>BaseTable</code></td><td><code>lerp(Level1Table, Level20Table, AtkFraction)</code></td>
+      <td>7 weights (Miss…Crippling), sum = 100</td></tr>
+    <tr><td><code>LevelGap</code></td><td><code>AttackerLevel − DefenderLevel</code></td>
+      <td>any integer, can be negative</td></tr>
+    <tr><td><code>Increments</code></td><td><code>IncrementsToFutility(min(AttackerLevel, DefenderLevel))</code>
+      — a lookup, not arithmetic: find the highest Fibonacci band floor the lower level meets, return that
+      band's increment (§8's <code>LevelBandFloor</code>/<code>LevelBandIncrements</code>)</td>
+      <td>1, 1, 2, 3, 5, or 8</td></tr>
+    <tr><td><code>LevelFraction</code></td><td><code>clamp01(|LevelGap| / Increments)</code></td>
+      <td>[0, 1]</td></tr>
+    <tr><td><code>RawTier</code></td><td><code>WeightedPick(Table)</code> — draw <code>roll(0, Total)</code>,
+      walk the 7 tiers in order accumulating weight, return the first tier whose cumulative weight exceeds
+      the roll</td><td>Miss | Glancing | Hit | Solid | Good | Critical | Crippling</td></tr>
+  </table>
+
+  <h3>7.8 Derived — Avoidance chances</h3>
+  <table>
+    <tr><th>Variable</th><th>Formula</th><th>Bounds</th></tr>
+    <tr><td><code>AvoidanceChance(stat)</code></td><td>Piecewise-linear interpolation over the 11-point
+      <code>AvoidancePoints</code> control table (§8) — not a closed-form formula. Same curve function
+      used for all three checks below — only the input value differs, and each is now independent
+      (2026-08-13 rework fixed the earlier bug where Parry and Riposte read the exact same input).</td>
+      <td>0.10%–15.0%, per the control table's endpoints</td></tr>
+    <tr><td><code>RiposteChance</code></td><td><code>AvoidanceChance(Defender.Riposte)</code></td>
+      <td>same as above</td></tr>
+    <tr><td><code>ParryChance</code></td><td><code>AvoidanceChance(Defender.Parry)</code></td>
+      <td>same as above — independently trained, no longer shares Riposte's input</td></tr>
+    <tr><td><code>DodgeChance</code></td><td><code>AvoidanceChance(Defender.Dodge)</code></td>
+      <td>same as above</td></tr>
+  </table>
+
+  <h3>7.9 Derived — Damage</h3>
+  <table>
+    <tr><th>Variable</th><th>Formula</th><th>Bounds</th></tr>
+    <tr><td><code>TierPercent</code></td><td><code>TierDamagePercent[FinalTier]</code> — fixed lookup
+      (§8)</td><td>0%–150%</td></tr>
+    <tr><td><code>VarianceMultiplier</code></td><td><code>1 + rand(−1,+1) × DamageVariance</code></td>
+      <td>[1 − DamageVariance, 1 + DamageVariance] = [0.875, 1.125] at the current constant</td></tr>
+    <tr><td><code>BaseDamageWithStat</code></td><td><code>(RelevantStat × StatToDamagePercentRatio ×
+      WeaponBonusDamage) + WeaponBaseDamage</code></td>
+      <td>no cap — a high enough RelevantStat can push the WeaponBonusDamage term past 100% of itself</td></tr>
+    <tr><td><code>RawDamage</code></td><td><code>BaseDamageWithStat × TierPercent × VarianceMultiplier ×
+      ExtraMultiplier</code></td><td>—</td></tr>
+    <tr><td><code>Damage</code></td><td><code>max(1, round(RawDamage))</code></td>
+      <td>≥ 1 on any non-Miss hit; exactly 0 on a Miss</td></tr>
+    <tr><td><code>RiposteDamage</code></td><td>Same Damage formula, <code>FinalTier</code> forced to Solid
+      Hit, <code>ExtraMultiplier = RiposteDamageMultiplier</code></td><td>only computed if Riposted; bypasses
+      Step 2 (already resolved) and Step 4 (no mitigation)</td></tr>
+  </table>
+
+  <h2>8. Constants reference</h2>
+  <p>Fixed tuning knobs — not authored per class/mob, shared by every combatant. Tune via the Combat
+    Simulator or by editing the named constant in code (both <code>CombatResolver.cs</code> and its
+    hand-mirrored TypeScript port in <code>combat-math.ts</code> must be updated together).</p>
+  <table>
+    <tr><th>Constant</th><th>Value</th><th>Used by</th></tr>
+    <tr><td><code>StatToSkillRatio</code></td><td>0.1</td><td>EffectiveSkill</td></tr>
+    <tr><td><code>StatToDamagePercentRatio</code></td><td>0.01</td><td>BaseDamageWithStat's
+      RelevantStat→percentage conversion (2026-08-21) — unrelated to StatToSkillRatio despite the
+      similar name, no cap</td></tr>
+    <tr><td><code>OffensePerLevel</code></td><td>5</td><td><code>OffenseCap(Level) = Level × 5</code> —
+      caps <code>Offense</code> (<code>PlayerOffense</code>). No flat base term, unlike WeaponSkillCap.</td></tr>
+    <tr><td><code>DefensePerLevel</code></td><td>5</td><td><code>DefenseCap(Level) = Level × 5</code> —
+      caps <code>Defense</code> (<code>PlayerAvoidanceSkills</code>). Same shape as OffensePerLevel.</td></tr>
+    <tr><td><code>WeaponSkillCap(Level)</code></td><td><code>10 + 5 × (Level − 1)</code> = Level×5+5</td>
+      <td>caps <code>WeaponSkill</code> (<code>PlayerWeaponSkills.Cap</code>) — also the cap shape used by
+      <code>Dodge</code>/<code>Parry</code>/<code>Riposte</code> (<code>PlayerAvoidanceSkills</code>)</td></tr>
+    <tr><td><code>MinAtk</code> / <code>MaxAtk</code></td><td>10 / 150 (5.1.5 AD9 placeholder — the
+      explicit tuning target of the simulator)</td><td>AtkFraction</td></tr>
+    <tr><td><code>Level1Table</code></td><td>Miss 17.5, Glancing 40, Hit 30, Solid 10, Good 2.5,
+      Critical 0, Crippling 0</td><td>BaseTable's <code>AtkFraction = 0</code> end (design doc §2.5,
+      Warrior Level 1)</td></tr>
+    <tr><td><code>Level20Table</code></td><td>Miss 2, Glancing 13, Hit 20, Solid 35, Good 25, Critical 3,
+      Crippling 2</td><td>BaseTable's <code>AtkFraction = 1</code> end (design doc §2.11, Warrior Level
+      20)</td></tr>
+    <tr><td><code>LevelBandFloor</code></td><td>[1, 2, 3, 5, 8, 13]</td><td><code>Increments</code> lookup
+      — Fibonacci band floors</td></tr>
+    <tr><td><code>LevelBandIncrements</code></td><td>[1, 1, 2, 3, 5, 8]</td><td>paired 1:1 with
+      LevelBandFloor</td></tr>
+    <tr><td><code>MaxLevelFutilityWeight</code></td><td>100</td><td>Level Differential's full-strength
+      weight transfer</td></tr>
+    <tr><td><code>LevelAdvantageScale</code></td><td>0.5</td><td>a level advantage helps at half the
+      strength a disadvantage hurts</td></tr>
+    <tr><td><code>RearAttackWeight</code></td><td>50</td><td>Position Modifier's max weight pulled into
+      Solid Hit</td></tr>
+    <tr><td><code>AvoidancePoints</code></td><td>(stat → %): 1→0.10, 50→0.10, 51→0.136, 75→1.0, 76→1.16,
+      100→5.0, 101→5.14, 135→10.0, 136→10.07, 209→14.93, 210→15.0</td><td><code>AvoidanceChance(stat)</code>'s
+      control points (<code>AvoidanceCurve.cs</code>)</td></tr>
+    <tr><td><code>TierDamagePercent</code></td><td>Miss 0%, Glancing 25%, Hit 60%, Solid 100%, Good 110%,
+      Critical 125%, Crippling 150%</td><td>Damage step's <code>TierPercent</code> lookup</td></tr>
+    <tr><td><code>DamageVariance</code></td><td>0.125 (±12.5%)</td><td>VarianceMultiplier</td></tr>
+    <tr><td><code>RiposteDamageMultiplier</code></td><td>0.5</td><td>RiposteDamage's ExtraMultiplier</td></tr>
+  </table>
+
+  <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/CombatResolver.cs</code>,
+    <code>CombatTierTable.cs</code>, <code>AvoidanceCurve.cs</code>, <code>CombatTierDamageConfig.cs</code>,
+    mirrored in <code>web/src/app/combat-sim/combat-math.ts</code>. Design source:
+    <code>Docs/eventide_combat_pipeline.md</code>. Rework history:
+    <code>Docs/devplans/5.1.5-atk-derived-hit-roll.md</code>.</footer>
+</article>

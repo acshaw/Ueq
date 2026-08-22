@@ -303,6 +303,106 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
     principles, no formula ("requires a dedicated design session"). Ships as a named `ApplyMitigation` seam
     that's a pure pass-through (final damage = raw damage), so the full 4-step pipeline is wired end-to-end
     and shippable well before armor design happens.
+  - [x] **5.1.5 — ATK-derived Hit Roll (tuning simplification).** *(Added 2026-08-09, implemented 2026-08-11.)*
+    Not a new pipeline step — revises 5.1.1's base-table authoring model specifically (Avoidance/Damage/
+    Mitigation/Level Differential/Position Modifier untouched — all already implemented, verified in-editor
+    2026-07-15, and confirmed unaffected by this change). 🟠 Implemented — pending in-editor verification
+    ([devplan](docs/devplans/5.1.5-atk-derived-hit-roll.md)). Collapses weapon skill + the relevant stat into
+    a single derived **ATK** score (`EffectiveSkill = weaponSkill + relevantStat × 0.1`, design doc §2.10,
+    wired for the first time) feeding ONE shared curve (Warrior L1/L20 reference tables) instead of
+    per-class/mob authored tables. Cuts class authoring from 14 raw numbers to 2 (`classAtkBase`/
+    `atkPerLevel`); mob authoring from 7 to 1 (`atk`). Retires the old Skill Differential modifier
+    (superseded by ATK). The Angular combat simulator (`web/src/app/combat-sim/`) was rebuilt first per AD7,
+    and gained a new **swing-trace** feature (roll one real swing, see every intermediate value — base
+    table, level/position modifier stages, the actual roll, each avoidance check, damage math) alongside the
+    existing aggregate Monte Carlo view, addressing a user ask to see the pipeline "piece by piece and
+    wholistically." **AD10**: weapon damage/delay stay hand-authored on purpose — live DPS readout added to
+    the Item Editor + simulator, no target curve or item-level field. DB migration `0030` is additive (old
+    tier columns kept pending a follow-up drop-migration); **caveat** — `DatabaseSeeder`'s `ON CONFLICT DO
+    NOTHING` means the 3 already-seeded classes (Warrior/Wizard/Cleric) won't pick up their new seeded ATK
+    values automatically on re-migration, need setting via the web Class Editor once. Both `ng build` and
+    `dotnet build` verified clean; migration SQL validated in a rolled-back transaction against the live dev
+    DB. **NOT verified in-editor** — no Unity instance available during implementation.
+    **Follow-up (2026-08-13): Offense is now a trainable stat, not a fixed formula.** User pushed back —
+    Offense should work exactly like WeaponSkill (starts at 1, earned through use), capped at `level × 5`
+    (no `+5`, unlike WeaponSkill's `level×5+5`), not silently pinned to the cap from level 1. New
+    `PlayerOffense.cs` (mirrors `PlayerWeaponSkills.cs`: SyncVar, `RollOffenseUp()` called alongside
+    `RollSkillUp()` on every player swing in `PlayerAutoAttack.cs`, no split by weapon category — a single
+    general combat-aptitude value). `CombatResolver.BuildCombatant` reads `PlayerOffense.Value` directly
+    instead of computing `level × OffensePerLevel`. Persisted through the full character-save pipeline
+    (`CharacterSnapshot.Offense`, `CharacterPersistence` load/save/new-character-init at 1,
+    `CharacterRepository` SQL), migration `0032_offense_skill.sql` (`characters.offense_skill`). Web port:
+    `combat-math.ts`'s `computeAtk` now takes a raw `offense` number instead of deriving it from `level`;
+    `combatant-form.ts`'s `autoOffense()` assumes always-trained-to-cap, same convention `autoWeaponSkill()`
+    already uses (the simulator doesn't model training progression). `to-hit-guide.html`/`combat-guide.html`
+    updated to describe Offense as trained, not fixed. This also resolved a real design question: **class is
+    NOT an independent lever on Hit Roll tier weights** — holding STR/DEX, Level, WeaponSkill, and Offense
+    equal, a Warrior and a Wizard produce byte-identical hit-tier tables (class only reaches Avoidance, via
+    `defenseBase`/`defensePerLevel`); confirmed by reading `ClassDefinition.cs` (no ATK/hit-tier field left)
+    and `CombatResolver.BuildCombatant` (no class term in the ATK computation). If class-specific hit-roll
+    behavior is wanted later, user's stated intent is to route it through weighting/capping WeaponSkill or
+    Offense per class, not reintroducing a separate authored ATK knob. **NOT verified in-editor** — no Unity
+    instance available; `ng build` verified clean. `Tools/Patch Player Prefab` needs a run to add the new
+    `PlayerOffense` component to the live Player prefab before this does anything in Play mode.
+    **Follow-up (2026-08-13, cont. — Avoidance rework, supersedes the "class only reaches Avoidance via
+    defenseBase/defensePerLevel" claim two paragraphs up).** User's stated design: Defense should mirror
+    Offense exactly (trained, capped `level×5`); Dodge/Parry/Riposte should each be independent trained
+    skills capped `level×5+5` like WeaponSkill; AGI + Defense form a shared `AvoidanceBase` that feeds
+    **Dodge only** (an innate/reflexive check — nonzero even before Dodge itself is trained); Parry and
+    Riposte stand completely alone with no shared base (genuinely ~0% until trained) — fixing a real
+    pre-existing bug where Parry and Riposte read the exact same Dexterity-derived value. Confirmed with
+    the user before building: DEX drops out of Avoidance entirely (purely offensive now, ATK/Damage for
+    Finesse weapons); mobs represent this as three independent flat authored numbers (one per check,
+    AV3), not a formula. **Implemented full-stack, mirroring the Offense build exactly but 3× the
+    surface area**: new `PlayerAvoidanceSkills.cs` (bundles all four values — Defense/Dodge/Parry/Riposte
+    — into one component, mirroring how `PlayerWeaponSkills` already bundles Might/Finesse; each trains
+    via the same flat per-attempt rise chance, rolled on the *defender's* side in both
+    `PlayerAutoAttack.cs` and `EnemyAI.cs` after `ResolveAttack` — Defense/Dodge/Riposte roll
+    unconditionally every attack faced, Parry only when the attack was actually parryable, mirroring
+    SK4's "every attempt regardless of outcome" rule). `CombatResolver.cs`: `Combatant`'s
+    `Agility`/`Dexterity` fields replaced with `Dodge`/`Parry`/`Riposte` (three independent,
+    fully-resolved values); `ResolveAvoidance` reads them directly with no more Dexterity double-use.
+    **Class-authored Defense is fully retired** — `defenseBase`/`defensePerLevel` removed from
+    `ClassDefinition.cs`/`ClassSnapshot.cs`/`ClassRepository.cs`/`RaceClassRegistry.cs`/
+    `DatabaseSeeder.cs`/API (`Class.cs`, `ContentDbContext.cs`, `ClassesController.cs`)/Angular
+    (`class.service.ts`, `class-editor.ts` — whole Defense Formula section dropped), same "remove from
+    the authoring surface, leave the DB column orphaned" treatment Offense got. **Mob avoidance fields
+    renamed 2→3**: `avoidanceAgility`/`avoidanceDexterity` → `avoidanceDodge`/`avoidanceParry` (RENAME,
+    preserves existing values) + new `avoidanceRiposte` (ADD, defaults to 20) — threaded through
+    `MobDefinition.cs`, `MobRepository.cs`/`MobRegistry.cs`, API (`Mob.cs`, `ContentDbContext.cs`,
+    `MobsController.cs`), and `mob.service.ts`/`mob-editor.ts`. Full persistence plumbing added for the
+    four new character-side trained values (`CharacterSnapshot`/`CharacterPersistence`/
+    `CharacterRepository`, new-character init at 1/1/1/1). One new migration,
+    `0033_avoidance_rework.sql`, covers both the `characters` table (4 new trained-skill columns) and the
+    `mobs` table (the 2-rename-plus-1-add above) in one file since it's one coherent design change.
+    `SceneSetup.cs`'s two component-requirement lists and prefab-build call all gained
+    `PlayerAvoidanceSkills` alongside `PlayerWeaponSkills`/`PlayerOffense`. **Web port**: `combat-math.ts`
+    gained `defenseCap`/`avoidanceBase`/`effectiveDodge` (Parry/Riposte have no wrapper — just the raw
+    trained value); `combatant-form.ts` gained real editable `defense`/`dodgeSkill`/`parrySkill`/
+    `riposteSkill` fields (same "Load class defaults to level's cap, editable afterward" treatment as
+    weaponSkill/offense) plus `manualDodge`/`manualParry`/`manualRiposte` mob-bypass fields mirroring
+    `manualAtk`; `combatant-panel.ts`'s Defense section replaced with an Avoidance section following
+    ATK's exact `@if(manual…)/`@else` branch pattern, plus a compact `Dodge X% · Parry Y% · Riposte Z%`
+    readout line (reusing the `.weapon-line` centered-3-column style already established for the
+    STR/DMG/DLY line). Both `to-hit-guide.html` and `combat-guide.html` rewritten section-by-section for
+    the new model (glossary sections renumbered 7.4–7.9 in `to-hit-guide.html` after the old
+    class-authored-Defense section was deleted outright rather than left as a stub). `ng build
+    --configuration production` and an isolated `dotnet build -o` both verified clean throughout: after
+    each of the ~10 discrete edit groups (new component; CombatResolver rewrite; PlayerAutoAttack/EnemyAI
+    training hooks; mob field rename across Unity/API/web; class Defense removal across the same 3
+    layers; persistence + migration; SceneSetup wiring; the 3 web-port files; both doc pages) and once
+    more at the very end. **NOT verified in-editor or in a live Play session** — no Unity instance
+    available this session; every C# change was grounded by reading every consumer of the touched types
+    before editing (mirrored the Offense build's approach, just at 3-4× the file count) but genuinely
+    untested end-to-end. **NEXT (user, in editor): recompile → `Tools/Patch Player Prefab` (adds
+    `PlayerAvoidanceSkills` to the live prefab) → `Tools/Database/Run Migrations` (0033) → confirm
+    boot/load logs are clean → fight as a player and watch a defender's Dodge/Parry/Riposte skills rise
+    over several incoming attacks (no UI readout yet — needs a debug view or DB query to observe
+    directly) → sanity-check that a fresh level-1 character's avoidance doesn't feel too porous now that
+    Defense/Dodge/Parry/Riposte all start at 1 instead of being pinned to old class-formula values from
+    swing one → in the web Class Editor, confirm the Defense Formula section is actually gone; in the Mob
+    Editor, confirm the three renamed/added Avoidance fields show up correctly on an existing mob (values
+    should have carried over for Dodge/Parry, Riposte should read 20).**
 - [ ] **5.2 — Level 1→2 polish round.** A focused vertical polishing the earliest gameplay progression (level 1 → 2) end to end: abilities, combat feel, feedback, pacing — the payoff of the combat refinement on the real starting experience.
 - [x] **5.3 — Player grouping.** ✅ Done 2026-07-26, reviewed GP1–GP11 one at a time
   ([devplan](docs/devplans/5.3-player-grouping.md)). Parties (≤6) via

@@ -2,14 +2,15 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// 2.12 — a player's two weapon-proficiency values (Might/Finesse), feeding Step 1's Skill Differential
-/// modifier (design doc §2.8). Earned through use (SK4), unlike <see cref="CharacterStats"/>' derived
-/// stats — this is genuinely persisted state, like XP.
+/// 2.12 — a player's two weapon-proficiency values (Might/Finesse). Feeds Step 1's ATK via
+/// EffectiveSkill (design doc §2.10; <see cref="CombatResolver.BuildCombatant"/>) as of 5.1.5 —
+/// originally fed the now-retired Skill Differential modifier (§2.8). Earned through use (SK4), unlike
+/// <see cref="CharacterStats"/>' derived stats — this is genuinely persisted state, like XP.
 /// </summary>
 public class PlayerWeaponSkills : NetworkBehaviour
 {
-    // SK3 — skillCap(level) = base + perLevel × (level − 1). Tunable, not locked by the design doc.
-    [SerializeField] int _capBase     = 5;
+    // SK3 — skillCap(level) = base + perLevel × (level − 1) = level×5 + 5 with these constants.
+    [SerializeField] int _capBase     = 10;
     [SerializeField] int _capPerLevel = 5;
 
     // SK4 — flat rise-on-use chance per swing while under cap. Not specified by the design doc — a

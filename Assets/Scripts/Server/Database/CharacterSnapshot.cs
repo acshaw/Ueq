@@ -24,6 +24,8 @@ public sealed class CharacterSnapshot
     public int    Copper, Silver, Gold, Platinum;
     public int    CurrentHealth, CurrentMana;
     public int    MightSkill, FinesseSkill;   // 2.12 — earned weapon proficiency, persisted like XP
+    public int    Offense;                    // 5.1.5 follow-up — earned combat aptitude, same treatment
+    public int    DefenseSkill, DodgeSkill, ParrySkill, RiposteSkill; // 2026-08-13 — Avoidance rework
 
     public float  PosX, PosY, PosZ, Yaw;
     public float  BindX, BindY, BindZ;

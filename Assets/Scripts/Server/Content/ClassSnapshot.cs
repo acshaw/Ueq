@@ -17,8 +17,8 @@ public struct ClassSnapshot
     public int   ClassBaseMana, ManaPerLevel, ManaCap;
     public float BaseManaRatio, ManaGrowthRate;
 
-    public float TierL1Miss, TierL1Glancing, TierL1Hit, TierL1Solid, TierL1Good, TierL1Critical, TierL1Crippling;
-    public float TierL20Miss, TierL20Glancing, TierL20Hit, TierL20Solid, TierL20Good, TierL20Critical, TierL20Crippling;
+    // Offense/Defense are no longer per-class authored (2026-08-11 / 2026-08-13) — both are trained
+    // per-character stats now (PlayerOffense.cs / PlayerAvoidanceSkills.cs).
 
     public List<string> StartingAbilityIds; // ordered ability ids (class_starting_abilities)
 }

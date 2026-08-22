@@ -22,8 +22,10 @@ public class Item
     public int BonusInt { get; set; }
     public int BonusWis { get; set; }
     public int BonusCha { get; set; }
+    public int BonusAc { get; set; }
 
     public int WeaponBaseDamage { get; set; } = 10;
+    public int WeaponBonusDamage { get; set; }
     public float WeaponDelay { get; set; } = 2f;
     public float WeaponRange { get; set; } = 3f;
     public int WeaponCategory { get; set; } // WeaponCategory.Might

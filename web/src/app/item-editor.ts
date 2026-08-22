@@ -66,6 +66,7 @@ import { ADMIN_STYLES } from './shared/admin-styles';
             <label>INT <input type="number" [(ngModel)]="model.bonusInt" name="bonusInt" /></label>
             <label>WIS <input type="number" [(ngModel)]="model.bonusWis" name="bonusWis" /></label>
             <label>CHA <input type="number" [(ngModel)]="model.bonusCha" name="bonusCha" /></label>
+            <label>AC <input type="number" [(ngModel)]="model.bonusAc" name="bonusAc" /></label>
           </div>
         </section>
 
@@ -73,6 +74,7 @@ import { ADMIN_STYLES } from './shared/admin-styles';
           <h3>Weapon Stats</h3>
           <div class="grid">
             <label>Base damage <input type="number" [(ngModel)]="model.weaponBaseDamage" name="weaponBaseDamage" /></label>
+            <label>Bonus damage <input type="number" [(ngModel)]="model.weaponBonusDamage" name="weaponBonusDamage" /></label>
             <label>Delay (s) <input type="number" step="0.1" [(ngModel)]="model.weaponDelay" name="weaponDelay" /></label>
             <label>Range <input type="number" step="0.1" [(ngModel)]="model.weaponRange" name="weaponRange" /></label>
             <label>Category
@@ -81,6 +83,10 @@ import { ADMIN_STYLES } from './shared/admin-styles';
               </select>
             </label>
           </div>
+          <p class="soon">Bonus damage is the stat-scalable portion: Damage = (STR or DEX × 0.01 × Bonus damage)
+            + Base damage. Base damage stays flat regardless of the wielder's stats.</p>
+          <p class="soon">Raw weapon ratio (5.1.5 AD10): <b>{{ weaponRatio() }}</b> base damage/delay. Itemization stays
+            hand-authored on purpose — this is just a tuning-visibility aid, not a target curve.</p>
         </section>
 
         <section>
@@ -106,7 +112,7 @@ import { ADMIN_STYLES } from './shared/admin-styles';
       }
     </app-crud-modal>
   `,
-  styles: [ADMIN_STYLES],
+  styles: [ADMIN_STYLES, `.soon { color: #999; font-size: 0.75rem; } .soon b { color: #444; }`],
 })
 export class ItemEditor implements OnInit {
   private readonly api = inject(ItemService);
@@ -147,6 +153,12 @@ export class ItemEditor implements OnInit {
   select(it: Item): void { this.model = { ...it }; this.isNew = false; this.modalOpen = true; }
 
   closeModal(): void { this.modalOpen = false; this.model = null; this.error.set(null); }
+
+  weaponRatio(): string {
+    return this.model && this.model.weaponDelay > 0
+      ? (this.model.weaponBaseDamage / this.model.weaponDelay).toFixed(1)
+      : '—';
+  }
 
   save(): void {
     if (!this.model) return;

@@ -247,6 +247,16 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         };
         var result = CombatResolver.ResolveAttack(ctx);
 
+        // 2026-08-13 follow-up — same defender-side training as PlayerAutoAttack's player-vs-mob path.
+        var defenderAvoidance = _currentTarget.GetComponent<PlayerAvoidanceSkills>();
+        if (defenderAvoidance != null)
+        {
+            defenderAvoidance.RollDefenseUp();
+            defenderAvoidance.RollDodgeUp();
+            defenderAvoidance.RollRiposteUp();
+            if (ctx.IsParryable) defenderAvoidance.RollParryUp();
+        }
+
         var playerConn = _currentTarget.connectionToClient;
         if (result.Tier == HitTier.Miss)
         {

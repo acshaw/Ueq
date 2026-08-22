@@ -40,7 +40,8 @@ public sealed class CharacterRepository : IRepository
             " name = @name, gender = @gender, race_name = @race, class_name = @class, total_xp = @xp, " +
             " copper = @cp, silver = @sp, gold = @gp, platinum = @pp, " +
             " current_health = @hp, current_mana = @mp, " +
-            " might_skill = @might, finesse_skill = @finesse, " +
+            " might_skill = @might, finesse_skill = @finesse, offense_skill = @offense, " +
+            " defense_skill = @defense, dodge_skill = @dodge, parry_skill = @parry, riposte_skill = @riposte, " +
             " pos_x = @px, pos_y = @py, pos_z = @pz, yaw = @yaw, " +
             " bind_x = @bx, bind_y = @by, bind_z = @bz, " +
             " zone_id = @zone, " +
@@ -61,6 +62,11 @@ public sealed class CharacterRepository : IRepository
         cmd.Parameters.AddWithValue("mp", s.CurrentMana);
         cmd.Parameters.AddWithValue("might", s.MightSkill);
         cmd.Parameters.AddWithValue("finesse", s.FinesseSkill);
+        cmd.Parameters.AddWithValue("offense", s.Offense);
+        cmd.Parameters.AddWithValue("defense", s.DefenseSkill);
+        cmd.Parameters.AddWithValue("dodge", s.DodgeSkill);
+        cmd.Parameters.AddWithValue("parry", s.ParrySkill);
+        cmd.Parameters.AddWithValue("riposte", s.RiposteSkill);
         cmd.Parameters.AddWithValue("px", s.PosX);
         cmd.Parameters.AddWithValue("py", s.PosY);
         cmd.Parameters.AddWithValue("pz", s.PosZ);
@@ -184,7 +190,8 @@ public sealed class CharacterRepository : IRepository
         using (var cmd = new NpgsqlCommand(
             "SELECT character_id, account_id, name, race_name, class_name, total_xp, copper, silver, gold, platinum, " +
             "current_health, current_mana, pos_x, pos_y, pos_z, yaw, bind_x, bind_y, bind_z, " +
-            "actual_race, apparent_race, zone_id, gender, might_skill, finesse_skill FROM characters WHERE character_id = @cid", conn, tx))
+            "actual_race, apparent_race, zone_id, gender, might_skill, finesse_skill, offense_skill, " +
+            "defense_skill, dodge_skill, parry_skill, riposte_skill FROM characters WHERE character_id = @cid", conn, tx))
         {
             cmd.Parameters.AddWithValue("cid", characterId);
             using var r = cmd.ExecuteReader();
@@ -217,6 +224,11 @@ public sealed class CharacterRepository : IRepository
                 Gender        = ParseGender(r.GetString(22)),
                 MightSkill    = r.GetInt32(23),
                 FinesseSkill  = r.GetInt32(24),
+                Offense       = r.GetInt32(25),
+                DefenseSkill  = r.GetInt32(26),
+                DodgeSkill    = r.GetInt32(27),
+                ParrySkill    = r.GetInt32(28),
+                RiposteSkill  = r.GetInt32(29),
             };
         }
 
