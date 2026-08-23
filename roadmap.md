@@ -100,6 +100,25 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [x] **2.7 — Loot tables + XP thresholds.** ✅ Done 2026-06-29 ([devplan](docs/devplans/2.7-loot-xp.md)). `loot_tables` (+ item/drop-count/coin-tier children) and the XP table → DB + web editors; retired `Resources/XpTable.asset` + the Loot Table SO path to fallbacks; wired mob `loot_table_id` (now a dropdown). `Corpse` rolls the DB-resolved `mob.lootTable`; `PlayerExperience` reads the DB XP curve. Verified in-editor: web-authored Giant Rat loot drops at seeded weights, `MaxLevel == 50`, level thresholds match the DB curve. **Closes the NPC content cluster (2.3–2.7).**
 - [x] **2.7.2 — Spawn tables + timers.** ✅ Done 2026-06-29 ([devplan](docs/devplans/2.7.2-spawn-tables.md)). Migrated `SpawnTable` (weighted mob entries + `groupSize`) and `SpawnTimer` (base + variance) to DB + a web **Spawn Editor**; `SpawnPoint` references a `spawn_table_id` (DB) so it keeps **weighted / timed / grouped** spawning instead of being forced onto single-mob `mobId`, with **group spawning** (DS3) via a live-set. Retired the `SpawnTable`/`SpawnTimer` SO path to a fallback. Verified in-editor: rat camp pointed at the DB "Mob Spawn Table" spawns the DB `Giant Rat` (closing the spawn-path gap that blocked 2.7/2.7.1 in-game verification).
 - [x] **2.7.1 — Mob faction hits on kill.** ✅ Done 2026-06-29 ([devplan](docs/devplans/2.7.1-mob-faction-hits.md)). *(Deferred from the 2.6/2.7 discussion.)* Per-mob `(faction_id, delta)` hit list (a `mob_faction_hits` child of `mobs`) authored in the Mob Editor; `MobKillReward` applies them via `PlayerFactionScores.ModifyScore` on death + chat feedback. `MobRepository` restructured flat→header-children. Verified in-editor: killing a Giant Rat moves Vermin −10 / CityGuards +2, persists across relog on the re-keyed `faction_id` column — which **also closes 2.6's deferred aggro/gate/round-trip verification** (this is the first in-game lever to change a standing).
+- [x] **2.7.3 — World placement sync (spawn/patrol/wander ↔ DB, bidirectional).** ✅ Done 2026-08-22
+  *(discovered organically while placing the initial wolf spawns for West Reach)* — user confirmed working
+  end-to-end ([devplan](docs/devplans/2.7.3-world-placement-sync.md), decisions WP1–WP9). DB-backed
+  `world_placements` table + `IWorldPlacement` interface (`SpawnPoint`/`PatrolRoute`/`WanderRegion`) + Unity
+  Editor sync/import tools + `ZoneManager` materialize-if-missing/refresh-if-present + web **Placements**
+  editor + `Docs/ContentCreation.md` rewrite. A new spawn location now goes live on any server restart, no
+  rebuild — and a `SpawnPoint`'s config is now web-editable and restart-hot even for placements already
+  baked into a shipped build. 2.7.2 made *what* spawns
+  DB-driven; this makes *where* a `SpawnPoint`/`PatrolRoute`/`WanderRegion` physically exists DB-driven too,
+  so a new camp goes live on a server **restart**, not a full Unity rebuild + redeploy. Keeps the Editor
+  scene-placement workflow exactly as-is (gizmos, terrain/navmesh snapping); adds a common `IWorldPlacement`
+  interface + one generic JSONB `world_placements` table (extensible to future marker types with zero schema
+  changes), an export/sync tool (scene → DB), a materialize-if-missing step in `ZoneManager` at zone load
+  (DB → any running server, ephemeral, never scene-persisted), and — completing the round trip — an import
+  tool (DB → scene, persisted, upsert-by-id) so anything authored outside Unity (e.g. by script) can be
+  pulled in for visual editing and pushed back out. Staged A (export + runtime materialize — delivers the
+  restart-only outcome) / B (import, full round-trip) / C (web **Placement Editor** for non-spatial fields +
+  a rewrite of the already-stale `Docs/ContentCreation.md`, which still describes the pre-2.7.2
+  ScriptableObject workflow).
 - [x] **2.8 — Quests (new content type).** ✅ Closed 2026-07-12 — **superseded by 3.2, not built as originally scoped.** Original plan was a standalone quest data model + Quest Editor (objectives, trigger keywords, reward bundle) that 3.2 would consume. **3.2's Q1 decision found the design has no objective-tracking entity** (emergent/inferred quests, no quest log), so a keyword-attached reward transaction *is* the quest — 3.2 folded the reward bundle straight into the Conversation Editor and shipped self-contained, leaving nothing left for a separate 2.8 to deliver. Reopen only if quests outgrow single-keyword transactions (multi-step objectives, a quest log) — see the 3.3 remnant note.
 - [x] **2.1.1 — Generic admin CRUD framework.** ✅ Done 2026-07-16 — all 7 editors (Item, Mob, Vendor,
   Loot, Faction, Conversation, Spawn) retrofitted onto the shared `ContentGrid`/`CrudModal` and fully

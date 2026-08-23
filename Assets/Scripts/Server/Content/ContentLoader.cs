@@ -93,6 +93,12 @@ public static class ContentLoader
         PlayerExperience.SetTable(xpTable);
         Debug.Log($"[Content] Loaded {(xpTable != null ? xpTable.Count : 0)} XP level(s) from the database.");
 
+        // ── World placements (2.7.3, Stage A — server-only; order-independent; ZoneManager.ServerInitialize
+        // runs right after this and reads WorldPlacementRegistry per zone as it registers each scene) ─────
+        var placements = new WorldPlacementRepository().LoadAll(conn);
+        WorldPlacementRegistry.LoadFrom(placements);
+        Debug.Log($"[Content] Loaded {WorldPlacementRegistry.Count} world placement(s) from the database.");
+
         // ── World clock settings (5.12 follow-up — server-only; read by WorldClock.ServerInitialize,
         // which runs right after this in GameNetworkManager) ─────────────────────────────
         var clockSettings = new WorldClockSettingsRepository().Load(conn);

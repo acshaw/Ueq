@@ -31,6 +31,7 @@ public class ContentDbContext : DbContext
     public DbSet<Class> Classes => Set<Class>();
     public DbSet<WebAdmin> WebAdmins => Set<WebAdmin>();
     public DbSet<WorldClockSettings> WorldClockSettings => Set<WorldClockSettings>();
+    public DbSet<WorldPlacement> WorldPlacements => Set<WorldPlacement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -474,6 +475,21 @@ public class ContentDbContext : DbContext
             e.Property(s => s.FogStartDistance).HasColumnName("fog_start_distance");
             e.Property(s => s.FogEndDistance).HasColumnName("fog_end_distance");
             e.Property(s => s.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<WorldPlacement>(e =>
+        {
+            e.ToTable("world_placements");
+            e.HasKey(p => p.PlacementId);
+            e.Property(p => p.PlacementId).HasColumnName("placement_id");
+            e.Property(p => p.ZoneId).HasColumnName("zone_id");
+            e.Property(p => p.MarkerType).HasColumnName("marker_type");
+            e.Property(p => p.PosX).HasColumnName("pos_x");
+            e.Property(p => p.PosY).HasColumnName("pos_y");
+            e.Property(p => p.PosZ).HasColumnName("pos_z");
+            e.Property(p => p.RotY).HasColumnName("rot_y");
+            e.Property(p => p.Data).HasColumnName("data").HasColumnType("jsonb");
+            e.Property(p => p.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

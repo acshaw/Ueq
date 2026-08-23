@@ -1,12 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using Mirror;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
-public class SpawnPoint : MonoBehaviour
+public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacements
 {
+    [Header("World Placement Sync (2.7.3)")]
+    [Tooltip("GUID assigned once when this object is placed — the stable key used by the sync/import " +
+             "tools and by ZoneManager's materialize-if-missing/refresh-if-present step. Never hand-edit.")]
+    [SerializeField] string     placementId = "";
+
     [Tooltip("M2.7.2: spawn from a DB-backed spawn table (weighted entries + group size + timer), " +
              "resolved from SpawnTableRegistry. Highest precedence — the web-authored camp path.")]
     [SerializeField] string     spawnTableId = "";
@@ -50,6 +56,76 @@ public class SpawnPoint : MonoBehaviour
     bool            _respawnPending;
     readonly List<NetworkIdentity> _live = new();   // M2.7.2: a group can have multiple live mobs
     SpawnTimer      _respawnTimer;                   // resolved at spawn, used for the respawn delay
+
+    // ── World Placement Sync (2.7.3, Stage A) ──────────────────────────────────
+
+    public string PlacementId => placementId;
+    public string MarkerType  => "SpawnPoint";
+    public void   SetPlacementId(string id) => placementId = id;
+
+    // Cross-references (WP3) resolve in two steps: ApplyPlacementData stores the referenced placements'
+    // ids; ResolveReferences (called after every placement in the zone is known) looks them up.
+    string _pendingPatrolRoutePlacementId;
+    string _pendingWanderRegionPlacementId;
+
+    public JObject CapturePlacementData() => new()
+    {
+        ["spawnTableId"]            = spawnTableId,
+        ["mobId"]                   = mobId,
+        ["activationRadius"]        = activationRadius,
+        ["snapToGround"]            = snapToGround,
+        ["navSampleRadius"]         = navSampleRadius,
+        ["freeRange"]               = freeRange,
+        ["freeRangeRadius"]         = freeRangeRadius,
+        ["patrolRoutePlacementId"]  = patrolRoute != null ? patrolRoute.PlacementId : null,
+        ["wanderRegionPlacementId"] = wanderRegion != null ? wanderRegion.PlacementId : null,
+    };
+
+    // Config only — never touches position/rotation (WP5: the scene/row's position columns own that).
+    public void ApplyPlacementData(JObject data)
+    {
+        spawnTableId     = (string)data["spawnTableId"] ?? "";
+        mobId            = (string)data["mobId"] ?? "";
+        activationRadius = (float?)data["activationRadius"] ?? activationRadius;
+        snapToGround     = (bool?)data["snapToGround"] ?? snapToGround;
+        navSampleRadius  = (float?)data["navSampleRadius"] ?? navSampleRadius;
+        freeRange        = (bool?)data["freeRange"] ?? freeRange;
+        freeRangeRadius  = (float?)data["freeRangeRadius"] ?? freeRangeRadius;
+
+        _pendingPatrolRoutePlacementId  = (string)data["patrolRoutePlacementId"];
+        _pendingWanderRegionPlacementId = (string)data["wanderRegionPlacementId"];
+    }
+
+    // Two-pass resolution (WP3): called only for placements that actually had ApplyPlacementData run this
+    // load (a scene-baked-but-refreshed or newly-materialized SpawnPoint) — a SpawnPoint with no matching
+    // DB row is never touched here, so its hand-wired Inspector references are left completely alone.
+    public void ResolveReferences(IReadOnlyDictionary<string, GameObject> byPlacementId)
+    {
+        if (!string.IsNullOrEmpty(_pendingPatrolRoutePlacementId))
+        {
+            if (byPlacementId.TryGetValue(_pendingPatrolRoutePlacementId, out var go))
+                patrolRoute = go.GetComponent<PatrolRoute>();
+            else
+                Debug.LogWarning($"[Placement] {name}: patrol route '{_pendingPatrolRoutePlacementId}' " +
+                                 "not found among this zone's placements — no patrol will be applied.", this);
+        }
+        if (!string.IsNullOrEmpty(_pendingWanderRegionPlacementId))
+        {
+            if (byPlacementId.TryGetValue(_pendingWanderRegionPlacementId, out var go))
+                wanderRegion = go.GetComponent<WanderRegion>();
+            else
+                Debug.LogWarning($"[Placement] {name}: wander region '{_pendingWanderRegionPlacementId}' " +
+                                 "not found among this zone's placements — the default leash will be used.", this);
+        }
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (string.IsNullOrEmpty(placementId))
+            placementId = System.Guid.NewGuid().ToString();
+    }
+#endif
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 

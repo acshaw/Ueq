@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -6,8 +7,12 @@ using UnityEngine;
 /// networked — read server-side at spawn to configure <see cref="WanderBehavior"/>, exactly like a
 /// <see cref="PatrolRoute"/>. Placement tooling + Scene-view label come with the encounter tools.
 /// </summary>
-public class WanderRegion : MonoBehaviour
+public class WanderRegion : MonoBehaviour, IWorldPlacement
 {
+    [Header("World Placement Sync (2.7.3)")]
+    [Tooltip("GUID assigned once when this object is placed. Never hand-edit.")]
+    [SerializeField] string placementId = "";
+
     public enum Shape { Box, Sphere }
 
     [Tooltip("Box = a rectangular footprint (X/Z); Sphere = a radial area. Y is not used for sampling (mobs snap " +
@@ -49,4 +54,40 @@ public class WanderRegion : MonoBehaviour
         else                       Gizmos.DrawWireCube(Vector3.zero, boxSize);
         Gizmos.matrix = Matrix4x4.identity;
     }
+
+    // ── World Placement Sync (2.7.3, Stage A) ──────────────────────────────────
+    // Shape/size are scalar config (same category as SpawnPoint.activationRadius), not spatial hierarchy —
+    // they always refresh from the DB (WP5). Only this object's own anchor transform.position is
+    // scene-owned/positional, and that's set by the caller outside ApplyPlacementData, same as every
+    // other marker type.
+
+    public string PlacementId => placementId;
+    public string MarkerType  => "WanderRegion";
+    public void   SetPlacementId(string id) => placementId = id;
+
+    public JObject CapturePlacementData() => new()
+    {
+        ["shape"]        = shape.ToString(),
+        ["boxSize"]      = new JObject { ["x"] = boxSize.x, ["y"] = boxSize.y, ["z"] = boxSize.z },
+        ["sphereRadius"] = sphereRadius,
+        ["sampleRadius"] = sampleRadius,
+    };
+
+    public void ApplyPlacementData(JObject data)
+    {
+        if (data["shape"] != null && System.Enum.TryParse<Shape>((string)data["shape"], out var s))
+            shape = s;
+        if (data["boxSize"] is JObject box)
+            boxSize = new Vector3((float)box["x"], (float)box["y"], (float)box["z"]);
+        sphereRadius = (float?)data["sphereRadius"] ?? sphereRadius;
+        sampleRadius = (float?)data["sampleRadius"] ?? sampleRadius;
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (string.IsNullOrEmpty(placementId))
+            placementId = System.Guid.NewGuid().ToString();
+    }
+#endif
 }

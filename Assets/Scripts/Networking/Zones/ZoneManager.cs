@@ -97,6 +97,24 @@ public class ZoneManager : MonoBehaviour
             foreach (var p in root.GetComponentsInChildren<ZonePortal>(true))
                 if (!_portals.Contains(p)) _portals.Add(p);
         }
+
+        MaterializePlacements(zoneId, scene);
+    }
+
+    // ── World placement sync (2.7.3, Stage A) ────────────────────────────────────
+    // For every DB placement row belonging to this zone: refresh an already-scene-baked object's config
+    // (WP5 — position/hierarchy stays whatever the scene authored; config always comes from the DB when a
+    // row exists), or materialize one that isn't in the scene at all (ephemeral here — never written to a
+    // scene asset, thrown away on server stop, exactly like SpawnPoint.SpawnOne's mob instantiation; the
+    // Stage B Editor import tool calls the exact same PlacementMaterializer, just persists the result).
+    void MaterializePlacements(string zoneId, Scene scene)
+    {
+        var byId = PlacementMaterializer.IndexScenePlacements(scene);
+        PlacementMaterializer.SplitPasses(WorldPlacementRegistry.ForZone(zoneId), out var pass1, out var pass2);
+
+        PlacementMaterializer.ApplyRows(pass1, byId, scene);
+        PlacementMaterializer.ApplyRows(pass2, byId, scene);
+        PlacementMaterializer.ResolveReferences(pass2, byId);
     }
 
     // ── Portal proximity poll (server) ───────────────────────────────────────────

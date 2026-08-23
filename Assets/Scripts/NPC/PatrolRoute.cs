@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -7,8 +8,12 @@ using UnityEngine;
 /// the mob walks the beat instead of random-wandering. Scene-view labels for each point come with the Stage 2
 /// placement tooling; this draws the path + waypoint spheres.
 /// </summary>
-public class PatrolRoute : MonoBehaviour
+public class PatrolRoute : MonoBehaviour, IWorldPlacement
 {
+    [Header("World Placement Sync (2.7.3)")]
+    [Tooltip("GUID assigned once when this object is placed. Never hand-edit.")]
+    [SerializeField] string placementId = "";
+
     [Tooltip("Loop back to the first point (true) or ping-pong back along the route (false).")]
     public bool  loop = true;
 
@@ -28,6 +33,47 @@ public class PatrolRoute : MonoBehaviour
             return pts;
         }
     }
+
+    // ── World Placement Sync (2.7.3, Stage A) ──────────────────────────────────
+
+    public string PlacementId => placementId;
+    public string MarkerType  => "PatrolRoute";
+    public void   SetPlacementId(string id) => placementId = id;
+
+    public JObject CapturePlacementData()
+    {
+        var points = new JArray();
+        foreach (var p in Points)
+            points.Add(new JObject { ["x"] = p.x, ["y"] = p.y, ["z"] = p.z });
+        return new JObject { ["loop"] = loop, ["pausePerPoint"] = pausePerPoint, ["points"] = points };
+    }
+
+    // Waypoints are spatial, not config (same reasoning as SpawnPoint's position): an already-placed route
+    // (this object already has child waypoints) keeps its own scene-authored points untouched on refresh —
+    // only loop/pausePerPoint refresh. A freshly materialized route (zero children — it was just created by
+    // the placement factory) has no other source for its shape, so its waypoints are built from the data.
+    public void ApplyPlacementData(JObject data)
+    {
+        loop          = (bool?)data["loop"] ?? loop;
+        pausePerPoint = (float?)data["pausePerPoint"] ?? pausePerPoint;
+
+        if (transform.childCount > 0) return;
+        if (data["points"] is not JArray points) return;
+        foreach (var p in points)
+        {
+            var wp = new GameObject($"WP {transform.childCount}");
+            wp.transform.SetParent(transform, worldPositionStays: false);
+            wp.transform.position = new Vector3((float)p["x"], (float)p["y"], (float)p["z"]);
+        }
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (string.IsNullOrEmpty(placementId))
+            placementId = System.Guid.NewGuid().ToString();
+    }
+#endif
 
     void OnDrawGizmos()
     {

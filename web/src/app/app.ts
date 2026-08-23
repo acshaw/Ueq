@@ -25,6 +25,7 @@ import { AbilityTagEditor } from './ability-tag-editor';
 import { RaceEditor } from './race-editor';
 import { ClassEditor } from './class-editor';
 import { WorldClockEditor } from './world-clock-editor';
+import { PlacementEditor } from './placement-editor';
 import { SpawnGuide } from './spawn-guide';
 import { ConversationGuide } from './conversation-guide';
 import { QuestGuide } from './quest-guide';
@@ -37,7 +38,7 @@ import { PlayPage } from './play-page';
 import { CombatSimulator } from './combat-sim/combat-simulator';
 
 type ViewId = 'play' | 'items' | 'vendors' | 'conversations' | 'mobs' | 'factions' | 'loot' | 'xp'
-  | 'spawns' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'combatSim'
+  | 'spawns' | 'placements' | 'abilities' | 'abilityTags' | 'races' | 'classes' | 'worldClock' | 'combatSim'
   | 'docsSpawn' | 'docsConversation' | 'docsQuest' | 'docsCombat' | 'docsToHit' | 'docsAbilities'
   | 'docsRacesClasses' | 'docsBuildDeploy';
 
@@ -52,6 +53,7 @@ const CONTENT_NAV: NavItem[] = [
   { id: 'loot', label: 'Loot', icon: 'inventory_2' },
   { id: 'xp', label: 'XP', icon: 'trending_up' },
   { id: 'spawns', label: 'Spawns', icon: 'place' },
+  { id: 'placements', label: 'Placements', icon: 'push_pin' },
   { id: 'abilities', label: 'Abilities', icon: 'auto_awesome' },
   { id: 'abilityTags', label: 'Ability Tags', icon: 'sell' },
   { id: 'races', label: 'Races', icon: 'diversity_3' },
@@ -81,7 +83,7 @@ const DOCS_NAV: NavItem[] = [
   selector: 'app-root',
   imports: [
     Login, ItemEditor, VendorEditor, ConversationEditor, MobEditor, FactionEditor, LootEditor,
-    XpEditor, SpawnEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, WorldClockEditor,
+    XpEditor, SpawnEditor, PlacementEditor, AbilityEditor, AbilityTagEditor, RaceEditor, ClassEditor, WorldClockEditor,
     SpawnGuide, ConversationGuide, QuestGuide, CombatGuide, ToHitGuide, AbilitiesGuide,
     RacesClassesGuide, BuildDeployGuide,
     PlayPage, CombatSimulator,
@@ -174,6 +176,7 @@ const DOCS_NAV: NavItem[] = [
               @case ('loot')          { <app-loot-editor /> }
               @case ('xp')            { <app-xp-editor /> }
               @case ('spawns')        { <app-spawn-editor /> }
+              @case ('placements')    { <app-placement-editor /> }
               @case ('abilities')     { <app-ability-editor /> }
               @case ('abilityTags')   { <app-ability-tag-editor /> }
               @case ('races')         { <app-race-editor /> }
