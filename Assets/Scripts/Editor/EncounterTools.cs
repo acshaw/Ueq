@@ -9,12 +9,19 @@ using UnityEngine.AI;
 /// </summary>
 static class EncounterTools
 {
+    // Ready-made drag-in prefabs (hand-authored, predate this file's tools — see the web app's Spawn
+    // System guide, §7) — these menu commands prefer them so a menu-created placement and a hand-dragged
+    // one are identical, falling back to building from scratch only if a prefab is ever missing.
+    const string SpawnPointPrefabPath   = "Assets/Prefabs/Encounters/SpawnPoint.prefab";
+    const string PatrolRoutePrefabPath  = "Assets/Prefabs/Encounters/PatrolRoute.prefab";
+    const string WanderRegionPrefabPath = "Assets/Prefabs/Encounters/WanderRegion.prefab";
+
     [MenuItem("Tools/Zones/Place Encounter (Spawn Point)")]
     static void PlaceEncounter()
     {
-        var go = new GameObject("Encounter (SpawnPoint)");
+        var go = InstantiatePrefabOrNew(SpawnPointPrefabPath, "Encounter (SpawnPoint)",
+            g => g.AddComponent<SpawnPoint>());
         go.transform.position = SnapToNavmeshOrGround(SceneFocus());
-        go.AddComponent<SpawnPoint>();
 
         Undo.RegisterCreatedObjectUndo(go, "Place Encounter");
         Selection.activeGameObject = go;
@@ -26,9 +33,9 @@ static class EncounterTools
     [MenuItem("Tools/Zones/New Patrol Route")]
     static void NewPatrolRoute()
     {
-        var go = new GameObject("Patrol Route");
+        var go = InstantiatePrefabOrNew(PatrolRoutePrefabPath, "Patrol Route",
+            g => g.AddComponent<PatrolRoute>());
         go.transform.position = SnapToNavmeshOrGround(SceneFocus());
-        go.AddComponent<PatrolRoute>();
 
         Undo.RegisterCreatedObjectUndo(go, "New Patrol Route");
         Selection.activeGameObject = go;
@@ -62,9 +69,9 @@ static class EncounterTools
     [MenuItem("Tools/Zones/New Wander Region")]
     static void NewWanderRegion()
     {
-        var go = new GameObject("Wander Region");
+        var go = InstantiatePrefabOrNew(WanderRegionPrefabPath, "Wander Region",
+            g => g.AddComponent<WanderRegion>());
         go.transform.position = SnapToNavmeshOrGround(SceneFocus());
-        go.AddComponent<WanderRegion>();
 
         Undo.RegisterCreatedObjectUndo(go, "New Wander Region");
         Selection.activeGameObject = go;
@@ -74,6 +81,19 @@ static class EncounterTools
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // Prefer instantiating the existing drag-in prefab so a menu-created placement and a hand-dragged one
+    // are identical; fall back to building from scratch only if a prefab is ever missing/renamed.
+    static GameObject InstantiatePrefabOrNew(string prefabPath, string fallbackName, System.Action<GameObject> addComponent)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab != null)
+            return (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+
+        var go = new GameObject(fallbackName);
+        addComponent(go);
+        return go;
+    }
 
     static PatrolRoute ResolveSelectedRoute()
     {

@@ -24,6 +24,12 @@ public class NetworkedPlayer : NetworkBehaviour
     [SerializeField] float sitCameraDrop = 0.85f;
     [Tooltip("Camera height ease speed for sit/stand (higher = snappier).")]
     [SerializeField] float sitCameraLerp = 8f;
+    [Tooltip("Max hold time (seconds) for a right-click to still resolve as a click-through " +
+             "interact (loot/consider) rather than committing to a camera-look drag.")]
+    [SerializeField] float rmbClickMaxDuration = 0.3f;
+    [Tooltip("Max accumulated mouse movement (pixels) during the hold for a right-click to still " +
+             "resolve as a click rather than committing to a camera-look drag.")]
+    [SerializeField] float rmbClickMaxDrag = 12f;
 
     CharacterController _cc;
     Camera _cam;
@@ -48,7 +54,22 @@ public class NetworkedPlayer : NetworkBehaviour
     bool _sprint;
     bool _jumpQueued;
     bool _isLooking; // true while RMB held
-    bool _rmbIsLoot; // RMB press was consumed by loot or consider (5.4) — suppress look mode for that press
+
+    // ── RMB click-vs-drag (loot/consider vs. camera look) ──────────────────────
+    // A right-click's outcome isn't known at press time: a quick release with little movement is
+    // an interact (loot/consider) even when the press started over an interactable; holding past
+    // a short grace period (or dragging past a small threshold) commits it to a camera-look drag
+    // instead. This is what lets look mode work when the cursor happens to start over an
+    // interactable — previously an interactable under the cursor suppressed look for the entire
+    // hold (bug reported 2026-08-24).
+    enum RmbInteractKind { None, LootCorpse, LootPlayerCorpse, Consider }
+    RmbInteractKind _rmbPendingKind;
+    Corpse          _rmbPendingCorpse;
+    PlayerCorpse    _rmbPendingPlayerCorpse;
+    NetworkIdentity _rmbPendingConsiderTarget;
+    float _rmbPressTime;
+    float _rmbDragAccum;
+    bool  _rmbLookActive; // once true for this hold, stays true — no interact fires on release
 
     // ── 4.2 — client-side prediction + reconciliation ──────────────────────────
     [Header("Prediction")]
@@ -237,25 +258,35 @@ public class NetworkedPlayer : NetworkBehaviour
         bool rmbHeld  = mouse.rightButton.isPressed;
         bool bothHeld = lmbHeld && rmbHeld;
 
-        // ── RMB press — loot raycast takes priority over look mode ───────────
-        if (mouse.rightButton.wasPressedThisFrame && _cam != null && !chatOpen)
+        // ── RMB press — capture what's under the cursor. The interact doesn't fire yet (see
+        // release below); locking the cursor (entering look mode) is likewise deferred whenever
+        // the press starts over something interactable, so a hold/drag from that starting point
+        // still becomes a normal camera look instead of being stuck non-look for the whole press.
+        if (mouse.rightButton.wasPressedThisFrame)
         {
-            Ray ray = _cam.ScreenPointToRay(mouse.position.ReadValue());
-            if (Physics.Raycast(ray, out RaycastHit rmbHit, 100f))
+            _rmbPendingKind = RmbInteractKind.None;
+            _rmbPendingCorpse = null;
+            _rmbPendingPlayerCorpse = null;
+            _rmbPendingConsiderTarget = null;
+            _rmbPressTime = Time.time;
+            _rmbDragAccum = 0f;
+
+            if (_cam != null && !chatOpen && Physics.Raycast(
+                    _cam.ScreenPointToRay(mouse.position.ReadValue()), out RaycastHit rmbHit, 100f))
             {
                 var hitCorpse = rmbHit.collider.GetComponentInParent<Corpse>();
                 if (hitCorpse != null && hitCorpse.IsActive)
                 {
-                    _rmbIsLoot = true;
-                    LootUI.Open(hitCorpse);
+                    _rmbPendingKind = RmbInteractKind.LootCorpse;
+                    _rmbPendingCorpse = hitCorpse;
                 }
                 else
                 {
                     var hitPlayerCorpse = rmbHit.collider.GetComponentInParent<PlayerCorpse>();
                     if (hitPlayerCorpse != null && hitPlayerCorpse.IsActive && hitPlayerCorpse.Owner == netIdentity)
                     {
-                        _rmbIsLoot = true;
-                        LootUI.Open(hitPlayerCorpse);
+                        _rmbPendingKind = RmbInteractKind.LootPlayerCorpse;
+                        _rmbPendingPlayerCorpse = hitPlayerCorpse;
                     }
                     else
                     {
@@ -265,18 +296,29 @@ public class NetworkedPlayer : NetworkBehaviour
                         var considerNi = hitTargetable != null ? hitTargetable.GetComponentInParent<NetworkIdentity>() : null;
                         if (considerNi != null)
                         {
-                            _rmbIsLoot = true; // reuse the same look-mode suppression flag
-                            GetComponent<PlayerConsider>()?.CmdConsider(considerNi);
+                            _rmbPendingKind = RmbInteractKind.Consider;
+                            _rmbPendingConsiderTarget = considerNi;
                         }
                     }
                 }
             }
-        }
-        if (mouse.rightButton.wasReleasedThisFrame)
-            _rmbIsLoot = false;
 
-        // ── Cursor / look mode (RMB) — cursor hidden whenever RMB is held ────
-        _isLooking       = rmbHeld && !_rmbIsLoot;
+            // Nothing interactable under the cursor — no reason to withhold look, so it kicks in
+            // immediately exactly like before this fix.
+            _rmbLookActive = _rmbPendingKind == RmbInteractKind.None;
+        }
+
+        // Still undecided (pressed over an interactable, not yet committed either way this hold)
+        // — a hold past the click window, or enough drag, commits this press to a look-drag.
+        if (rmbHeld && !_rmbLookActive)
+        {
+            _rmbDragAccum += mouse.delta.ReadValue().magnitude;
+            if (Time.time - _rmbPressTime > rmbClickMaxDuration || _rmbDragAccum > rmbClickMaxDrag)
+                _rmbLookActive = true;
+        }
+
+        // ── Cursor / look mode (RMB) — cursor hidden once a hold has committed to a look-drag ──
+        _isLooking       = rmbHeld && _rmbLookActive;
         Cursor.lockState = _isLooking ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible   = !_isLooking;
 
@@ -286,6 +328,29 @@ public class NetworkedPlayer : NetworkBehaviour
             Vector2 delta = mouse.delta.ReadValue();
             _yaw   += delta.x * lookSensitivity;
             _pitch  = Mathf.Clamp(_pitch - delta.y * lookSensitivity, -maxPitch, maxPitch);
+        }
+
+        // ── RMB release — fire the pending loot/consider interact only if this press never
+        // committed to a look-drag (a genuine quick click, wherever it happened to start).
+        if (mouse.rightButton.wasReleasedThisFrame)
+        {
+            if (!_rmbLookActive)
+            {
+                switch (_rmbPendingKind)
+                {
+                    case RmbInteractKind.LootCorpse:
+                        if (_rmbPendingCorpse != null) LootUI.Open(_rmbPendingCorpse);
+                        break;
+                    case RmbInteractKind.LootPlayerCorpse:
+                        if (_rmbPendingPlayerCorpse != null) LootUI.Open(_rmbPendingPlayerCorpse);
+                        break;
+                    case RmbInteractKind.Consider:
+                        if (_rmbPendingConsiderTarget != null)
+                            GetComponent<PlayerConsider>()?.CmdConsider(_rmbPendingConsiderTarget);
+                        break;
+                }
+            }
+            _rmbPendingKind = RmbInteractKind.None;
         }
 
         // ── Both mouse buttons = move forward (mouse-driven, chat-safe) ──────
@@ -820,6 +885,24 @@ public class NetworkedPlayer : NetworkBehaviour
 
         string names = string.Join(", ", System.Array.ConvertAll(TravelPoints, t => t.name));
         SendSystemMsg($"Unknown travel point '{destination}'. Options: {names}.");
+    }
+
+    /// <summary>`/set-time &lt;hour&gt;` — dev/testing convenience to jump the day/night cycle straight to
+    /// a given hour (0-23) instead of waiting out a full day-length cycle. Not gated out of combat (unlike
+    /// /unstuck and /travel) — it only affects sky/lighting, not player position, so there's nothing to
+    /// exploit. Broadcasts the new clock reference to every connected client, not just the caller.</summary>
+    [Command]
+    public void CmdSetTime(int hour)
+    {
+        if (hour < 0 || hour > 23)
+        {
+            SendSystemMsg("Usage: /set-time <hour 0-23>.");
+            return;
+        }
+
+        WorldClock.ServerSetHour(hour);
+        NetworkServer.SendToAll(WorldClock.BuildSync());
+        SendSystemMsg($"World time set to {hour:00}:00.");
     }
 
     // Raycast down onto the ground + snap to the nearest navmesh point, given only X/Z — same pattern as

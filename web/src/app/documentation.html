@@ -14,6 +14,7 @@
       <li>Movement modes</li>
       <li>Giving a mob a body</li>
       <li>Recipes (step-by-step)</li>
+      <li>World Placement Sync — shipping to a live server</li>
       <li>Aggro in one paragraph</li>
       <li>Troubleshooting</li>
       <li>Quick reference</li>
@@ -40,9 +41,13 @@
     <tr><td>Mob Definition</td><td>A creature's stats/identity</td><td>Web <strong>Mob Editor</strong></td><td>Database</td></tr>
     <tr><td>Spawn Table</td><td>Weighted list of mobs + group size + respawn timer</td><td>Web <strong>Spawn Editor</strong></td><td>Database</td></tr>
     <tr><td>Mob body (model)</td><td>The Synty 3D character a mob wears</td><td>Unity <strong>Mob Model Catalog</strong></td><td>Unity project</td></tr>
-    <tr><td>Spawn Point</td><td>The in-world spawner</td><td>Unity <strong>scene</strong></td><td>The scene file</td></tr>
-    <tr><td>Patrol Route / Wander Region</td><td>Optional movement shapes</td><td>Unity <strong>scene</strong></td><td>The scene file</td></tr>
+    <tr><td>Spawn Point</td><td>The in-world spawner</td><td>Unity <strong>scene</strong> (still — see §8)</td><td>The scene file <em>+ the database, once synced</em></td></tr>
+    <tr><td>Patrol Route / Wander Region</td><td>Optional movement shapes</td><td>Unity <strong>scene</strong> (still — see §8)</td><td>The scene file <em>+ the database, once synced</em></td></tr>
   </table>
+  <div class="note">You still place these in Unity exactly as always — nothing about <em>how</em> you place
+    things changed. What's new (§8) is an optional extra step that pushes a copy into the database, which
+    matters when a <em>different, already-running</em> server build needs to pick it up without a full
+    rebuild.</div>
 
   <h3>The three programs involved</h3>
   <ol>
@@ -54,7 +59,8 @@
   </ol>
   <div class="note">⚠️ <strong>Important:</strong> Unity reads the database <strong>once, at host start.</strong>
     If you edit a mob in the web app while the game is running, <strong>restart the Unity host</strong> to see the
-    change.</div>
+    change. Since 2.7.3 this also covers a synced Spawn Point/Patrol Route/Wander Region's <em>config</em>
+    (§8) — but never its position, which is always whatever the scene says.</div>
 
   <h2>2. Key concepts</h2>
   <ul>
@@ -78,7 +84,10 @@
   </ul>
 
   <h2>3. Two spawn styles: single mob vs. spawn table</h2>
-  <p>A Spawn Point spawns in one of two ways. It uses the first field that's filled in:</p>
+  <p>A Spawn Point spawns in one of two ways. It uses the first field that's filled in. Both fields are now
+    <strong>dropdowns</strong> in the Unity Inspector — pulled live from the database, the same ids the Mob/
+    Spawn Editors use — so there's no id to memorize or copy-paste (a "Refresh from Database" button
+    re-fetches the list if you've authored something new on the web since opening this scene).</p>
   <table>
     <tr><th>Field on the Spawn Point</th><th>Behavior</th><th>Use it for</th></tr>
     <tr><td><code>spawnTableId</code> (highest priority)</td><td>Rolls a <strong>weighted random</strong> mob,
@@ -183,8 +192,9 @@
         <code>Assets/Prefabs/Encounters/SpawnPoint.prefab</code> from the Project window into the scene, and position
         it just above the ground by the well (drag it in the Scene view, or set its Transform position). Rename it
         e.g. <code>OldHermitSpawn</code> if you like.</li>
-      <li><span class="tag unity">Unity</span> In its <strong>Spawn Point</strong> component set <strong>Mob
-        Id</strong> = <code>old_hermit</code> (leave <strong>Spawn Table Id</strong> empty).</li>
+      <li><span class="tag unity">Unity</span> In its <strong>Spawn Point</strong> component, pick
+        <code>old_hermit</code> from the <strong>Mob Id</strong> dropdown (leave <strong>Spawn Table Id</strong>
+        as "(none)"). Click <strong>Refresh from Database</strong> first if you don't see it yet.</li>
       <li><span class="tag unity">Unity</span> <strong>Save the scene</strong> (Ctrl+S), then
         <strong>restart the Unity host</strong> so it loads the new mob.</li>
       <li><span class="tag unity">Unity</span> <strong>Test:</strong> Play as Host, walk near the well — the Old
@@ -197,7 +207,7 @@
     <p class="goal">Goal: a clearing where mostly goblins spawn, occasionally a bigger brute, sometimes in pairs.</p>
     <ol>
       <li><span class="tag web">Web app</span> <strong>Author the mobs</strong> (Mob Editor): e.g.
-        <code>goblin_scout</code> and <code>goblin_brute</code>, each with a hostile faction (§8), XP reward, and a
+        <code>goblin_scout</code> and <code>goblin_brute</code>, each with a hostile faction (§9), XP reward, and a
         loot table.</li>
       <li><span class="tag unity">Unity</span> <strong>Give each a body</strong> (§6).</li>
       <li><span class="tag web">Web app</span> <strong>Author a spawn table</strong> (Spawn Editor): id
@@ -207,7 +217,8 @@
         relative — scouts appear 4× as often as brutes.)</li>
       <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
         <code>Encounters/SpawnPoint.prefab</code> into the scene over the clearing, rename it <code>GoblinCamp</code>.
-        Set <strong>Spawn Table Id</strong> = <code>greenwood_goblins</code> (leave <strong>Mob Id</strong> empty).</li>
+        Pick <code>greenwood_goblins</code> from the <strong>Spawn Table Id</strong> dropdown (leave <strong>Mob
+        Id</strong> as "(none)").</li>
       <li><span class="tag unity">Unity</span> <strong>Save the scene</strong>, then <strong>restart the Unity
         host.</strong></li>
       <li><span class="tag unity">Unity</span> <strong>Test:</strong> walk into the clearing — a weighted roll
@@ -225,7 +236,8 @@
       <li><span class="tag web">Web app</span> Author <code>dire_wolf</code> (hostile faction). <span class="tag unity">Unity</span>
         Give it a body (§6).</li>
       <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
-        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>dire_wolf</code>.</li>
+        <code>Encounters/SpawnPoint.prefab</code> in, pick <code>dire_wolf</code> from the <strong>Mob Id</strong>
+        dropdown.</li>
       <li><span class="tag unity">Unity</span> <strong>Place the region:</strong> drag
         <code>Encounters/WanderRegion.prefab</code> into the scene, rename <code>MeadowRegion</code>, position it at
         the meadow center over walkable ground. On its <strong>Wander Region</strong> component set
@@ -245,7 +257,8 @@
       <li><span class="tag web">Web app</span> Author <code>lost_ghost</code>. <span class="tag unity">Unity</span>
         Give it a body (§6).</li>
       <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
-        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>lost_ghost</code>.</li>
+        <code>Encounters/SpawnPoint.prefab</code> in, pick <code>lost_ghost</code> from the <strong>Mob Id</strong>
+        dropdown.</li>
       <li><span class="tag unity">Unity</span> On the Spawn Point, tick <strong>Free Range</strong> (leave Wander
         Region empty). Optionally raise <strong>Free Range Radius</strong> to widen roaming (the default is safe —
         keep it comfortably under the distance between zones).</li>
@@ -268,14 +281,56 @@
         <strong>Loop</strong> (walk the loop) or uncheck it (ping-pong), and <strong>Pause Per Point</strong>
         (seconds paused at each post).</li>
       <li><span class="tag unity">Unity</span> <strong>Place the spawn point:</strong> drag
-        <code>Encounters/SpawnPoint.prefab</code> in, set <strong>Mob Id</strong> = <code>city_guard</code>, then
-        drag the <code>GuardPatrol</code> object into its <strong>Patrol Route</strong> field.</li>
+        <code>Encounters/SpawnPoint.prefab</code> in, pick <code>city_guard</code> from the <strong>Mob Id</strong>
+        dropdown, then drag the <code>GuardPatrol</code> object into its <strong>Patrol Route</strong> field.</li>
       <li><span class="tag unity">Unity</span> Save the scene, restart the host, test: the guard walks its beat,
         aggros anything hostile it perceives, and returns to the nearest post afterward.</li>
     </ol>
   </div>
 
-  <h2>8. Aggro in one paragraph</h2>
+  <h2>8. World Placement Sync — shipping to a live server</h2>
+  <p>Everything in §7 works exactly as described if you're the only one running the game — you edit the
+    scene, save, restart your own Unity host, done. This section only matters once there's a
+    <strong>separately-running server</strong> (a locally hosted dedicated server, or one already deployed
+    somewhere) that isn't going to get rebuilt every time you place something new.</p>
+
+  <div class="note"><strong>Mental model:</strong> a spawn point's <em>position</em> is still 100% a Unity
+    scene thing — moving one always needs a scene edit and, for an already-running separate server, a
+    rebuild. What's new is that a spawn point's <em>id</em> (this exact GameObject) and its <em>config</em>
+    (spawn table/mob id, activation radius, snap-to-ground, free-range) can also live in the database — and
+    a server picks up anything in the database that isn't already baked into whatever build it's currently
+    running, on a <strong>restart alone</strong>.</div>
+
+  <h3>Pushing a new placement out (the common case)</h3>
+  <ol>
+    <li><span class="tag unity">Unity</span> Place/tune your Spawn Point, Patrol Route, or Wander Region in
+      the scene exactly as in the recipes above.</li>
+    <li><span class="tag unity">Unity</span> Run <code>Tools/Zones/Sync Placements to Database</code>. It
+      walks every open zone scene and uploads what it finds — no confirmation needed for this part.</li>
+    <li>Any server that doesn't already have this exact object baked into its current build (your local
+      host running an older build, or a deployed dedicated server) will spawn it correctly on its
+      <strong>next restart</strong> — no rebuild, no redeploy.</li>
+  </ol>
+  <div class="note">The sync tool also checks whether anything in the database has no matching object in
+    the scene you have open right now, and — <strong>only if you confirm</strong> — offers to delete those
+    rows. If you deleted a Spawn Point's GameObject in Unity and want that reflected in the database too,
+    this is how; it's never automatic.</div>
+
+  <h3>Editing config without opening Unity</h3>
+  <p>The web app's <strong>Placements</strong> tab lists every synced placement across every zone. Click a
+    Spawn Point row to edit its spawn table/mob id, activation radius, snap-to-ground, or free-range —
+    <strong>restart the game server</strong> and the change takes effect, whether or not that Spawn Point
+    was also baked into the running build. Position, rotation, zone, and marker type are always read-only
+    there (and Patrol Route/Wander Region rows have no editable fields at all) — anything spatial stays a
+    Unity-only concern.</p>
+
+  <h3>Pulling database-only content into a scene</h3>
+  <p>If a placement was ever authored some way other than the Unity scene it belongs to, <code>Tools/Zones/
+    Import Placements from Database</code> pulls it in as a real, editable GameObject (pick the zone; its
+    scene must already be open) — refreshing one already present rather than duplicating it. Round-trips
+    with the sync tool above.</p>
+
+  <h2>9. Aggro in one paragraph</h2>
   <p>Whether a mob attacks you is decided by <strong>faction standing</strong>, not the spawn system. In the web
     editors you give a mob a <strong>faction</strong>; every player has a numeric standing with every faction
     (seeded from their race). When a mob perceives a player within its <strong>perception radius</strong>, it looks
@@ -284,7 +339,7 @@
     with), and a <strong>hostile monster</strong> gets a faction players stand poorly with (e.g. a "Monster"
     faction set hostile to all races, authored in the Faction Editor).</p>
 
-  <h2>9. Troubleshooting</h2>
+  <h2>10. Troubleshooting</h2>
   <table>
     <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
     <tr><td>Mob spawns as a <strong>white cube</strong></td><td>No body assigned. Do §6 (catalog Model Id = mob id).</td></tr>
@@ -292,22 +347,26 @@
     <tr><td>My <strong>web edit didn't show up</strong></td><td>Unity loads content at host start — restart the Unity host. Also confirm Postgres + the API are running.</td></tr>
     <tr><td>Mob <strong>won't wander into its region</strong> / stands still</td><td>The Wander Region (or the spawn) isn't over the navmesh. Move it over walkable ground; confirm the green volume overlaps the blue navmesh. Also confirm the mob's <code>movementType</code> is Wander, not Stationary.</td></tr>
     <tr><td>Mob <strong>ignores my Wander Region</strong></td><td>A Patrol Route is also set (patrol wins). Clear it. Or the mob is Stationary.</td></tr>
-    <tr><td>Mob <strong>isn't hostile</strong></td><td>It has no faction, or the player's standing with its faction is high. Give it a hostile faction (§8).</td></tr>
+    <tr><td>Mob <strong>isn't hostile</strong></td><td>It has no faction, or the player's standing with its faction is high. Give it a hostile faction (§9).</td></tr>
     <tr><td>Mob <strong>chases forever / off the map</strong></td><td>By design chasing has no distance leash; it stops when the target dies or zones out.</td></tr>
     <tr><td>Mob spawns <strong>floating or buried</strong></td><td><code>Snap To Ground</code> is off, or there's no ground collider / navmesh under the point. Keep Snap To Ground on and place over baked navmesh.</td></tr>
+    <tr><td>New spawn point works locally but <strong>doesn't show up on the deployed/other server</strong></td><td>You placed it in Unity but never ran <code>Tools/Zones/Sync Placements to Database</code> (§8) — that build's scene never had this GameObject baked in, and nothing pushed it to the database either.</td></tr>
+    <tr><td><strong>Spawn Table/Mob dropdown is empty</strong> in the Inspector</td><td>Click <strong>Refresh from Database</strong> on the Spawn Point — the list is fetched once per Editor session, so anything authored on the web after you opened the scene won't appear until you refresh.</td></tr>
+    <tr><td>Web edit to a Spawn Point's config (§8) <strong>didn't take effect</strong></td><td>Restart the server you're actually testing against — the same "restart to load content" rule from §1 applies to synced placement config too.</td></tr>
   </table>
 
-  <h2>10. Quick reference</h2>
+  <h2>11. Quick reference</h2>
   <h3>Spawn Point fields (Unity Inspector)</h3>
   <table>
     <tr><th>Field</th><th>Meaning</th></tr>
-    <tr><td><code>spawnTableId</code></td><td>DB spawn table to roll from (weighted, grouped, timed). Top priority.</td></tr>
-    <tr><td><code>mobId</code></td><td>A single DB mob to spawn (used if no spawn table).</td></tr>
-    <tr><td><code>activationRadius</code></td><td>How close a player must be to trigger spawning (default 50).</td></tr>
+    <tr><td><code>spawnTableId</code></td><td>DB spawn table to roll from (weighted, grouped, timed). Top priority. <strong>Dropdown</strong>, populated live from the database.</td></tr>
+    <tr><td><code>mobId</code></td><td>A single DB mob to spawn (used if no spawn table). <strong>Dropdown</strong>, same source as above.</td></tr>
+    <tr><td><code>activationRadius</code></td><td>How close a player must be to trigger spawning (default 50). Web-editable in the <strong>Placements</strong> tab (§8) too.</td></tr>
     <tr><td><code>patrolRoute</code></td><td>Optional patrol path (movement priority 1).</td></tr>
     <tr><td><code>wanderRegion</code></td><td>Optional bounded roam area (movement priority 2).</td></tr>
-    <tr><td><code>freeRange</code> / <code>freeRangeRadius</code></td><td>Roam the whole zone (movement priority 3).</td></tr>
+    <tr><td><code>freeRange</code> / <code>freeRangeRadius</code></td><td>Roam the whole zone (movement priority 3). Web-editable (§8) too.</td></tr>
     <tr><td><code>snapToGround</code> / <code>groundMask</code> / <code>navSampleRadius</code></td><td>Placement onto the ground + navmesh.</td></tr>
+    <tr><td><code>placementId</code></td><td>Auto-assigned GUID (§8) — the key the sync/import tools use. Read-only in the Inspector; never hand-edit.</td></tr>
   </table>
   <h3>Mob Definition fields (Mob Editor)</h3>
   <p>Identity (display name, level, model id) · Combat (max health, attack damage, attack interval, attack range) ·
@@ -317,11 +376,13 @@
   <h3>Placing the scene objects (Unity)</h3>
   <p>Drag the ready-made prefabs from <code>Assets/Prefabs/Encounters/</code> into the scene — no menu commands.
     Save the scene (Ctrl+S) after, and restart the host to load Web-app content changes. (Each can also be built by
-    hand: an empty GameObject + the matching component; the prefabs just carry the component and defaults.)</p>
+    hand: an empty GameObject + the matching component; the prefabs just carry the component and defaults.) If a
+    separate server also needs this without a rebuild, run <code>Tools/Zones/Sync Placements to Database</code>
+    (§8).</p>
   <table>
     <tr><th>To place…</th><th>Do this</th></tr>
     <tr><td><strong>Spawn Point</strong></td><td>Drag <code>Encounters/SpawnPoint.prefab</code> in → position it →
-      set <strong>Mob Id</strong> or <strong>Spawn Table Id</strong>.</td></tr>
+      pick a <strong>Mob Id</strong> or <strong>Spawn Table Id</strong> from its dropdown.</td></tr>
     <tr><td><strong>Wander Region</strong></td><td>Drag <code>Encounters/WanderRegion.prefab</code> in → position +
       size it (Shape + Box Size / Sphere Radius) → drag it into the Spawn Point's <strong>Wander Region</strong>
       field.</td></tr>
@@ -335,5 +396,8 @@
 
   <footer>Authoritative behavior lives in <code>Assets/Scripts/Combat/SpawnPoint.cs</code>,
     <code>MobDefinition.cs</code>, <code>SpawnTable.cs</code>, and the movement behaviors under
-    <code>Assets/Scripts/NPC/</code>.</footer>
+    <code>Assets/Scripts/NPC/</code>. World Placement Sync (§8) lives in <code>Assets/Scripts/Placement/</code>
+    (<code>IWorldPlacement.cs</code>, <code>PlacementMaterializer.cs</code>), <code>ZoneManager.cs</code>, and
+    the Editor tools <code>WorldPlacementSyncTool.cs</code>/<code>WorldPlacementImportTool.cs</code>/
+    <code>SpawnPointEditor.cs</code>.</footer>
 </article>

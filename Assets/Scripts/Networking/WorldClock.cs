@@ -163,6 +163,21 @@ public class WorldClock : MonoBehaviour
     public static void  SetDebugDayFraction(float f)   => _debugDayOverride = Mathf.Repeat(f, 1f);
     public static void  SetDebugLunarFraction(float f) => _debugLunarOverride = Mathf.Repeat(f, 1f);
     public static void  ClearDebugOverrides() { _debugDayOverride = -1f; _debugLunarOverride = -1f; }
+
+    // ── /set-time chat command (testing convenience) ────────────────────────────────────────────────────
+
+    /// <summary>Server-only: push the clock straight to a specific hour (0-23) — lets a tester jump
+    /// straight to a time of day instead of waiting out a full day-length cycle. Rewrites the phase
+    /// reference (<see cref="_startNetworkTime"/>) rather than the Tools/World Clock Debug override above,
+    /// so it's genuinely server-authoritative: the caller broadcasts <see cref="BuildSync"/> afterward and
+    /// every connected client (not just the host) picks up the new time. Also clears any active debug
+    /// override, which would otherwise silently take priority and make this look like a no-op.</summary>
+    public static void ServerSetHour(int hour)
+    {
+        ClearDebugOverrides();
+        float targetFraction = Mathf.Clamp(hour, 0, 23) / 24f;
+        _startNetworkTime = NetworkTime.time - targetFraction * _dayLengthSeconds;
+    }
 }
 
 /// <summary>DC6 — the 8 traditional lunar phases, indexed from <see cref="WorldClock.LunarFraction"/>.</summary>

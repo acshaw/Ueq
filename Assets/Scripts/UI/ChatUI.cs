@@ -67,6 +67,7 @@ public class ChatUI : MonoBehaviour
         ("/sit",                  "Sit / stand (also hotbar key 0); rest faster while seated"),
         ("/unstuck",              "Warp to a safe spot if stuck or falling (out of combat)"),
         ("/travel <name>",        "Fast travel: creslins, thornwood, grukmar, village, mobs, crossroads"),
+        ("/set-time <0-23>",      "Testing: jump the day/night cycle to a specific hour"),
         ("/invite <name>",        "Invite a player to your group (leader only)"),
         ("/accept",               "Accept a pending group invite"),
         ("/leave",                "Leave your group"),
@@ -211,6 +212,28 @@ public class ChatUI : MonoBehaviour
             var local = LocalPlayer.Current;
             if (local != null) local.CmdTravel(arg);
             else AppendLine("<i>[Not connected — start Host first]</i>");
+            return true;
+        }
+
+        if (raw.Equals("/set-time", StringComparison.OrdinalIgnoreCase))
+        {
+            AppendLine("<i>[Usage: /set-time <hour 0-23>]</i>");
+            return true;
+        }
+
+        if (raw.StartsWith("/set-time ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(10).Trim();
+            if (int.TryParse(arg, out int hour))
+            {
+                var local = LocalPlayer.Current;
+                if (local != null) local.CmdSetTime(hour);
+                else AppendLine("<i>[Not connected — start Host first]</i>");
+            }
+            else
+            {
+                AppendLine("<i>[Usage: /set-time <hour 0-23>]</i>");
+            }
             return true;
         }
 
