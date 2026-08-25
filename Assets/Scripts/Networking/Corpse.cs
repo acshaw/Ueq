@@ -147,5 +147,12 @@ public class Corpse : NetworkBehaviour, IOnDeath
             mpb.SetColor("_BaseColor", new Color(0.28f, 0.22f, 0.22f, 1f));
             r.SetPropertyBlock(mpb);
         }
+
+        // Play a death animation if this mob's Animator Controller declares one (e.g. the wolf's new
+        // "Death" trigger + Dead state) — PlayTrigger no-ops quietly for a mob with no matching trigger
+        // parameter, so this is safe to call unconditionally on every mob corpse, not just ones with a
+        // death clip authored. Previously nothing here ever touched the Animator at all, so a dead mob
+        // just stood frozen in whatever locomotion pose it died in, tinted dark.
+        GetComponentInChildren<PlayerAnimator>()?.PlayTrigger("Death");
     }
 }

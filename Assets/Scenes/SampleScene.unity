@@ -2541,7 +2541,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7300000000000000003, guid: 4a8b2c6d1e3f5a7908b1c2d3e4f5a6b7, type: 3}
       propertyPath: mobId
-      value: grey_wolf
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7300000000000000003, guid: 4a8b2c6d1e3f5a7908b1c2d3e4f5a6b7, type: 3}
+      propertyPath: spawnTableId
+      value: Gray Wolf Spawn Table
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

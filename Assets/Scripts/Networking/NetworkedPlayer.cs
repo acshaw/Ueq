@@ -404,7 +404,12 @@ public class NetworkedPlayer : NetworkBehaviour
     {
         if (hit == _currentTarget) return; // no change
 
-        _currentTarget?.SetHighlight(false);
+        // `?.` deliberately NOT used here: it checks the raw C# reference, not Unity's overridden
+        // null-equality, so it does not detect a destroyed-but-still-referenced target (e.g. a corpse
+        // that despawned/got fully looted while it was still the active target) — that mismatch threw
+        // MissingReferenceException on the next click (found 2026-08-24). `!= null` below correctly
+        // uses the overload and treats a destroyed object as null.
+        if (_currentTarget != null) _currentTarget.SetHighlight(false);
         _currentTarget = hit;
         if (_currentTarget != null)
         {

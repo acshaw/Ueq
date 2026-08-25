@@ -37,6 +37,7 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
     Health               _health;
     NpcEventDispatcher   _dispatcher;
     INpcMovementBehavior _movementBehavior;
+    PlayerAnimator       _animator; // built onto the body MobModel instantiates — see RpcPlayAttack
 
     // 5.4 (AG4) — a threat entry tracks damage AND status separately: Active entries are live combat
     // threats (drive retargeting); Dead/Zoned entries are departed players whose damage still counts
@@ -233,6 +234,11 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         var targetHealth = _currentTarget.GetComponent<Health>();
         if (targetHealth == null || targetHealth.IsDead) return;
 
+        // Play the swing animation on every client, hit or miss — same convention as
+        // PlayerAutoAttack.RpcPlayAttack (mob attacks never called this at all before, a real gap: the
+        // Animator Controller side, e.g. the wolf's "Attack" trigger, was already wired and just never fired).
+        RpcPlayAttack();
+
         var def = GetComponent<MobApplicator>()?.Definition;
         var cat = def != null ? def.weaponCategory : WeaponCategory.Might;
 
@@ -276,6 +282,15 @@ public class EnemyAI : NetworkBehaviour, IOnAttacked, IOnDeath
         {
             targetHealth.TakeDamage(result.Damage, netIdentity);
         }
+    }
+
+    [ClientRpc]
+    void RpcPlayAttack()
+    {
+        // Re-resolve if the model child was (re)built after our initial cache, or hadn't finished
+        // building yet the first time (MobModel builds its body asynchronously off a SyncVar hook).
+        if (_animator == null) _animator = GetComponentInChildren<PlayerAnimator>();
+        _animator?.PlayAttack();
     }
 
     // WR5: the return anchor is the movement behavior's call — spawn (leash → walk home) for a leashed/patrol/
