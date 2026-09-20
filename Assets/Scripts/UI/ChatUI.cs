@@ -68,6 +68,8 @@ public class ChatUI : MonoBehaviour
         ("/unstuck",              "Warp to a safe spot if stuck or falling (out of combat)"),
         ("/travel <name>",        "Fast travel: creslins, thornwood, grukmar, village, mobs, crossroads"),
         ("/set-time <0-23>",      "Testing: jump the day/night cycle to a specific hour"),
+        ("/set-age <age> <year>", "Testing: advance the Age (resets day/week/month/year, keeps time of day)"),
+        ("/time",                 "Show the real-world and in-game date/time"),
         ("/invite <name>",        "Invite a player to your group (leader only)"),
         ("/accept",               "Accept a pending group invite"),
         ("/leave",                "Leave your group"),
@@ -234,6 +236,38 @@ public class ChatUI : MonoBehaviour
             {
                 AppendLine("<i>[Usage: /set-time <hour 0-23>]</i>");
             }
+            return true;
+        }
+
+        // 8.1.5 — /set-age <age> <startingYear>: same shape as /set-time, but two int args.
+        if (raw.Equals("/set-age", StringComparison.OrdinalIgnoreCase) ||
+            raw.StartsWith("/set-age ", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] parts = raw.Length > 8 ? raw.Substring(8).Trim().Split(' ') : Array.Empty<string>();
+            if (parts.Length == 2 && int.TryParse(parts[0], out int age) && int.TryParse(parts[1], out int startYear))
+            {
+                var local = LocalPlayer.Current;
+                if (local != null) local.CmdSetAge(age, startYear);
+                else AppendLine("<i>[Not connected — start Host first]</i>");
+            }
+            else
+            {
+                AppendLine("<i>[Usage: /set-age <age> <startingYear>]</i>");
+            }
+            return true;
+        }
+
+        // 8.1.6 (CAL10) — /time: resolved entirely client-side. Every value it prints is already either
+        // synced once (age, the day/month names) or purely derived from that sync (Year/Month/Week/Day
+        // via NetworkTime), same as DayFraction always has been — no Cmd/Rpc, no server round trip.
+        if (raw.Equals("/time", StringComparison.OrdinalIgnoreCase))
+        {
+            string realWorld = DateTime.Now.ToString("M/d/yyyy h:mm tt").ToLowerInvariant();
+            string gameTime = $"{WorldClock.DayOfWeekName}, {WorldClock.DayOfMonth}{WorldClock.OrdinalSuffix(WorldClock.DayOfMonth)} " +
+                               $"Day of the {WorldClock.MonthName} in the Year {WorldClock.Year} of the " +
+                               $"{WorldClock.Age}{WorldClock.OrdinalSuffix(WorldClock.Age)} Age";
+            AppendLine($"<i>Real time: {realWorld}</i>");
+            AppendLine($"<i>Game time: {gameTime}</i>");
             return true;
         }
 

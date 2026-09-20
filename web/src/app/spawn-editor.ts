@@ -57,7 +57,8 @@ import { ADMIN_STYLES } from './shared/admin-styles';
 
         <section>
           <div class="rowhead"><h3>Entries</h3><button (click)="addEntry()">+ Entry</button></div>
-          <p class="muted">Weighted pick; group size = mobs spawned per activation.</p>
+          <p class="muted">Weighted pick; group size = mobs spawned per activation. Conditions (8.1.4)
+            restrict when an entry is eligible to roll — "Any" means no restriction (existing behavior).</p>
           @for (e of model.entries; track $index; let i = $index) {
             <div class="erow">
               <select [(ngModel)]="e.mobId" [name]="'mob'+i">
@@ -67,6 +68,62 @@ import { ADMIN_STYLES } from './shared/admin-styles';
               <label class="w">weight <input type="number" [(ngModel)]="e.weight" [name]="'w'+i" /></label>
               <label class="w">group <input type="number" [(ngModel)]="e.groupSize" [name]="'g'+i" /></label>
               <button class="small danger" (click)="model.entries.splice(i,1)">✕</button>
+            </div>
+            <div class="erow cond">
+              <label class="w">
+                Time
+                <select [(ngModel)]="e.timeCondition" [name]="'time'+i">
+                  <option value="Any">Any</option>
+                  <option value="DayOnly">Day only</option>
+                  <option value="NightOnly">Night only</option>
+                </select>
+              </label>
+              <label class="w">
+                Lunar
+                <select [(ngModel)]="e.lunarCondition" [name]="'lunar'+i">
+                  <option value="Any">Any</option>
+                  <option value="FullMoonOnly">Full moon only</option>
+                  <option value="NewMoonOnly">New moon only</option>
+                </select>
+              </label>
+              <label class="w">
+                Day of week
+                <select [(ngModel)]="e.dayOfWeekCondition" [name]="'dow'+i">
+                  <option [ngValue]="null">Any</option>
+                  @for (d of weekDays; track d) { <option [ngValue]="d">Day {{ d }}</option> }
+                </select>
+              </label>
+              <label class="w">
+                Month
+                <select [(ngModel)]="e.monthCondition" [name]="'month'+i">
+                  <option [ngValue]="null">Any</option>
+                  @for (m of yearMonths; track m) { <option [ngValue]="m">Month {{ m }}</option> }
+                </select>
+              </label>
+            </div>
+            <div class="erow cond">
+              <label class="w">
+                Respawn override (s)
+                <input type="number" [(ngModel)]="e.respawnBaseSeconds" [name]="'rb'+i" placeholder="table default" />
+              </label>
+              <label class="w">
+                ± variance
+                <input type="number" [(ngModel)]="e.respawnVariance" [name]="'rv'+i" placeholder="table default" />
+              </label>
+              <p class="muted rnote">8.2 — a named/rare roll can pop back in on its own pace. Leave both
+                blank to use the table's respawn timer above.</p>
+            </div>
+            <div class="erow cond">
+              <label class="w">
+                Level override min
+                <input type="number" [(ngModel)]="e.minLevelOverride" [name]="'lmin'+i" placeholder="mob's own level" />
+              </label>
+              <label class="w">
+                Level override max
+                <input type="number" [(ngModel)]="e.maxLevelOverride" [name]="'lmax'+i" placeholder="mob's own level" />
+              </label>
+              <p class="muted rnote">8.3 — each spawned instance rolls independently in this range (e.g.
+                4-6). Leave both blank to spawn at the mob's authored level.</p>
             </div>
           } @empty { <p class="muted">No entries — nothing will spawn.</p> }
         </section>
@@ -78,6 +135,10 @@ import { ADMIN_STYLES } from './shared/admin-styles';
     .erow select { flex: 1; }
     .erow .w, .trow .w { display: flex; flex-direction: column; width: 90px; margin: 0; }
     .erow .w input, .trow .w input { width: 100%; }
+    .erow.cond { margin-bottom: 0.9rem; padding-left: 0.25rem; }
+    .erow.cond .w { width: 130px; }
+    .erow.cond select { width: 100%; flex: none; }
+    .erow.cond .rnote { margin: 0; align-self: center; }
   `],
 })
 export class SpawnEditor implements OnInit {
@@ -93,6 +154,10 @@ export class SpawnEditor implements OnInit {
 
   readonly columns = SPAWN_GRID_COLUMNS;
   readonly searchFields = SPAWN_SEARCH_FIELDS;
+
+  // 8.1.4 — option lists for the day-of-week/month condition dropdowns.
+  readonly weekDays = [1, 2, 3, 4, 5, 6, 7];
+  readonly yearMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
   ngOnInit(): void {
     this.reload();
@@ -116,7 +181,14 @@ export class SpawnEditor implements OnInit {
 
   closeModal(): void { this.modalOpen = false; this.model = null; this.error.set(null); }
 
-  addEntry(): void { this.model?.entries.push({ mobId: '', weight: 1, groupSize: 1 }); }
+  addEntry(): void {
+    this.model?.entries.push({
+      mobId: '', weight: 1, groupSize: 1,
+      timeCondition: 'Any', lunarCondition: 'Any', dayOfWeekCondition: null, monthCondition: null,
+      respawnBaseSeconds: null, respawnVariance: null,
+      minLevelOverride: null, maxLevelOverride: null,
+    });
+  }
 
   save(): void {
     if (!this.model) return;

@@ -56,6 +56,7 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
     bool            _respawnPending;
     readonly List<NetworkIdentity> _live = new();   // M2.7.2: a group can have multiple live mobs
     SpawnTimer      _respawnTimer;                   // resolved at spawn, used for the respawn delay
+    SpawnTableEntry _lastRolledEntry;                 // 8.2 (NR2): which entry rolled, for its own respawn override
 
     // ── World Placement Sync (2.7.3, Stage A) ──────────────────────────────────
 
@@ -166,16 +167,29 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         var table = SpawnTableRegistry.Get(spawnTableId);
         if (table != null)
         {
-            var entry = table.Roll();
-            def           = entry?.mob;
-            groupSize     = Mathf.Max(1, entry?.groupSize ?? 1);
-            _respawnTimer = table.defaultTimer;
+            var entry = table.Roll(out bool anyEntriesExist);
+            if (entry == null)
+            {
+                // 8.1.4 (TG3): a table that's fully condition-filtered right now (e.g. all NightOnly
+                // entries, checked at noon) is expected and quiet — ActivationCheck retries every 5s,
+                // so warning here would spam the console all day for any point with a player nearby.
+                // Only warn when the table is genuinely empty/misconfigured (no entries resolved at all).
+                if (!anyEntriesExist)
+                    Debug.LogWarning($"[SpawnPoint] {name}: spawn table '{spawnTableId}' has no valid " +
+                                     "entries (empty, or every mob reference is unresolved).", this);
+                return;
+            }
+            def              = entry.mob;
+            groupSize        = Mathf.Max(1, entry.groupSize);
+            _respawnTimer    = table.defaultTimer;
+            _lastRolledEntry = entry; // 8.2 (NR2) — RespawnAfterDelay prefers its override, if any
         }
         else if (!string.IsNullOrEmpty(mobId))
         {
-            def           = MobRegistry.Get(mobId);
-            groupSize     = 1;
-            _respawnTimer = null;
+            def              = MobRegistry.Get(mobId);
+            groupSize        = 1;
+            _respawnTimer    = null;
+            _lastRolledEntry = null; // 8.2 — no entry to override from on this path
         }
         else
         {
@@ -207,7 +221,13 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         if (gameObject.scene.IsValid() && go.scene != gameObject.scene)
             SceneManager.MoveGameObjectToScene(go, gameObject.scene);
 
-        go.GetComponent<MobApplicator>()?.SetDefinition(def);
+        var mobApp = go.GetComponent<MobApplicator>();
+        mobApp?.SetDefinition(def);
+
+        // 8.3 (LV3) — per-instance level roll, only if the rolled entry configured a range (both null =
+        // no variance, unaffected). Random.Range(int,int) is max-exclusive, hence the +1 to include it.
+        if (_lastRolledEntry?.minLevelOverride is int minLvl && _lastRolledEntry?.maxLevelOverride is int maxLvl)
+            mobApp?.SetLevelOverride(Random.Range(minLvl, maxLvl + 1));
 
         // 3.1.10: turn this mob into a patroller if the spawn point has a route — swap the wander/stationary
         // behavior for a PatrolBehavior seeded with the route's world-space waypoints. Must run before Spawn so
@@ -295,10 +315,23 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
     IEnumerator RespawnAfterDelay()
     {
         _respawnPending = true;
-        float delay = _respawnTimer != null ? _respawnTimer.Roll() : 300f;
+        float delay = ResolveRespawnDelay();
         yield return new WaitForSeconds(delay);
         _respawnPending = false;
         if (_active && _live.Count == 0) DoSpawn();
+    }
+
+    // 8.2 (NR2): the rolled entry's own respawn override, if set, takes precedence over the table's
+    // default timer — same base±variance formula SpawnTimer.Roll() uses, inlined rather than spinning up
+    // a throwaway ScriptableObject instance for one arithmetic op.
+    float ResolveRespawnDelay()
+    {
+        if (_lastRolledEntry?.respawnBaseSeconds is float baseSeconds)
+        {
+            float variance = _lastRolledEntry.respawnVariance ?? 0f;
+            return Mathf.Max(0f, baseSeconds + Random.Range(-variance, variance));
+        }
+        return _respawnTimer != null ? _respawnTimer.Roll() : 300f;
     }
 
     // ── Editor gizmo ──────────────────────────────────────────────────────────

@@ -12,7 +12,8 @@ public class SpawnTable
     public List<SpawnTableEntry> Entries { get; set; } = new();
 }
 
-/// <summary>EF entity for <c>spawn_table_entries</c> — one weighted mob entry.</summary>
+/// <summary>EF entity for <c>spawn_table_entries</c> — one weighted mob entry. 8.1.4 adds four
+/// calendar-aware spawn conditions (Any/null = no restriction, unaffected existing behavior).</summary>
 public class SpawnTableEntry
 {
     public long Id { get; set; }
@@ -21,6 +22,16 @@ public class SpawnTableEntry
     public int Weight { get; set; } = 1;
     public int GroupSize { get; set; } = 1;
     public int SortOrder { get; set; }
+    public string TimeCondition { get; set; } = "Any";
+    public string LunarCondition { get; set; } = "Any";
+    public int? DayOfWeekCondition { get; set; }
+    public int? MonthCondition { get; set; }
+    // 8.2 (NR1) — optional per-entry respawn pace override; null = use the table's default timer.
+    public float? RespawnBaseSeconds { get; set; }
+    public float? RespawnVariance { get; set; }
+    // 8.3 (LV3) — optional per-entry level range; both null = no variance (mob's authored level).
+    public int? MinLevelOverride { get; set; }
+    public int? MaxLevelOverride { get; set; }
 }
 
 /// <summary>Editor-friendly shape: a spawn table, its timer, and its ordered entries.</summary>
@@ -38,4 +49,12 @@ public class SpawnEntryDto
     public string MobId { get; set; } = string.Empty;
     public int Weight { get; set; } = 1;
     public int GroupSize { get; set; } = 1;
+    public string TimeCondition { get; set; } = "Any";
+    public string LunarCondition { get; set; } = "Any";
+    public int? DayOfWeekCondition { get; set; }
+    public int? MonthCondition { get; set; }
+    public float? RespawnBaseSeconds { get; set; }
+    public float? RespawnVariance { get; set; }
+    public int? MinLevelOverride { get; set; }
+    public int? MaxLevelOverride { get; set; }
 }

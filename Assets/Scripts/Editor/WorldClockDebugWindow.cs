@@ -51,6 +51,15 @@ public class WorldClockDebugWindow : EditorWindow
         EditorGUILayout.Space();
         if (GUILayout.Button("Clear Overrides (resume real time)"))
             WorldClock.ClearDebugOverrides();
+
+        // 8.1.5 — read-only calendar readout. Not a scrub control like the sliders above: calendar state
+        // is server-authoritative and persisted (8.1.1), not a process-local cosmetic override, so
+        // "jumping" it needs a server-authoritative call (/set-age) rather than an addition here.
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Calendar (8.1)", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField($"Age {WorldClock.Age}, Year {WorldClock.Year}");
+        EditorGUILayout.LabelField($"{WorldClock.DayOfWeekName} — Day {WorldClock.DayOfMonth} of {WorldClock.MonthName}" +
+                                    $" (week {WorldClock.WeekOfYear} of the year)");
     }
 
     void OnInspectorUpdate() => Repaint(); // keep the "live fraction" readout moving

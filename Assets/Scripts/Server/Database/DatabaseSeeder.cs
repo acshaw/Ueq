@@ -24,6 +24,7 @@ public static class DatabaseSeeder
         SeedLootTables(conn);
         SeedXpTable(conn);
         SeedWorldClockSettings(conn);
+        SeedWorldClockDayMonthNames(conn);
         SeedMobs(conn);
         SeedMobFactionHits(conn);
         SeedSpawnTables(conn);
@@ -269,15 +270,52 @@ public static class DatabaseSeeder
     // back to the ScriptableObject's own defaults the first time a server boots against it. ──────────
     static void SeedWorldClockSettings(NpgsqlConnection conn)
     {
+        // 8.1: seeds the fresh-world calendar defaults too (age 1, Day 1, "Year 1372") — ON CONFLICT DO
+        // NOTHING means this never touches an already-seeded/live-tuned row (calendar_elapsed_seconds
+        // keeps advancing from wherever the real world's clock already is).
         using var cmd = new NpgsqlCommand(
             "INSERT INTO world_clock_settings (id, day_length_minutes, lunar_cycle_days, " +
-            "fog_start_distance, fog_end_distance) VALUES (1, @day, @lunar, @fogStart, @fogEnd) " +
+            "fog_start_distance, fog_end_distance, calendar_elapsed_seconds, age, " +
+            "age_started_elapsed_days, age_starting_year_display) " +
+            "VALUES (1, @day, @lunar, @fogStart, @fogEnd, 0, 1, 0, 1372) " +
             "ON CONFLICT (id) DO NOTHING", conn);
         cmd.Parameters.AddWithValue("day", 2f);
         cmd.Parameters.AddWithValue("lunar", 28f);
         cmd.Parameters.AddWithValue("fogStart", 120f);
         cmd.Parameters.AddWithValue("fogEnd", 520f);
         cmd.ExecuteNonQuery();
+    }
+
+    // 8.1.6 (CAL8) — seed both name tables with the two the user's already named plus clear numbered
+    // placeholders elsewhere (not invented lore — renamed later via the web World Clock Editor).
+    // ON CONFLICT DO NOTHING per-row, same idempotent-seed convention as everywhere else here.
+    static void SeedWorldClockDayMonthNames(NpgsqlConnection conn)
+    {
+        string[] dayNames = { "Fast Day", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7" };
+        for (int i = 0; i < dayNames.Length; i++)
+        {
+            using var cmd = new NpgsqlCommand(
+                "INSERT INTO world_clock_day_names (day_index, name) VALUES (@idx, @name) " +
+                "ON CONFLICT (day_index) DO NOTHING", conn);
+            cmd.Parameters.AddWithValue("idx", i + 1);
+            cmd.Parameters.AddWithValue("name", dayNames[i]);
+            cmd.ExecuteNonQuery();
+        }
+
+        string[] monthNames =
+        {
+            "Month 1", "Month 2", "Month 3", "Month 4", "Month 5", "Month 6",
+            "Month 7", "Month 8", "Month 9", "Harvest Moon", "Month 11", "Month 12", "Month 13",
+        };
+        for (int i = 0; i < monthNames.Length; i++)
+        {
+            using var cmd = new NpgsqlCommand(
+                "INSERT INTO world_clock_month_names (month_index, name) VALUES (@idx, @name) " +
+                "ON CONFLICT (month_index) DO NOTHING", conn);
+            cmd.Parameters.AddWithValue("idx", i + 1);
+            cmd.Parameters.AddWithValue("name", monthNames[i]);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     // ── Factions (M2.6) — migrate the existing SO faction assets + shared threshold ladder ──

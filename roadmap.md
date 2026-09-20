@@ -193,7 +193,7 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
   - [x] **3.1.7 — Sitting state.** ✅ Verified in-editor 2026-07-05 (sit pose synced across two MPPM clients on Cleric + Warrior; free-look, camera height, and camp gate all confirmed). Devplan `docs/devplans/3.1.7-sitting-state.md` (SI1–SI6). EQ-style toggleable sitting: `PlayerSitting` NetworkBehaviour (`SyncVar`), `/sit` command + hotbar key `0`, `sitting.fbx` looping animation (bool-driven state), auto-stand on damage + on movement. Unblocked the **deferred 2/tick sitting regen** (`PlayerRegen`). **Verification follow-ups folded in:** free-look while seated (body frozen, camera orbits, height eases down/up), and the **camp-requires-sitting gate** (3.1.8 CP6, pulled forward — `/camp` refuses unless seated, cancels if you stand mid-camp).
   - [x] **3.1.8 — Camp / logout polish.** ✅ Verified in-editor 2026-07-05. Devplan `docs/devplans/3.1.8-camp-logout-polish.md` (CP1–CP6). Camp now covers the despawn with a fade: `UIScreenManager.ExitWorld` fades to black → sends `CampMessage` under black → reveals on Character Select, so the player-pop/camera-gap never shows; a refused camp recovers via a 2s timeout. Countdown stays chat-only; logout→Title unchanged (already fades); sitting gate landed in 3.1.7. (Also folded in a chat tweak: pressing `/` now keeps the prefix + caret so you type the command straight away — `onFocusSelectAll` off.)
   - [x] **3.1.9 — Starting-zone shaping + light dressing.** ✅ Verified in-editor — folded into the 3.1 parent item's 2026-07-11 closure ("all sub-items 3.1.1–3.1.11 verified"); checkbox sync fixed 2026-07-26. Devplan `docs/devplans/3.1.9-starting-location-polish.md` (SL1–SL5). **Scope grew** from "light dressing" after in-editor work showed the playable core was hilly (props/trails float/sink, cliff seams) and the zone was tiny (portal ~15u from spawn; walk speed is **3 u/s**, so 3–5 min = **540–900u**, confirmed by a ~1:45 walk of a ~315u path). Delivered: **shape first** (`Tools/Zones/Reshape Creslins Field` — flat **~1500×1500u** field [≈ 5-min run to cross; safe vs the 5000u zone-offset spacing], grass re-tiled [auto-scaled], light perimeter frame, Thornwood portal + return entry moved to the far north edge ~1380u from spawn), then **dress on flat ground** (`Build Trellis Starter Hub` + `Build Path Along Children`, both terrain-conforming). Old hand-placed core hills + `SyntyTerrain` removed, navmesh rebaked, north walk + creslins⇄thornwood round-trip confirmed — the shaped, walkable field that 3.1.10/3.1.11 then populated. Full population/themed edges = M7.
-  - [x] **3.1.10 — Encounter tooling + starter-zone population.** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.1.10-encounter-tooling.md` (E1–E10). Mob-body catalog (`MobModel`/`MobModelCatalog`), patrol runtime (`PatrolRoute`/`PatrolBehavior`), in-scene placement tooling (`Place Encounter`/`New Patrol Route`/gizmos), and seeded starter encounters — all verified (Dungeon-body mobs spawn + aggro, patrols loop, body-sized click targets). A cube-hide bug (Host-only) was fixed en route (hide the placeholder before the body build + `FitTargetCollider`). Makes the shaped-but-lifeless starter zone feel alive. Most spawn infra already exists (`SpawnPoint` proximity/group/respawn + DB `SpawnTable` weighted-random + `SpawnTimer` + `EnemyAI` wander/aggro/chase). **True gaps = 2:** (1) **waypoint patrol** (`PatrolBehavior : INpcMovementBehavior` — a drop-in sibling to `WanderBehavior` with **zero `EnemyAI` changes**; `PatrolRoute` scene component injected via a new `SpawnPoint.patrolRoute` field) for road guards; (2) **in-scene placement tooling** (`Tools/Zones/Place Encounter` + `PatrolRoute` prefab/`Add Patrol Waypoint` + gizmo labels, mirroring `ZonePortal`/`ZoneMarkerGizmos`). Then **populate Creslin's Field**: 3 wilderness mob types (existing web Mob/Spawn Editors) via static + weighted spawns + one City-Guard road patrol. "Random encounter" = weighted mob *type* at fixed points (already supported); roaming area spawners + real threat/social aggro are out (aggro = 3.4). Basic faction aggro already makes mobs hostile today. Reusable for 3.5/M7. **Also folds in a mob-body ergonomics fix (Stage 0, E8–E10):** today a distinct mob body needs a whole new networked Mirror prefab; instead mirror `PlayerModel` — one shared `Enemy` prefab + a `MobModel` that instantiates a plain art prefab from `Resources/MobModels/<modelId>` (synced id, no per-mob networked prefab). Adding a body = drop a Synty prefab in the folder + name it / pick from a Mob Editor dropdown (folder-catalog bridge). **Increment C (the web dropdown) — ✅ Done + verified in-editor 2026-09-20**, see the devplan's implementation log: `mobs.model_id` + `mob_models` lookup table (migration 0037) + `Tools/Character/Sync Mob Model Catalog to Database` + the Mob Editor's new Body Model dropdown.
+  - [x] **3.1.10 — Encounter tooling + starter-zone population.** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.1.10-encounter-tooling.md` (E1–E10). Mob-body catalog (`MobModel`/`MobModelCatalog`), patrol runtime (`PatrolRoute`/`PatrolBehavior`), in-scene placement tooling (`Place Encounter`/`New Patrol Route`/gizmos), and seeded starter encounters — all verified (Dungeon-body mobs spawn + aggro, patrols loop, body-sized click targets). A cube-hide bug (Host-only) was fixed en route (hide the placeholder before the body build + `FitTargetCollider`). Makes the shaped-but-lifeless starter zone feel alive. Most spawn infra already exists (`SpawnPoint` proximity/group/respawn + DB `SpawnTable` weighted-random + `SpawnTimer` + `EnemyAI` wander/aggro/chase). **True gaps = 2:** (1) **waypoint patrol** (`PatrolBehavior : INpcMovementBehavior` — a drop-in sibling to `WanderBehavior` with **zero `EnemyAI` changes**; `PatrolRoute` scene component injected via a new `SpawnPoint.patrolRoute` field) for road guards; (2) **in-scene placement tooling** (`Tools/Zones/Place Encounter` + `PatrolRoute` prefab/`Add Patrol Waypoint` + gizmo labels, mirroring `ZonePortal`/`ZoneMarkerGizmos`). Then **populate Creslin's Field**: 3 wilderness mob types (existing web Mob/Spawn Editors) via static + weighted spawns + one City-Guard road patrol. "Random encounter" = weighted mob *type* at fixed points (already supported); roaming area spawners + real threat/social aggro are out (aggro = 3.4). Basic faction aggro already makes mobs hostile today. Reusable for 3.5/M7. **Also folds in a mob-body ergonomics fix (Stage 0, E8–E10):** today a distinct mob body needs a whole new networked Mirror prefab; instead mirror `PlayerModel` — one shared `Enemy` prefab + a `MobModel` that instantiates a plain art prefab from `Resources/MobModels/<modelId>` (synced id, no per-mob networked prefab). Adding a body = drop a Synty prefab in the folder + name it / pick from a Mob Editor dropdown (folder-catalog bridge). **Increment C (the web dropdown) — ✅ Done + verified in-editor 2026-09-19**, see the devplan's implementation log: `mobs.model_id` + `mob_models` lookup table (migration 0037) + `Tools/Character/Sync Mob Model Catalog to Database` + the Mob Editor's new Body Model dropdown.
   - [x] **3.1.11 — Mob wander regions (leashed / free-range / bounded).** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.1.11-mob-wander-regions.md` (WR1–WR7, all as recommended). Generalizes idle wandering from "always tethered to a `wanderRadius` sphere at the spawn point" into a **region-driven** model, so a mob can roam a spawn-anchored bubble (today, unchanged default), the whole **zone** (free-range), or an authored **box/sphere boundary** — chosen per encounter on `SpawnPoint`, not new spawn "types." Reframe: one `WanderBehavior` sampling a swappable `IWanderRegion` (leash = sphere at spawn / bounded = authored shape / free-range = zone bounds), reusing the 3.1.10 `INpcMovementBehavior` seam. **No chase leash — ever** (user); regions constrain idle wander only. Also tweaks `EnterReturn` so roamers reset in place instead of trudging home, and (**WR7**) makes a mob **disengage when its target zones out** — a zone-integration correctness gap (see 3.0.1) folded in here because it touches the same target-loss/return code; reuses the existing threat-list reassessment, no fresh perception scan (that's 3.4). Extends 3.1.10's `PatrolRoute` tooling with a `WanderRegion` marker/prefab. Reusable for 3.5/M7.
 - [x] **3.2 — Quest turn-ins & rewards via keywords.** ✅ Verified in-editor 2026-07-12. Devplan `docs/devplans/3.2-quest-rewards-keywords.md` (Q1–Q7). A `KeywordRewardApplicator : IOnConversationKeyword` (sibling to `VendorApplicator`) grants a reward bundle (XP / items / currency / faction) when a faction-gated conversation keyword fires — the gate already runs before dispatch, so it's free. **Resolves the 2.8 dependency (Q1): the design has no objective-tracking entity, so a keyword-attached reward *is* the quest → fold the reward bundle into the conversation keyword (extend the web Conversation Editor) and ship 3.2 self-contained; reclassify 2.8 as a future dedicated multi-step Quest Editor only if quests outgrow single-keyword rewards.** **Includes the turn-in (Q4, revised):** a quest is "bring me X / pay me N coin → get Y," so the NPC **accepting items/coin** is the requirement side of the same keyword transaction (validate → consume → grant, all-or-nothing) — this absorbs the core of old 3.3. **Q2 decided: quests are repeatable** (no completion tracking / no migration) — anti-farm is EQ1-style item scarcity via the **LORE flag (3.2.1)**, which 3.2 inherits for free through `AddItem`; XP/coin repeatability is intentional (bounded by turn-in cost). No quest UI. *(Q1: consumes-from-2.8 folded in — ship self-contained.)*
   - [x] **3.2.1 — LORE item flag (anti-stockpile).** ✅ Verified in-editor 2026-07-11. Devplan `docs/devplans/3.2.1-lore-item-flag.md` (L1–L6, all as recommended). `lore` flag on items (DB/migration 0019/sync/Item Editor) + `PlayerInventory` opt-in enforcement (`AddItem(…, enforceLore)` + `CanAcquire`/`AlreadyHolds`) wired into loot + vendor buy; internal equip moves deliberately unaffected. Item-system feature, not quest-specific: a `lore` flag on `ItemDefinition` (DB, migration 0019) + a "max one in possession" (inventory + equipped) guard on the external acquire paths (loot, vendor buy, quest reward; trade is future). EQ1-style — a LORE reward can't be stockpiled, which is how repeatable quests (3.2) stay balanced on the item side. **Key grounding: enforcement is opt-in (`CanAcquire` pre-check + `AddItem(…, enforceLore)` default false), NOT baked into `AddItem`** — because `TryUnequip` adds to inventory while the item is still equipped, so an unconditional LORE block would trap a LORE item on the character. 3.2's reward grant passes `enforceLore: true`, so quests inherit it. Not a hard blocker for 3.2, but wanted before authoring repeatable item-reward quests. (Sibling flags like NODROP can follow if needed.)
@@ -609,3 +609,109 @@ Full history in `CLAUDE.md` (Current Status + Last Session).
 - [ ] **7.3 — Grukmar's Deep: zone build.** Currently just the 3.0.2 flat 280u scaffold — entirely
   unbuilt beyond the portal graph. Needs its own shaping pass (dungeon-kit tooling, not a heightmap —
   Grukmar's Deep is underground per `trellis_zone_design.md`) plus full population from scratch.
+
+---
+
+## M8 — Extend Spawner Functionality
+
+> Goal: round out `SpawnPoint`/`SpawnTable` with the encounter-design patterns not yet supported —
+> identified 2026-09-19 while surveying what the spawn system covers today (single mob / weighted table,
+> stationary / wander / patrol). **Sequencing: self-contained, no dependency on M5/M6/M7** — each item
+> touches `SpawnPoint`/`SpawnTable`/`MobDefinition` directly and can be picked up any time; not gated on
+> combat/content work elsewhere. Same devplan-first workflow as everywhere else on this roadmap — each
+> item below gets reviewed before it's built. **8.1–8.5 are all point-based** (extend `SpawnPoint`, one
+> location, one respawn cycle per group). **8.6 (added 2026-09-20) is a different, area-based model** — a
+> shared population ceiling across an irregularly-shaped region with independent per-death respawn timers
+> — not a variant of the other five, its own thing.
+
+- [ ] **8.1 — World Clock: full calendar system (Age/Year/Month/Week/Day).** *(Restructured 2026-09-20 from
+  the original "time/condition-gated spawns" single item into an umbrella, same pattern as 3.1 — the user
+  wants a real calendar, not just day/night + lunar gating.)* 7-day week, 4-week (28-day) month — equal to
+  the lunar cycle — 13-month (364-day) year, and an Age above that (servers start on the 1st Age). Grounding
+  surfaced a real gap driving the whole restructure: `WorldClock` currently has **no persistence across
+  server restarts** — harmless for cosmetic day/night today, fatal for a real calendar. Devplan (all
+  sub-items): [`8.1-worldclock-calendar.md`](docs/devplans/8.1-worldclock-calendar.md).
+  - [ ] **8.1.1 — Persistent calendar epoch.** Fix the restart-reset gap: persist accumulated elapsed
+    seconds (uptime-based, not wall-clock — avoids surprise time-jumps after an outage), piggybacked onto
+    the existing 1.6 autosave tick + shutdown flush.
+  - [ ] **8.1.2 — Calendar unit derivation.** `DayOfWeek`/`WeekOfYear`/`MonthOfYear`/`Year` read API on
+    `WorldClock` — pure derived math off the same synced epoch, no new sync traffic (mirrors how
+    `DayFraction` already works).
+  - [ ] **8.1.3 — Age tracking.** Manually-set, persisted, no auto-advance (nothing specified an age
+    duration). **Decided:** a new Age resets Year back to 1 ("Second Age, Year 1"), via a stored
+    `age_started_elapsed_days` anchor.
+  - [ ] **8.1.4 — Calendar-aware spawn conditions.** The original 8.1 scope (day/night + lunar-phase
+    `SpawnTableEntry` conditions, TG1-TG4, unchanged) extended with `DayOfWeekCondition`/`MonthCondition` —
+    closes the inn-NPC-rotation gap flagged in the M9 discussion ("some patrons only spawn on certain days"
+    wasn't representable before this).
+  - [ ] **8.1.5 — Web + debug tooling.** World Clock Editor shows Age/Year/Month/Week **read-only**
+    (`/set-age` is the only live-mutation path — editing this row in the web editor only applies on next
+    restart, which would conflict with `/set-age`'s immediate effect); `/set-age <age> <startingYear>`
+    testing command (mirrors existing `/set-time`); read-only calendar readout in `Tools/World Clock Debug`.
+  - [ ] **8.1.6 — `/time` command + editable calendar display names.** Player-facing command showing both
+    real-world date/time (`9/20/2026 10:24 am`) and full in-game date/time (`Fast Day, 3rd Day of the
+    Harvest Moon in the Year 1372 of the 1st Age`) — resolved entirely client-side, no server round trip.
+    Day-of-week names (7) and month names (13) are DB-backed + web-editable (renameable without a rebuild);
+    the in-game year display starts at a configurable value (1372 for Age 1), not a raw internal count —
+    see the devplan's CAL7. On a new Age, the whole calendar display (Day/Week/Month/Year) resets to 1
+    while time-of-day stays untouched (CAL6a).
+- [ ] **8.2 — Named/rare spawn behavior.** Beyond a low-weight table entry: an independent respawn timer
+  for that entry (a named shouldn't respawn as fast as the trash it replaces). *(Scope narrowed
+  2026-09-20 — announce-on-spawn dropped; the user wants that reserved for a future raid/event-mob
+  system, not fired for an ordinary named. See the devplan's Deferred section.)*
+  Devplan: [`8.2-named-rare-spawns.md`](docs/devplans/8.2-named-rare-spawns.md).
+- [ ] **8.3 — Level variance within one mob type at a spawn.** A camp spawning "level 4-6 wolves" instead
+  of every instance being the exact same level — a per-instance override, not a change to the shared
+  `MobDefinition`. *(Scope grew 2026-09-20: the visible signal is an EQ1-style level-banded `/con` —
+  color + text — extending the existing consider mechanic, not a nameplate label.)* Affects display and
+  the hit-roll level-differential only, not HP/damage/AC/loot — the user has flagged wanting mobs' HP to
+  derive from level in a future, separate devplan once mob/PC HP derivation is redesigned.
+  Devplan: [`8.3-spawn-level-variance.md`](docs/devplans/8.3-spawn-level-variance.md).
+- [ ] **8.4 — Spawn-pool exclusivity (rotating pops).** Several `SpawnPoint`s sharing one "only one of us
+  is up at a time" pool (a boss room with 3 possible spots). New `SpawnPool` marker, same
+  `IWorldPlacement`/cross-reference pattern `PatrolRoute`/`WanderRegion` already use.
+  Devplan: [`8.4-spawn-pool-exclusivity.md`](docs/devplans/8.4-spawn-pool-exclusivity.md).
+- [ ] **8.5 — Event/quest-triggered spawns.** A spawn point that pops on an explicit trigger call instead
+  of proximity/timer. Scoped to the trigger mechanism itself — wiring a real quest system to call it is a
+  future consumer, same treatment as 5.12's lunar-phase hook. Devplan: [`8.5-triggered-spawns.md`](docs/devplans/8.5-triggered-spawns.md).
+- [ ] **8.6 — Area population spawner (population zones).** A shared population ceiling (e.g. "at most 10
+  wolves") across an irregularly-bounded region (not a box/sphere — an authored polygon), replenished by
+  independent per-death timers so sustained hunting can genuinely drain it to 0. New `PopulationZone`
+  marker + a `Polygon` shape added to `WanderRegion`; needs no DB/API/web changes for its first pass
+  (rides the existing generic placement-sync JSON blob). Devplan: [`8.6-population-zone.md`](docs/devplans/8.6-population-zone.md).
+
+---
+
+## M9 — Extend Enemy AI
+
+> Goal: a general home for `EnemyAI` capability work beyond spawning — identified 2026-09-20 while
+> discussing disengage behavior. Deliberately a big, loosely-scoped bucket for now: only 9.1 is fleshed out
+> and devplanned; the rest are placeholders capturing known future need (pathfinding, targeting, encounter
+> tactics, …) without design work yet — add dotted-decimal items as each is actually scoped, same pattern
+> as M7/M8. **Grounding note from the 9.1 discussion, worth keeping here so it isn't re-derived:** of the
+> three "disengage options" originally proposed (return to spawn / fall back to previous wander-or-patrol
+> state / trigger an event), the first two were **already built** — `INpcMovementBehavior.GetReturnAnchor`
+> (3.1.11/WR5, spawn-leash vs. reset-in-place) and its `Suspend()`/`Resume()` pair (patrol/wander resumes
+> itself once the mob reaches its return anchor). Only the third turned out to be a real gap, and only in a
+> specific way — see 9.1.
+
+- [ ] **9.1 — Killing-blow notification event.** `IOnAggroLost` already fires an event on disengage, but
+  it's argument-less and fires for every disengage cause alike (kill, target fled, disconnected, zoned) —
+  it can't tell a listener "I just won." Adds a new `IOnKillingBlow(NetworkIdentity victim)`, fired on the
+  **attacker's own** `NpcEventDispatcher` (symmetric to how `IOnDeath` already fires on the victim's) at
+  the exact moment `Health.TakeDamage` reduces the victim to 0 — lets an NPC/mob (e.g. a guard) react to
+  landing a kill (announce it, alert allies, fire a script event), which nothing can do today. Scoped to
+  NPC/mob attackers only (players have no `NpcEventDispatcher`, so player kills are unaffected — that
+  credit path is `MobKillReward`, untouched). Devplan: [`9.1-killing-blow-event.md`](docs/devplans/9.1-killing-blow-event.md).
+- [ ] **9.2 — Pathfinding improvements.** Not yet scoped. `EnemyAI` currently uses stock `NavMeshAgent`
+  pathing with no obstacle-avoidance tuning, formation/spacing behavior, or handling for known trouble
+  spots (e.g. group chases bunching up, patrol routes crossing hazards). Revisit once a concrete case shows
+  up in real content (M7) or combat testing (M5) — don't design against hypotheticals.
+- [ ] **9.3 — Improved PC targeting.** Not yet scoped. Placeholder for whatever targeting gaps surface as
+  encounter design matures — e.g. AI target-selection logic beyond "top threat" (positioning, target
+  switching rules, caster/healer prioritization). Distinct from the player-side click-to-target system,
+  which already works.
+- [ ] **9.4 — Encounter tactics.** Not yet scoped. Placeholder for mob-side tactical behavior beyond the
+  current Idle/Chase/Combat/Return loop — e.g. ability use in combat (once mobs can cast), positioning,
+  coordinated group behavior beyond social aggro's flat "everyone piles on." Likely depends on the ability
+  system extending to mobs, which isn't scheduled yet.

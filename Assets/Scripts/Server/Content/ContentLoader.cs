@@ -101,12 +101,25 @@ public static class ContentLoader
 
         // ── World clock settings (5.12 follow-up — server-only; read by WorldClock.ServerInitialize,
         // which runs right after this in GameNetworkManager) ─────────────────────────────
-        var clockSettings = new WorldClockSettingsRepository().Load(conn);
+        var clockRepo = new WorldClockSettingsRepository();
+        var clockSettings = clockRepo.Load(conn);
         WorldClock.SetDbSettingsOverride(
             clockSettings?.dayLengthMinutes, clockSettings?.lunarCycleDays,
             clockSettings?.fogStartDistance, clockSettings?.fogEndDistance);
+        // 8.1.1/8.1.3 — the persisted calendar state (elapsed seconds, age) rides the same row but is
+        // plain world state, not a tunable-with-fallback, so it's a separate setter.
+        WorldClock.SetPersistedCalendarState(
+            clockSettings?.calendarElapsedSeconds, clockSettings?.age,
+            clockSettings?.ageStartedElapsedDays, clockSettings?.ageStartingYearDisplay);
         Debug.Log(clockSettings.HasValue
             ? "[Content] Loaded world clock settings from the database."
             : "[Content] No world_clock_settings row — falling back to the Resources asset/defaults.");
+
+        // ── World clock calendar display names (8.1.6 — server-only load; synced to clients via
+        // WorldClock.BuildSync) ───────────────────────────────────────────────────────────────
+        var dayNames = clockRepo.LoadDayNames(conn);
+        var monthNames = clockRepo.LoadMonthNames(conn);
+        WorldClock.SetDayMonthNames(dayNames, monthNames);
+        Debug.Log("[Content] Loaded world clock day/month display names from the database.");
     }
 }

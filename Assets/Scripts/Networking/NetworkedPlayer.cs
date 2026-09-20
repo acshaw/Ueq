@@ -910,6 +910,25 @@ public class NetworkedPlayer : NetworkBehaviour
         SendSystemMsg($"World time set to {hour:00}:00.");
     }
 
+    /// <summary>`/set-age &lt;age&gt; &lt;startingYear&gt;` — 8.1.3/8.1.5, dev/testing convenience to
+    /// advance the Age. Rare/deliberate, unlike /set-time — resets the whole calendar display (day/week/
+    /// month/year all read back as 1) while leaving time-of-day untouched (CAL6a). Broadcasts the new
+    /// clock reference to every connected client, same as /set-time.</summary>
+    [Command]
+    public void CmdSetAge(int age, int startingYear)
+    {
+        if (age < 1)
+        {
+            SendSystemMsg("Usage: /set-age <age> <startingYear> (age must be 1 or greater).");
+            return;
+        }
+
+        WorldClock.ServerSetAge(age, startingYear);
+        NetworkServer.SendToAll(WorldClock.BuildSync());
+        SendSystemMsg($"The {WorldClock.Age}{WorldClock.OrdinalSuffix(WorldClock.Age)} Age begins — " +
+                       $"Year {WorldClock.Year}, {WorldClock.DayOfWeekName}, Day 1 of {WorldClock.MonthName}.");
+    }
+
     // Raycast down onto the ground + snap to the nearest navmesh point, given only X/Z — same pattern as
     // SpawnPoint.ResolveSpawnPosition. A single shared physics scene + a single global navmesh spans every
     // zone at its own world offset (3.0's zone architecture), so this resolves correctly regardless of

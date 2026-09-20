@@ -24,7 +24,14 @@ public class SpawnTablesController : ControllerBase
         TimerBaseSeconds = t.TimerBaseSeconds,
         TimerVariance = t.TimerVariance,
         Entries = t.Entries.OrderBy(e => e.SortOrder)
-            .Select(e => new SpawnEntryDto { MobId = e.MobId, Weight = e.Weight, GroupSize = e.GroupSize }).ToList(),
+            .Select(e => new SpawnEntryDto
+            {
+                MobId = e.MobId, Weight = e.Weight, GroupSize = e.GroupSize,
+                TimeCondition = e.TimeCondition, LunarCondition = e.LunarCondition,
+                DayOfWeekCondition = e.DayOfWeekCondition, MonthCondition = e.MonthCondition,
+                RespawnBaseSeconds = e.RespawnBaseSeconds, RespawnVariance = e.RespawnVariance,
+                MinLevelOverride = e.MinLevelOverride, MaxLevelOverride = e.MaxLevelOverride,
+            }).ToList(),
     };
 
     [HttpGet]
@@ -100,6 +107,16 @@ public class SpawnTablesController : ControllerBase
         {
             var mob = (e.MobId ?? "").Trim();
             if (string.IsNullOrEmpty(mob)) continue;
+
+            // 8.3 (LV4): non-positive values are "no override" (mirrors weight/groupSize's own sane
+            // defaults, not a literal level-0 mob); a range needs both ends, so one set without the other
+            // is treated as unset rather than silently becoming a fixed level; max < min gets swapped
+            // rather than rejected, so whatever the two numbers were, the roll still has a valid range.
+            int? minLevel = e.MinLevelOverride is > 0 ? e.MinLevelOverride : null;
+            int? maxLevel = e.MaxLevelOverride is > 0 ? e.MaxLevelOverride : null;
+            if (minLevel.HasValue != maxLevel.HasValue) { minLevel = null; maxLevel = null; }
+            else if (minLevel.HasValue && maxLevel < minLevel) (minLevel, maxLevel) = (maxLevel, minLevel);
+
             rows.Add(new SpawnTableEntry
             {
                 SpawnTableId = input.SpawnTableId,
@@ -107,6 +124,14 @@ public class SpawnTablesController : ControllerBase
                 Weight = e.Weight < 0 ? 0 : e.Weight,
                 GroupSize = e.GroupSize < 1 ? 1 : e.GroupSize,
                 SortOrder = order++,
+                TimeCondition = string.IsNullOrEmpty(e.TimeCondition) ? "Any" : e.TimeCondition,
+                LunarCondition = string.IsNullOrEmpty(e.LunarCondition) ? "Any" : e.LunarCondition,
+                DayOfWeekCondition = e.DayOfWeekCondition,
+                MonthCondition = e.MonthCondition,
+                RespawnBaseSeconds = e.RespawnBaseSeconds,
+                RespawnVariance = e.RespawnVariance,
+                MinLevelOverride = minLevel,
+                MaxLevelOverride = maxLevel,
             });
         }
         return rows;

@@ -98,7 +98,7 @@ public static class CombatResolver
             return new Combatant
             {
                 Atk     = def.atk, // AD3 — authored directly, no EffectiveSkill/Offense split
-                Level   = def.mobLevel,
+                Level   = mobApp.LevelOverride ?? def.mobLevel, // 8.3 (LV2) — per-spawn-instance roll, if any
                 // AV3 (2026-08-13 follow-up) — mobs author all three avoidance checks directly as flat
                 // numbers, no formula, same reasoning as ATK: mobs have nothing to derive them from.
                 Dodge   = def.avoidanceDodge,
@@ -221,14 +221,26 @@ public static class CombatResolver
         int gap = attackerLevel - defenderLevel;
         if (gap == 0) return;
 
-        int lowLevel     = Mathf.Min(attackerLevel, defenderLevel);
-        int increments   = IncrementsToFutility(lowLevel);
-        float fraction   = Mathf.Clamp01(Mathf.Abs(gap) / (float)increments);
+        float fraction = LevelGapFraction(attackerLevel, defenderLevel);
 
         if (gap < 0) // attacker at a level disadvantage — hurts at full magnitude
             ShiftTowardFutility(ref table, fraction * MaxLevelFutilityWeight);
         else         // attacker at a level advantage — helps at reduced magnitude
             ShiftTowardPotency(ref table, fraction * MaxLevelFutilityWeight * LevelAdvantageScale);
+    }
+
+    /// <summary>8.3 (LV2a) — 0 (even) to 1 (full band futility): how significant a level gap is, on the
+    /// same Fibonacci-band scale <see cref="ApplyLevelDifferential"/> uses for the hit-roll adjustment.
+    /// Extracted and made public so <c>PlayerConsider</c>'s level-banded `/con` text stays mechanically
+    /// consistent with what actually happens in combat, instead of a separately-invented scale that could
+    /// drift from it.</summary>
+    public static float LevelGapFraction(int levelA, int levelB)
+    {
+        int gap = levelA - levelB;
+        if (gap == 0) return 0f;
+        int lowLevel   = Mathf.Min(levelA, levelB);
+        int increments = IncrementsToFutility(lowLevel);
+        return Mathf.Clamp01(Mathf.Abs(gap) / (float)increments);
     }
 
     static int IncrementsToFutility(int lowLevel)

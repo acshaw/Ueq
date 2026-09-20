@@ -46,7 +46,20 @@ public static class SpawnTableRegistry
                                  "which is not in the mob registry — that entry is skipped.");
                 continue;
             }
-            table.entries.Add(new SpawnTableEntry { mob = mob, weight = e.Weight, groupSize = e.GroupSize });
+            table.entries.Add(new SpawnTableEntry
+            {
+                mob                = mob,
+                weight             = e.Weight,
+                groupSize          = e.GroupSize,
+                timeCondition      = e.TimeCondition,
+                lunarCondition     = e.LunarCondition,
+                dayOfWeekCondition = e.DayOfWeekCondition,
+                monthCondition     = e.MonthCondition,
+                respawnBaseSeconds = e.RespawnBaseSeconds,
+                respawnVariance    = e.RespawnVariance,
+                minLevelOverride   = e.MinLevelOverride,
+                maxLevelOverride   = e.MaxLevelOverride,
+            });
         }
         return table;
     }

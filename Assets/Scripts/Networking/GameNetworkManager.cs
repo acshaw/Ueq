@@ -34,8 +34,14 @@ public class GameNetworkManager : NetworkManager
     }
 
     // Periodic autosave (1.6, O3). Cheap: per-character saves coalesce in the 1.2 write queue.
+    // 8.1.1 (CAL2) — the world clock's calendar state piggybacks on this same tick; a single-row
+    // settings write this infrequent needs no dedicated timer.
     const float AutosaveSeconds = 90f;
-    void AutosaveTick() => SaveAllCharacters();
+    void AutosaveTick()
+    {
+        SaveAllCharacters();
+        WorldClock.ServerPersistCalendar();
+    }
 
     // Flush queued DB writes and stop the persistence worker before the server tears down.
     public override void OnStopServer()
@@ -43,6 +49,7 @@ public class GameNetworkManager : NetworkManager
         CancelInvoke(nameof(AutosaveTick));
         GetComponent<CharacterSelectController>()?.OnServerStopped(); // 1.5 — unregister select handlers
         GetComponent<PartyManager>()?.ServerShutdown(); // 5.3 — session-only, nothing to persist
+        WorldClock.ServerPersistCalendar(); // 8.1.1 (CAL2) — flush the calendar one more time before teardown
         GetComponent<WorldClock>()?.ServerShutdown(); // 5.12 — clear the clock reference
         GetComponent<ZoneManager>()?.ServerShutdown(); // 3.0 — clear zone state (scenes torn down by Unity)
 

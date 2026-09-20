@@ -32,6 +32,8 @@ public class ContentDbContext : DbContext
     public DbSet<Class> Classes => Set<Class>();
     public DbSet<WebAdmin> WebAdmins => Set<WebAdmin>();
     public DbSet<WorldClockSettings> WorldClockSettings => Set<WorldClockSettings>();
+    public DbSet<WorldClockDayName> WorldClockDayNames => Set<WorldClockDayName>();
+    public DbSet<WorldClockMonthName> WorldClockMonthNames => Set<WorldClockMonthName>();
     public DbSet<WorldPlacement> WorldPlacements => Set<WorldPlacement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -455,6 +457,14 @@ public class ContentDbContext : DbContext
             e.Property(x => x.Weight).HasColumnName("weight");
             e.Property(x => x.GroupSize).HasColumnName("group_size");
             e.Property(x => x.SortOrder).HasColumnName("sort_order");
+            e.Property(x => x.TimeCondition).HasColumnName("time_condition");
+            e.Property(x => x.LunarCondition).HasColumnName("lunar_condition");
+            e.Property(x => x.DayOfWeekCondition).HasColumnName("day_of_week_condition");
+            e.Property(x => x.MonthCondition).HasColumnName("month_condition");
+            e.Property(x => x.RespawnBaseSeconds).HasColumnName("respawn_base_seconds");
+            e.Property(x => x.RespawnVariance).HasColumnName("respawn_variance");
+            e.Property(x => x.MinLevelOverride).HasColumnName("min_level_override");
+            e.Property(x => x.MaxLevelOverride).HasColumnName("max_level_override");
         });
 
         modelBuilder.Entity<WebAdmin>(e =>
@@ -477,6 +487,29 @@ public class ContentDbContext : DbContext
             e.Property(s => s.FogStartDistance).HasColumnName("fog_start_distance");
             e.Property(s => s.FogEndDistance).HasColumnName("fog_end_distance");
             e.Property(s => s.UpdatedAt).HasColumnName("updated_at");
+            // 8.1 — calendar state. Read for display; Age/elapsed fields are NOT written through this
+            // endpoint (see WorldClockSettingsController.Update) — /set-age in-game is the only live-
+            // mutation path, since editing here only takes effect on next server restart.
+            e.Property(s => s.CalendarElapsedSeconds).HasColumnName("calendar_elapsed_seconds");
+            e.Property(s => s.Age).HasColumnName("age");
+            e.Property(s => s.AgeStartedElapsedDays).HasColumnName("age_started_elapsed_days");
+            e.Property(s => s.AgeStartingYearDisplay).HasColumnName("age_starting_year_display");
+        });
+
+        modelBuilder.Entity<WorldClockDayName>(e =>
+        {
+            e.ToTable("world_clock_day_names");
+            e.HasKey(x => x.DayIndex);
+            e.Property(x => x.DayIndex).HasColumnName("day_index").ValueGeneratedNever();
+            e.Property(x => x.Name).HasColumnName("name");
+        });
+
+        modelBuilder.Entity<WorldClockMonthName>(e =>
+        {
+            e.ToTable("world_clock_month_names");
+            e.HasKey(x => x.MonthIndex);
+            e.Property(x => x.MonthIndex).HasColumnName("month_index").ValueGeneratedNever();
+            e.Property(x => x.Name).HasColumnName("name");
         });
 
         modelBuilder.Entity<WorldPlacement>(e =>
