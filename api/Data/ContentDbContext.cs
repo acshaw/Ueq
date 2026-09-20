@@ -19,6 +19,7 @@ public class ContentDbContext : DbContext
     public DbSet<VendorInventory> VendorInventories => Set<VendorInventory>();
     public DbSet<ConversationSet> ConversationSets => Set<ConversationSet>();
     public DbSet<Mob> Mobs => Set<Mob>();
+    public DbSet<MobModel> MobModels => Set<MobModel>();
     public DbSet<Faction> Factions => Set<Faction>();
     public DbSet<FactionThreshold> FactionThresholds => Set<FactionThreshold>();
     public DbSet<LootTable> LootTables => Set<LootTable>();
@@ -177,6 +178,7 @@ public class ContentDbContext : DbContext
             e.Property(m => m.DisplayName).HasColumnName("display_name");
             e.Property(m => m.MobLevel).HasColumnName("mob_level");
             e.Property(m => m.PrefabAddress).HasColumnName("prefab_address");
+            e.Property(m => m.ModelId).HasColumnName("model_id");
             e.Property(m => m.MaxHealth).HasColumnName("max_health");
             e.Property(m => m.AttackDamage).HasColumnName("attack_damage");
             e.Property(m => m.AttackInterval).HasColumnName("attack_interval");
@@ -490,6 +492,14 @@ public class ContentDbContext : DbContext
             e.Property(p => p.RotY).HasColumnName("rot_y");
             e.Property(p => p.Data).HasColumnName("data").HasColumnType("jsonb");
             e.Property(p => p.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<MobModel>(e =>
+        {
+            e.ToTable("mob_models");
+            e.HasKey(m => m.ModelId);
+            e.Property(m => m.ModelId).HasColumnName("model_id");
+            e.Property(m => m.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

@@ -73,12 +73,14 @@ public class MobModel : NetworkBehaviour
         GameObject prefab;
         RuntimeAnimatorController controller = locomotionController;
         Vector3 offset = Vector3.zero, eulerOffset = Vector3.zero;
+        string speedParam = null;
         if (MobModelRegistry.TryGet(modelId, out var entry))
         {
             prefab = entry.prefab;
             if (entry.animatorController != null) controller = entry.animatorController; // non-Humanoid rig
             offset      = entry.offset;
             eulerOffset = entry.eulerOffset;
+            speedParam  = entry.speedParam;
         }
         else
         {
@@ -104,7 +106,8 @@ public class MobModel : NetworkBehaviour
             Debug.LogWarning($"[MobModel] '{name}': no MeshRenderer found on this GameObject to hide — the " +
                              "placeholder cube may remain visible. Is MobModel on the Enemy prefab root (the cube)?");
 
-        _instance = CharacterModelFactory.BuildFromPrefab(EnsureMount(), prefab, controller, driveLocomotion: true);
+        _instance = CharacterModelFactory.BuildFromPrefab(EnsureMount(), prefab, controller, driveLocomotion: true,
+                                                          speedParam: speedParam);
         if (_instance != null)
         {
             _instance.name = $"MobModel_{modelId}";

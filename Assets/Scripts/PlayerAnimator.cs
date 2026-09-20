@@ -83,6 +83,18 @@ public class PlayerAnimator : MonoBehaviour
     public void PlayAttack() => _animator.SetTrigger(_attackHash);
 
     /// <summary>
+    /// Overrides the locomotion float parameter name after Awake — used by <see cref="CharacterModelFactory"/>
+    /// when a body's controller doesn't use the default "Speed" name (e.g. a non-Synty pack authored with its
+    /// own convention).
+    /// </summary>
+    public void SetSpeedParam(string paramName)
+    {
+        if (string.IsNullOrEmpty(paramName)) return;
+        speedParam = paramName;
+        _speedHash = Animator.StringToHash(paramName);
+    }
+
+    /// <summary>
     /// Fires an arbitrary Animator trigger by name — used by <see cref="PlayerAbilities"/>
     /// to drive per-ability animations (e.g. "Kick"). Guards against triggers the
     /// current controller doesn't declare, so an ability with no matching state

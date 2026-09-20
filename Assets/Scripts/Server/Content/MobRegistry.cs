@@ -36,6 +36,7 @@ public static class MobRegistry
         def.displayName        = s.DisplayName;
         def.mobLevel           = s.MobLevel;
         def.prefab             = ResolvePrefab(s.PrefabAddress, s.MobId);
+        def.modelId            = s.ModelId ?? "";                     // 2026-09-19 — blank = mob_id convention
 
         def.maxHealth          = s.MaxHealth;
         def.attackDamage       = s.AttackDamage;

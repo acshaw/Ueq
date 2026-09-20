@@ -13,6 +13,9 @@ export interface Mob {
   displayName: string;
   mobLevel: number;
   prefabAddress: string | null;
+  // 2026-09-19 — explicit body-model reference (decouples art from mobId). Null = fall back to the
+  // mobId convention path client-side. Options come from the mob_models lookup table.
+  modelId: string | null;
 
   maxHealth: number;
   attackDamage: number;
@@ -64,7 +67,7 @@ export interface Mob {
 
 export function emptyMob(): Mob {
   return {
-    mobId: '', displayName: '', mobLevel: 1, prefabAddress: 'Enemy',
+    mobId: '', displayName: '', mobLevel: 1, prefabAddress: 'Enemy', modelId: null,
     maxHealth: 10, attackDamage: 1, attackInterval: 2, attackRange: 2,
     movementType: 1, moveSpeed: 3.5, wanderRadius: 10, wanderPauseMin: 2, wanderPauseMax: 6,
     perceptionRadius: 20, baseAggroThreat: 1,
@@ -88,6 +91,7 @@ export const MOB_GRID_COLUMNS: GridColumn<Mob>[] = [
   { header: 'Name', accessor: m => m.displayName },
   { header: 'Level', accessor: m => m.mobLevel },
   { header: 'Faction', accessor: m => m.factionId ?? '' },
+  { header: 'Model', accessor: m => m.modelId ?? '(mob_id)' },
   { header: 'XP', accessor: m => m.xpReward },
 ];
 export const MOB_SEARCH_FIELDS: (keyof Mob)[] = ['mobId', 'displayName'];

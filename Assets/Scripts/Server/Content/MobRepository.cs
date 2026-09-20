@@ -48,6 +48,10 @@ public struct MobSnapshot
     // 5.4 (AG3) — social aggro, opt-in per mob.
     public bool  SocialAggroEnabled;
     public float SocialAggroRadius;
+
+    // 2026-09-19 — explicit body-model reference (decouples art from mob_id). Blank/null = fall back to
+    // the mob_id convention path (see MobDefinition.modelId / MobModel.OnStartServer).
+    public string ModelId;
 }
 
 /// <summary>One faction adjustment applied to the killer on this mob's death (M2.7.1).</summary>
@@ -81,7 +85,7 @@ public sealed class MobRepository : IRepository
             "vendor_id, vendor_open_keyword, " +
             "weapon_category, weapon_skill, atk, " +
             "attack_is_parryable, avoidance_dodge, avoidance_parry, avoidance_riposte, ac, " +
-            "social_aggro_enabled, social_aggro_radius " +
+            "social_aggro_enabled, social_aggro_radius, model_id " +
             "FROM mobs ORDER BY mob_id", conn, tx))
         using (var reader = cmd.ExecuteReader())
         {
@@ -123,6 +127,7 @@ public sealed class MobRepository : IRepository
                     Ac                 = reader.GetFloat(30),
                     SocialAggroEnabled = reader.GetBoolean(31),
                     SocialAggroRadius  = reader.GetFloat(32),
+                    ModelId            = reader.IsDBNull(33) ? null : reader.GetString(33),
                     FactionHits        = new List<MobFactionHitSnapshot>(),
                 };
                 order.Add(id);

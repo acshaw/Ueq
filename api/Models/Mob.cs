@@ -16,6 +16,11 @@ public class Mob
     public float AttackInterval { get; set; } = 2f;
     public float AttackRange { get; set; } = 2f;
 
+    // 2026-09-19 — explicit body-model reference (decouples art from mob_id/slug). Null/blank = fall
+    // back to the mob_id convention path client-side (MobModel.OnStartServer). Options come from the
+    // mob_models lookup table, synced from the Unity MobModelCatalog via an Editor tool.
+    public string? ModelId { get; set; }
+
     public int MovementType { get; set; } = 1; // 0 Stationary, 1 Wander
     public float MoveSpeed { get; set; } = 3.5f;
     public float WanderRadius { get; set; } = 10f;

@@ -35,6 +35,11 @@ public class MobModelCatalog : ScriptableObject
 
         [Tooltip("Local rotation offset (degrees), for bodies that don't face +Z by default.")]
         public Vector3 eulerOffset;
+
+        [Tooltip("Float parameter name that drives the locomotion blend tree from movement speed. Leave blank " +
+                 "for 'Speed' (the Synty/PlayerAnimator default). Set this for packs whose controller uses a " +
+                 "different name (e.g. Simple Forest Animal's controllers use 'Speed_f').")]
+        public string speedParam;
     }
 
     public List<Entry> entries = new();

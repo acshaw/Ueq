@@ -5,6 +5,7 @@ import { ConversationService } from './conversation.service';
 import { VendorService } from './vendor.service';
 import { FactionService } from './faction.service';
 import { LootService } from './loot.service';
+import { MobModelService } from './mob-model.service';
 import { ContentGrid } from './shared/content-grid';
 import { CrudModal } from './shared/crud-modal';
 import { ADMIN_STYLES } from './shared/admin-styles';
@@ -50,7 +51,19 @@ import { ADMIN_STYLES } from './shared/admin-styles';
             <label>Display name <input [(ngModel)]="model.displayName" name="displayName" /></label>
             <label>Level <input type="number" [(ngModel)]="model.mobLevel" name="mobLevel" /></label>
             <label>Prefab (spawnable) <input [(ngModel)]="model.prefabAddress" name="prefabAddress" placeholder="Enemy" /></label>
+            <label>Body model
+              <select [(ngModel)]="model.modelId" name="modelId">
+                <option [ngValue]="null">(none — falls back to mob_id)</option>
+                @for (id of modelIds(); track id) { <option [ngValue]="id">{{ id }}</option> }
+                @if (model.modelId && !modelIds().includes(model.modelId)) {
+                  <option [ngValue]="model.modelId">{{ model.modelId }} (not in catalog — stale?)</option>
+                }
+              </select>
+            </label>
           </div>
+          <p class="soon">Body model comes from Unity's MobModelCatalog, synced here via
+            Tools/Character/Sync Mob Model Catalog to Database. Leave blank to fall back to matching this
+            mob's own id against a catalog entry (the original convention).</p>
         </section>
 
         <section>
@@ -197,12 +210,14 @@ export class MobEditor implements OnInit {
   private readonly vendorApi = inject(VendorService);
   private readonly factionApi = inject(FactionService);
   private readonly lootApi = inject(LootService);
+  private readonly modelApi = inject(MobModelService);
 
   readonly mobs = signal<Mob[]>([]);
   readonly conversationIds = signal<string[]>([]);
   readonly vendorIds = signal<string[]>([]);
   readonly factionIds = signal<string[]>([]);
   readonly lootTableIds = signal<string[]>([]);
+  readonly modelIds = signal<string[]>([]);
   readonly error = signal<string | null>(null);
   model: Mob | null = null;
   isNew = false;
@@ -217,6 +232,7 @@ export class MobEditor implements OnInit {
     this.vendorApi.getAll().subscribe({ next: rows => this.vendorIds.set(rows.map(r => r.vendorId)) });
     this.factionApi.getAll().subscribe({ next: rows => this.factionIds.set(rows.map(r => r.factionId)) });
     this.lootApi.getAll().subscribe({ next: rows => this.lootTableIds.set(rows.map(r => r.lootTableId)) });
+    this.modelApi.getAll().subscribe({ next: rows => this.modelIds.set(rows.map(r => r.modelId)) });
   }
 
   reload(): void {

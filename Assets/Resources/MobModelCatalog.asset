@@ -18,683 +18,2110 @@ MonoBehaviour:
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Knight_01_Black
     prefab: {fileID: 111886, guid: 10b8f8b81a78d2b488d260466a8883d3, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Knight_01_Brown
     prefab: {fileID: 172688, guid: 6724992a26d21854798810e3993415be, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Knight_01_White
     prefab: {fileID: 113364, guid: dac2afd5e1dda1c4d9fe05cf141b47f0, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Peasant_01_Brown
     prefab: {fileID: 116112, guid: 100dded3f80a43846a29e6fdf0e82019, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Peasant_01_White
     prefab: {fileID: 171706, guid: 0925457c2b2fe9f4a8747c59013d56d4, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Shopkeeper_01_Black
     prefab: {fileID: 150176, guid: 4b94a93fa70935041b61d500fb573a22, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Shopkeeper_01_Brown
     prefab: {fileID: 159850, guid: 5bec398114a29f44286d4e48bb0e0de3, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Shopkeeper_01_White
     prefab: {fileID: 111118, guid: da95f7d3c32f0ae409c0d2c1c8b88511, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Viking_01_Black
     prefab: {fileID: 106386, guid: 46f578172acf555439ea7037b277bd58, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Viking_01_Brown
     prefab: {fileID: 142780, guid: 55baa12c54e933f44a6f55a515a15199, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Viking_01_White
     prefab: {fileID: 175192, guid: 996b1cdc214c6ad43b2b0a8dc6ab12ed, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Warrior_01_Black
     prefab: {fileID: 198702, guid: 156f67e924f48da4990472c91c068932, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Warrior_01_Brown
     prefab: {fileID: 139570, guid: 6ff9e4b8027e4b54ba8cccf95fad6052, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Warrior_White
     prefab: {fileID: 180246, guid: 4fd72ede44298284b89704ad0b9dedad, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Ghost_01
     prefab: {fileID: 1084090695722338, guid: fca0db359d6a91b4c8c39324d314cd2e, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Ghost_02
     prefab: {fileID: 1423417334750076, guid: d2b11d59c34b8794a916e2e3adca29b6, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_Female_01
     prefab: {fileID: 1435744202117670, guid: 8cccb88f6abce2445aec080d5a965bfb, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_Male_01
     prefab: {fileID: 1387492477484550, guid: 7ee713c854e6be5469a1372d66b7bc40, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_Shaman_01
     prefab: {fileID: 1042931328060984, guid: 7161ed0803b6af44eba14325b62837de, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_WarChief_01
     prefab: {fileID: 1283291039809076, guid: 9877270705d01b540aeaa38895b9f95b, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_Warrior_Female_01
     prefab: {fileID: 1091438940017972, guid: 851e8547e58372347b1fc5cbc7bf3930, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Goblin_Warrior_Male_01
     prefab: {fileID: 1475337874035606, guid: c4e3b5d3572bced46ab0fdb482897812, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Hero_Knight_Female_01
     prefab: {fileID: 1753741187899190, guid: 45608daf8c357ac4883238b3247d64b7, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Hero_Knight_Male_01
     prefab: {fileID: 1428387009061096, guid: a96b63f27d072234bbc3d7818166e4eb, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Rock_Golem_01
     prefab: {fileID: 1293082480778088, guid: beba2944035d3c54abd09d3d023aa9a8, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Skeleton_Knight_01
     prefab: {fileID: 1438608989707952, guid: f6362dc4479aaf549a3fdaedef699623, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Skeleton_Slave_01
     prefab: {fileID: 1698772203058814, guid: f3c9ecbe58652e1448eee0045d7036fe, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Giant Rat
     prefab: {fileID: 1547369703441942, guid: aa4de824abd97724da42ffc9d2b3c275, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Skeleton_Soldier_02
     prefab: {fileID: 1624536181693422, guid: 807c1226359007646905397056134019, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Tormented_Soul_01
     prefab: {fileID: 1877307886535162, guid: fda5edc93819a5946901f75bc534ac54, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_AncientWarrior_01
     prefab: {fileID: 1909744818002174, guid: c7cebe2178705794aa9a9911f182d8c1, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_BarbarianGiant_01
     prefab: {fileID: 1652650793432430, guid: d9162a78a8deb714a9bddd8038021008, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_BigOrk_01
     prefab: {fileID: 1293356793197548, guid: 0d42bc61d684259409d481c6f5dd5d5c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_Dwarf_01
     prefab: {fileID: 1820919466449660, guid: 00df519327294ce4da5a577098c3ed4f, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_ElementalGolem_01
     prefab: {fileID: 1334977650429898, guid: 93c0dd75ddc1c9f4dabe9f061ef19748, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_FortGolem_01
     prefab: {fileID: 1691206179217438, guid: fe16b94572a04254e9757241e9e92235, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_MechanicalGolem_01
     prefab: {fileID: 1170732337855516, guid: 5aed7f791a03c2a4ba0040d2fa161639, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_MutantGuy_01
     prefab: {fileID: 1544180832531774, guid: f9f6be802bd0fe3448c68a8b6f205bce, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_PigButcher_01
     prefab: {fileID: 1024577810811178, guid: a744caf4676601646ab2385371d1d140, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_RedDemon_01
     prefab: {fileID: 1248874732774416, guid: 3c9c85e47d53d1f4aaa97330d98c0680, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_Slayer_01
     prefab: {fileID: 1033247876357254, guid: b2739774a07ffdb459c1bd60e3ef4f10, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_BR_Troll_01
     prefab: {fileID: 1473157611212552, guid: 2250a4a4fc528684c85ba955eb992ec6, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_DarkElf_01
     prefab: {fileID: 1566049822020886, guid: 9d2d21ead9f817446aa6c299b76f7e89, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_EvilGod_01
     prefab: {fileID: 1870912557112684, guid: fc469b2d4ae90f6408eedaaa707d812f, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_ForestGuardian_01
     prefab: {fileID: 1520184032351820, guid: eda5ef8bfa1b36842be7b6d0ddc57616, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_ForestWitch_01
     prefab: {fileID: 1611041093240470, guid: c6817eb5530563147aad2cfd830512b9, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Medusa_01
     prefab: {fileID: 1891674185500050, guid: 333e5531d0814614f9738b8e0f3807cd, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Mystic_01
     prefab: {fileID: 1233347782355984, guid: e218b66930d51a741a5150ddb1bfeec0, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_SpiritDemon_01
     prefab: {fileID: 1997296248483302, guid: 9984be23625843a48a44d88aae5669f2, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chrr_AncientQueen_01
     prefab: {fileID: 1666678542618180, guid: 02ac59dea0bf44d4d87bba04f0a6ca33, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Beanie_01
     prefab: {fileID: 3818721685182870944, guid: 91a234a5ac753554e82d04a2bedc0e25, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Beard_01
     prefab: {fileID: 3252513830353061635, guid: 5552d13d2d0636b4b84403bca027f0c0, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Beard_02
     prefab: {fileID: 5381899529043745372, guid: 2c3db847c027ff04f9f95cf539c047de, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Bun_01
     prefab: {fileID: 3852699928726874806, guid: dda2c20e3e6bd714abb300e4c84e2be4, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Chops_01
     prefab: {fileID: 4158117797329843660, guid: 1d06f16f48b790548b778a5bdf7a69d6, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_04
     prefab: {fileID: 5359095326366316309, guid: 6acd4702716c64b49bd8504d04baea3b, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_05
     prefab: {fileID: 3331492727679041586, guid: 460174f6fb6cdb841bd0f562d9221ac3, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_06
     prefab: {fileID: 4248136288128711640, guid: 6599356a61fd47a4eaaeed1ac887d65a, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_07
     prefab: {fileID: 1090390649989844869, guid: d30df5bb55089ad4a989b1473c7a2293, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_08
     prefab: {fileID: 1213043109083764429, guid: d8091c7a2d9d8f2448b954f8720e99d5, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_09
     prefab: {fileID: 3051544637601550317, guid: 69ac49a48a29c9448ac5a507d38a3301, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_09_alt
     prefab: {fileID: 1816054855935763832, guid: 260657d29bfb17c47841ae7a62fcf3f4, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_10
     prefab: {fileID: 1272386763867106638, guid: 515a24c6c0ff2404782d8d7c7de093af, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hair_11
     prefab: {fileID: 593454656204496684, guid: 8f87914eee5a99b4381f0a1c7fdcd158, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hat_01
     prefab: {fileID: 7202588604819645970, guid: 72b4eb657d88d5d4ca05e983848f7bef, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Hat_02
     prefab: {fileID: 517384152127186018, guid: 740f72d010e55ad458e797ec6483f908, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Headset_01
     prefab: {fileID: 5483532631979247779, guid: 04e2a0f1ad1a87f4fa83b8972846ec96, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Headset_01_alt
     prefab: {fileID: 6771057364726623960, guid: 51428052337eae34084b8f9fe3955594, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Headset_02
     prefab: {fileID: 7624828572083015622, guid: 640045eb994ac644d9f89980114f4305, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Moustache_01
     prefab: {fileID: 4609227968844860818, guid: 6b5f1a42b82110e49988de1ad2a41fd9, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Ponytail_01
     prefab: {fileID: 7623271299947270949, guid: e19492d4a3b52dd408b1e4d76a214e42, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Attach_Sunglasses_01
     prefab: {fileID: 8314516393528333455, guid: 1c99f1025f7ca5b41bfc6c615178cf3c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Business_Female_01
     prefab: {fileID: 6597860165486235920, guid: 0a84514f554d6724098bbb2bd951d28b, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Business_Male_01
     prefab: {fileID: 6346790247640168239, guid: 34e0c0478273ba845ab029d21cb52a79, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Charred_01
     prefab: {fileID: 1230988377752467907, guid: e0b13cff52ec7744ab98183b162bcc48, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Jumpsuit_Female_01
     prefab: {fileID: 3863946197356255772, guid: e19a6cb628a52034393bc3af10bf0a72, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Jumpsuit_Male_01
     prefab: {fileID: 1237103786066752629, guid: 6b755f2212fb17d4f8d6ee004f322f2c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Peasent_Female_01
     prefab: {fileID: 3898496384508839527, guid: 3c469630796c82c4387e97ea9923fb5c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Peasent_Male_01
     prefab: {fileID: 3755277747141990492, guid: 89e401adace34884084d47323dfed9fc, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Prisoner_Female_01
     prefab: {fileID: 2651856903210286764, guid: eb54016f4b8b78e49b46d6ae66b3a976, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Prisoner_Male_01
     prefab: {fileID: 7229581758514280130, guid: 2d07864ce16f5e042a9bb64e7d61d8ff, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Robot_01
     prefab: {fileID: 2242111600426174931, guid: a7543fce49601494489b3edcae2284ae, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Skeleton_01
     prefab: {fileID: 3019351386366890193, guid: 5f1e3ed9628a12543adb9c996e045e24, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Space_Male_01
     prefab: {fileID: 85345772695510664, guid: f17f73fd88e335b499ab14d595ab4540, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Female_01
     prefab: {fileID: 3458756976290546274, guid: 7b5fb4afed2fb4d4f8a267687405b11c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Female_02
     prefab: {fileID: 9064580088405009711, guid: 2d9271186b9b6394698643d253e56181, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Female_03
     prefab: {fileID: 3779599460037819802, guid: 078289b95e4329c4698859519204f23e, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Female_04
     prefab: {fileID: 3381359940843186067, guid: 415206fdf339ef44cbed508914a9a7e2, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Male_01
     prefab: {fileID: 3989931881015276717, guid: 253e338a5c21f2d4691b62c2411dbf0d, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Male_02
     prefab: {fileID: 2601170466289135297, guid: 0f895ab6fa2a7e9419ef17d25c18bf9c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Male_03
     prefab: {fileID: 1315923550000629945, guid: 875a2010d705b604f8a5d36dd1a8b485, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Street_Male_04
     prefab: {fileID: 1988853622293806244, guid: 56f849b594aff0f429ad26bb10cf911f, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Underwear_Female_01
     prefab: {fileID: 3013489617249285301, guid: 88df0389e96833a4ab4d5a21ed648138, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Gen_Chr_Underwear_Male_01
     prefab: {fileID: 7179461242735521727, guid: 36763523c31ee7840bfd9fe0473b5259, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Dummy_Female_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: c25ecc65e2662d6468bcba4b42a1ab5e, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Dummy_Male_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: dc494f42aedd60c4a85be02ec2b22ec4, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Female_Face_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: 16d414309aee5534bb9124c86367882c, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Female_NoFace_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: 509223f9ef5fc8343ac57e8c8f8a7550, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Male_Face_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: bb0546db0edf6294fbf54f2aa895674b, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_Male_NoFace_01_FixedScale
     prefab: {fileID: 2151131426784420388, guid: e16e767da6f23f04687bbea5851a2391, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_FiveFinger_01
     prefab: {fileID: 1372995246405210, guid: cf8e268b32ddbee488f1327f1fd8c5d9, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_FiveFinger_02
     prefab: {fileID: 1880165936146566, guid: be265e142a7ab1a40b4e9367488943f9, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_FiveFinger_03
     prefab: {fileID: 1678070994075788, guid: fd5e831e3540bb449acb00ec35e888ac, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Hands_FiveFinger_01
     prefab: {fileID: 1781947224790524, guid: cffb3216c7854ab418a0045b21440088, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_Standard_01
     prefab: {fileID: 1909868681067312, guid: 63b914be36748c74ba47c08297bea915, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_Standard_02
     prefab: {fileID: 1272416262818662, guid: dbf18624c8b697a48bf91f3016035764, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Arms_Standard_03
     prefab: {fileID: 1083923957899038, guid: 664956de28ada604d8109484559e4751, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Character_FPS_Hands_Standard_01
     prefab: {fileID: 1068826876450678, guid: f68be8d3fbd733544b5bc54f8afe8b72, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Cover_Female_01
     prefab: {fileID: 1576452359595192, guid: 3a156a33c79555c42ac3f902b2499cac, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Cover_Male_01
     prefab: {fileID: 1240287736493098, guid: 3579c97d9ed0aae45a8ccabc4ebed8af, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Cower_Female_01
     prefab: {fileID: 1460785517083138, guid: 64500f6234352734ea891f09228b54c8, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Cower_Male_01
     prefab: {fileID: 1330181809638656, guid: f0baa043930a14a4b98b03a3fced57fa, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Dead_Female_01
     prefab: {fileID: 1462956378690600, guid: 781b40cbd594a1449813c8899719404e, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Dead_Male_01
     prefab: {fileID: 1572271316291028, guid: 84125a8ade8c402438e35df205c95fe4, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Handsup_Female_01
     prefab: {fileID: 1862206763957162, guid: fb33fe13fe38e0649b4db0919f655f47, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Handsup_Male_01
     prefab: {fileID: 1095300909340360, guid: 219dd4f5972dbcb4fb40813e7add23fc, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Idle_Female_01
     prefab: {fileID: 1155526852108386, guid: 38e49ff053f1e7143b935d61f1e5c506, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Idle_Male_01
     prefab: {fileID: 1639068373288188, guid: de896aef9da32424e969d39f6d5169e1, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_LadderClimb_Female_01
     prefab: {fileID: 1486236346271276, guid: 3d5d1967c284612499e7283e5078eeb0, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_LadderClimb_Male_01
     prefab: {fileID: 1197991958251212, guid: 1a96158508110cf48918d356a21d7830, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Run_Female_01
     prefab: {fileID: 1187730876428446, guid: 06004ce41fce0094ab5f737ac3a4c588, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Run_Male_01
     prefab: {fileID: 1710834516998308, guid: b790166e687772541a9e88161f45ee6f, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Walk_Female_01
     prefab: {fileID: 1851276113255198, guid: 5544bd443ff97b74faa514a35a23e167, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Walk_Male_01
     prefab: {fileID: 1704674223868808, guid: cb1ee49003ad0a2468059be313073541, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Weapon_Female_01
     prefab: {fileID: 1631874415336464, guid: 7390607478adfae42a6b6d85f2d00696, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Weapon_Female_02
     prefab: {fileID: 1996607170670594, guid: 91ee03343bd9594468c7ad42cd629fd6, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Weapon_Male_01
     prefab: {fileID: 1348288584672764, guid: 7ab16310faa910d40b16db3d54919077, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Pawn_Weapon_Male_02
     prefab: {fileID: 1656350130264164, guid: 5423795e6dfd69e4f89c48865dba38bc, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Attach_Female_Hair_01_FixedScale
     prefab: {fileID: 2617814553203595949, guid: 8ecbd5497b0afef4c8a6aac0626d81ed, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: SM_Chr_Attach_Male_Hair_01_FixedScale
     prefab: {fileID: 8650340731736475402, guid: 354451eee28210e4a92774b4b49e5782, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Goblin Scout
     prefab: {fileID: 1387492477484550, guid: 7ee713c854e6be5469a1372d66b7bc40, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Skeleton Soldier
     prefab: {fileID: 1547369703441942, guid: aa4de824abd97724da42ffc9d2b3c275, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: Goblin Warchief
     prefab: {fileID: 1283291039809076, guid: 9877270705d01b540aeaa38895b9f95b, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: City Guard
     prefab: {fileID: 1428387009061096, guid: a96b63f27d072234bbc3d7818166e4eb, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: hagar_sureshot
     prefab: {fileID: 1428387009061096, guid: a96b63f27d072234bbc3d7818166e4eb, type: 3}
     animatorController: {fileID: 0}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
   - modelId: grey_wolf
     prefab: {fileID: 8867960657160430145, guid: 2c201f6401314d44d8ae94ca75376bab, type: 3}
     animatorController: {fileID: 9100000, guid: 2e15c34bff240fa4aa61bf178e1a79b3, type: 2}
     offset: {x: 0, y: 0, z: 0}
     eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Bear
+    prefab: {fileID: 7962199819078159310, guid: f5b41ba4c79702547a89de7544b80656, type: 3}
+    animatorController: {fileID: 9100000, guid: 5b424ece8fe1c354cb43d2f0b12e556a, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Bag_01
+    prefab: {fileID: 8151758533494390002, guid: a8ae5178418af7845864e5fd53911916, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Bags_01
+    prefab: {fileID: 3258011023538239582, guid: 7185ad125b1b1b24e906eb69cbf5b1cf, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Crown_01
+    prefab: {fileID: 199058682787676843, guid: 38103d938158e6f44b40c45ebc9da47d, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Earrings_01
+    prefab: {fileID: 6380850709914598910, guid: c559a820017c51c409635522fdf8bc1e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Earrings_02
+    prefab: {fileID: 7071285550024174828, guid: 11f6921346ea9a74cb4a451250e4651b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_01
+    prefab: {fileID: 2407391530494666317, guid: f0cb881e1c86a2449a0d38e65930f200, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_02
+    prefab: {fileID: 4939766565825590063, guid: 2666e3e8d41c09141a69a163a1c84da7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_03
+    prefab: {fileID: 4734688342957145115, guid: 3ae98376263725743ad08a8450400f67, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_04
+    prefab: {fileID: 8015544173058749141, guid: d0eed51aa8f1ddf45ad5e821b6ef4bea, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Female_01
+    prefab: {fileID: 1542396207396811628, guid: 07943ca89b4d53a41a5a07f34a3f5a8c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Female_02
+    prefab: {fileID: 3997386023728717497, guid: 5137b2224f1d1454a9eb46a507e24ebf, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Female_03
+    prefab: {fileID: 1927789258081533202, guid: a598dbe3eda592249a51dd6a4fad969e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Female_04
+    prefab: {fileID: 5437253111413514283, guid: f165b58e9fed50c469436a78f4372983, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Male_01
+    prefab: {fileID: 1323070338699770785, guid: 8a6f0c2dbf1b908428a0afb78419971a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Male_02
+    prefab: {fileID: 643187367951932361, guid: 51e5e13a5f3fd804387c86232dea7595, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Male_03
+    prefab: {fileID: 6015631291831486599, guid: 58f6c82d72b792047b1bc2637e1c7546, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Elf_Ear_Male_04
+    prefab: {fileID: 1235360974997945166, guid: 1958ca6208b83bb4ba69a0fb7c384bdd, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Glasses_01
+    prefab: {fileID: 1089893792114658049, guid: 1837c6223b5ec8e4899370cccdd4e163, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_01
+    prefab: {fileID: 7434076700865442982, guid: 882c280a73594c0439abd2911e3600fa, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_02
+    prefab: {fileID: 7498542953188147338, guid: 1618947f6c6630348aabdf3ebb490f8d, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_03
+    prefab: {fileID: 7070880936215055436, guid: 0a6e0e7506b882b46ad3993823357ccc, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_04
+    prefab: {fileID: 2397376633924763002, guid: f2eca979f3fbcc8459f8ba9962423028, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_05
+    prefab: {fileID: 1610014931515969999, guid: 14de47975458ee74c95a8ba5deebc1d9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Helmet_06
+    prefab: {fileID: 802297258080352747, guid: 271a6bb90b9ebeb4e8822550cfb2e0dd, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Pouch_01
+    prefab: {fileID: 7816054833305489014, guid: f694dac795c43854199bd753288a68e6, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Tiara_01
+    prefab: {fileID: 8141185839512023373, guid: 8758d8cdbce754a4f85d243aab4c94c8, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Tiara_02
+    prefab: {fileID: 5820753246759500123, guid: b47b33fac1c341a4b96162b23f68483e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Tiara_03
+    prefab: {fileID: 4842576875333973752, guid: 8deb87745ccdc7145a48de11f1db94f3, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Attach_Tiara_04
+    prefab: {fileID: 5991656935463484077, guid: e4e0d61492c18d74583ea060e330f288, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Long_Male_01
+    prefab: {fileID: 7253649433419952182, guid: 4780ae2a90853e141abdd8ff2daf046b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Mohawk_01
+    prefab: {fileID: 1672167633088835932, guid: 5412e32f532e4de4b81ec2d452213430, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Ponytail_01
+    prefab: {fileID: 1263229921557233511, guid: 6d34273a558cd0741a535d5e32ed1874, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Priestess_01
+    prefab: {fileID: 554688947487334958, guid: 10dda0e32f5e202449c55ba58cee7370, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Short_01
+    prefab: {fileID: 2377630931165686561, guid: 6c6f3ea8d91df234b91996de95da3ad6, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Short_02
+    prefab: {fileID: 5950313925400345343, guid: 79259f10930b5e54ea47755e6322bb24, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Short_Female_01
+    prefab: {fileID: 3617628304959679646, guid: bbc836892abf48240b12858d2511c770, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Tied_Female_01
+    prefab: {fileID: 69589792770228330, guid: ddee5a8c0a2e20f48a8402f77d688d49, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Chr_Hair_Tied_Female_02
+    prefab: {fileID: 373284231200658854, guid: 4b3d0978627abcf42bf435efd40ca195, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SK_Chr_Attach_Cape_01
+    prefab: {fileID: 2474598434558574903, guid: 9f4650614bfb3df4c86e5fa7780237f3, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SK_Chr_Attach_Cape_02
+    prefab: {fileID: 2188069892339083750, guid: 59d1aeb4bfb53234f89732f3e31c1537, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cloth_Cloak_01
+    prefab: {fileID: 2671266790197380072, guid: aa2b4bebba75cc94c95d84206e144656, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cloth_Hood_01
+    prefab: {fileID: 7229284373901454395, guid: 473b03792e946b747994cf754ae56271, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cloth_Shoulders_01
+    prefab: {fileID: 2852308614232517933, guid: c2a307cc660b64045b423c0d8a481524, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Hair_Braids_01
+    prefab: {fileID: 7989498181443240466, guid: 793c5b39bfce977479ca40a4a922141a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Hair_Priestess_01
+    prefab: {fileID: 950131893133804151, guid: 247338116da5acf429891e43b64c386a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_01
+    prefab: {fileID: 1708380902028191256, guid: 9a808c09c9f7f484e9899ed2734ff0eb, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_01_Arrows_01
+    prefab: {fileID: 2643978167850394061, guid: fa30456e1527eaf439ede7ea29bb156b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_02
+    prefab: {fileID: 6517721118191846499, guid: cb4b1e84aeeedd748b45dbd447b52d94, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_02_Arrows_01
+    prefab: {fileID: 7711789806350230779, guid: d14b3dd7e02086f4e8622a8380405959, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_03
+    prefab: {fileID: 2380390824078117817, guid: b292a42fd3ae6294581f2cdb31340a1b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Prop_Quiver_03_Arrows_01
+    prefab: {fileID: 4566614256629257370, guid: 2fc56b78ba71f684cb6936f7f2ea2dec, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Commoner_Female_01
+    prefab: {fileID: 7792213644944468560, guid: 87935189c789be843a2364fb6e62d733, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Commoner_Male_01
+    prefab: {fileID: 8847747916045926584, guid: df7408037adae834b9f70a0b7b133162, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_King_Male_01
+    prefab: {fileID: 6026371645330985854, guid: 185ce3ee772f7bf42a0f67de1a97817a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Knight_Male_01
+    prefab: {fileID: 5529616222665352959, guid: 535bb95950f8d9a439d057d63b98682b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Nobility_Male_01
+    prefab: {fileID: 2791516608154219342, guid: 1da59b80383907844b0ba675e4ea30c7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Priestess_Female_01
+    prefab: {fileID: 8102165559679176880, guid: 7ee08cc98083d6b41a6ce1ac32b3e685, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Queen_Female_01
+    prefab: {fileID: 1624758465558247250, guid: 791ab37bbf465924ea7572d98f756fc7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Rogue_Female_01
+    prefab: {fileID: 2056596676476320965, guid: ceca8c17e7407cb4d9924001dc0efe4e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Scholar_Male_01
+    prefab: {fileID: 4661770343621100852, guid: bb9d22b0373045f45801c44da1d828c0, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Soldier_Female_01
+    prefab: {fileID: 3780461957510778905, guid: 520f7cbfa318d794882eef2d99c4685c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Soldier_Male_01
+    prefab: {fileID: 2288112593660792233, guid: 24453fe670b00454f909043ebbcf560f, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Blacksmith_Female_Goggles_02
+    prefab: {fileID: 1060238287923914, guid: 050622150a6fc6741889ace92693e628, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Blacksmith_Male_Goggles_01
+    prefab: {fileID: 1519748819495268, guid: c952278f1be002844829c6a08febea7d, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Blacksmith_Male_Goggles_02
+    prefab: {fileID: 1043301270751792, guid: a4cb8b786e4a0b1478ad52b461acf5a9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_King_Cape_01
+    prefab: {fileID: 1464276488509828, guid: cd1c9c0d25a430d49813c2f7293515df, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_King_Crown_01
+    prefab: {fileID: 1341976489007140, guid: d1402c58d959ec54fbbcd393e81b4b34, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Mage_Cape_01
+    prefab: {fileID: 1526653528056978, guid: 0e13a47ccf769c1419d22560947120f2, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Priest_Hat_01
+    prefab: {fileID: 1387588231728708, guid: 0a3c6105647a7bf42afe3cba7cb42ef1, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Princess_Tiara_01
+    prefab: {fileID: 1990391915472400, guid: 8269d465bb9f9c44e889bf84714db6ea, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Queen_Crown_01
+    prefab: {fileID: 1773873882836890, guid: 033a34f634bb6634ebd44fbcded07e8c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Soldier_01
+    prefab: {fileID: 1577006451429072, guid: ad89f676bde709244b48073d40d87d34, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Bartender_01
+    prefab: {fileID: 1430396767194642, guid: 624582b3b65da9a45bc1d204b8a69122, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Blacksmith_Female_01
+    prefab: {fileID: 1107688374796108, guid: a129c7755e4c7d843b98bfa2af4b3fb2, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Blacksmith_Male_01
+    prefab: {fileID: 1682917823560798, guid: f9d0bec09311bef48aa1fb044570e5de, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Fairy_01
+    prefab: {fileID: 1130955691468970, guid: 978a5cdcbd88a2b46903dec8fab90da9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_FortuneTeller_01
+    prefab: {fileID: 1492352555855718, guid: 8549abe3859269745a95380e270df83e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Headsman_01
+    prefab: {fileID: 1462432058118554, guid: dc6170fded71bf944b115160ab2cae64, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Hermit_01
+    prefab: {fileID: 1913839456307970, guid: d5a148a3575c47145a45da3ec571473c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Jester_01
+    prefab: {fileID: 1793230569793294, guid: 24e2f7a008fde164698a13a05b6918f5, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_King_01
+    prefab: {fileID: 1088698322870422, guid: 78bc42a4ceca0424ca04f3b7e68989ef, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Mage_01
+    prefab: {fileID: 1996767962855262, guid: e0331453113676149a9c0b2bc03e60de, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Merchant_01
+    prefab: {fileID: 1841705985760018, guid: 4f671f96ada2b43438b517dbc501e523, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Monk_01
+    prefab: {fileID: 1807343888332558, guid: 989e70245d7d4924d8758338bd26804a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Nun_01
+    prefab: {fileID: 1378242899357544, guid: 2154df2b1029fce44a5ed87edcaa0546, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Peasant_Female_01
+    prefab: {fileID: 1193453721025546, guid: 8d458e1bc503f3b4d89e72e841681909, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Peasant_Male_01
+    prefab: {fileID: 1052137612577496, guid: b3a21033f5e25ef47a403070d1d96983, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Priest_01
+    prefab: {fileID: 1111599145953978, guid: f30534c3df593c848ab209d140941eb4, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Prince_01
+    prefab: {fileID: 1890929502950978, guid: a8884fa09da891440a328b0212cd9ad4, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Princess_01
+    prefab: {fileID: 1205231767207672, guid: 119427e8efe54b54ea5b98536358014a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Queen_01
+    prefab: {fileID: 1356894068722700, guid: 4585a66dfd7209046a39ab9c63600129, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Rider_01
+    prefab: {fileID: 1116677665208918, guid: e11051163540ebf4884417f50c226d1c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Soldier_Female_01
+    prefab: {fileID: 1074668445682794, guid: 128d74125a472834991824f3f72198b5, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Soldier_Male_01
+    prefab: {fileID: 1741276027538082, guid: 767b276e5b6e4b14bbcd51b5a6e78ca8, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Backpack_01
+    prefab: {fileID: 1936017167018848404, guid: a0676d4f7749fe94bae0d6a9a528655a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Backpack_02
+    prefab: {fileID: 2400298101265855222, guid: 62236e0043d8fbc4ab9f06d884a5d2a0, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bags_01
+    prefab: {fileID: 2980006262964237901, guid: 085ddff12a258b0419bf5a3a68d5ff73, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bags_02
+    prefab: {fileID: 7056801608605009072, guid: 42dfebdc1df93ac4fa9fceb1805dc96e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bags_03
+    prefab: {fileID: 3674547165478284592, guid: 9f79806cc6edca5469083148cf108e38, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bags_04
+    prefab: {fileID: 622724822378542843, guid: 586ada899397edf41a1e7232e92c8c45, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bags_05
+    prefab: {fileID: 9172774868225767765, guid: aa3f7b659fd31a641b412d2d261b55fe, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_01
+    prefab: {fileID: 9084620144797494280, guid: 58e5e9e532d6d274dbdd7137d9f70ee9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_02
+    prefab: {fileID: 2944231946675445880, guid: 5c52fc198c116c246943ab74feaec585, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bottle_01
+    prefab: {fileID: 8101201156853245541, guid: 25c55fd3c8cc6f74384a12d6ecf3ab7c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bottle_02
+    prefab: {fileID: 3041490354050622140, guid: 9e50fa6174d79264983b6d1dab2524d2, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cape_01
+    prefab: {fileID: 833693867333503893, guid: 5fc1e39927f51904fb690c313e91855e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cape_02
+    prefab: {fileID: 4602912147316148264, guid: 0d5c952426a43254b99a9ab26b9b4bdc, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cape_03
+    prefab: {fileID: 1025406053452918064, guid: 0396ffcab804b724bb3f638e1b7ab4d0, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cape_04
+    prefab: {fileID: 2826583103492856864, guid: 102c1a6deec414247a24dfe409ef7f91, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Cape_05
+    prefab: {fileID: 8379806679169592071, guid: a471629cce063584a9d38b0db20cf5fb, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Collar_01
+    prefab: {fileID: 5371529025109559926, guid: b028a7a9bf61a4b4781313b71931ccf1, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Crown_01
+    prefab: {fileID: 3273137585325094359, guid: 3170f1f42122ccb4bacc976734698ea6, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Crown_02
+    prefab: {fileID: 6644648918825555294, guid: 68962f3e580c89542a5ef001c1270c73, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Crown_03
+    prefab: {fileID: 7924844389922300356, guid: 9453ce0d960cc39449ed7defd6d20d3b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Crown_04
+    prefab: {fileID: 2791915901726272662, guid: 5640d033efe7a4542941ac9d385b5ab9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Crown_05
+    prefab: {fileID: 1493181348011740519, guid: f5ef0ee1c2f1ddb448edcbe7984f916b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Eye_Patch_01
+    prefab: {fileID: 4353387015225537231, guid: e37648ab798c5264a9c2ea870884316a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Glider_01
+    prefab: {fileID: 7416733103836058505, guid: 127b17e1f05be7640a4b9d45edbb5fd9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Goggles_01
+    prefab: {fileID: 1704750261522655439, guid: 9a797032e8cc662458c25e6b26baaf28, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_01
+    prefab: {fileID: 8604807525824020366, guid: 358e75285050aec4a93fb5640b486e97, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_02
+    prefab: {fileID: 7046912465220683913, guid: c845e8e0ed18b3745b50a4be3a7b7f75, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_03
+    prefab: {fileID: 8152634918725183250, guid: 32674fc3ff757fa459d31846834b6e66, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_04
+    prefab: {fileID: 6533413198959969532, guid: 1c7685acb764a3c44b352603932ae560, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_05
+    prefab: {fileID: 7244794735956737432, guid: 16a55c52413635d4fa289f69981a051e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_06
+    prefab: {fileID: 897613536614593494, guid: 5ada7467e74417a4fa922ad9dee20f9b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_07
+    prefab: {fileID: 7617336986562387646, guid: df5a7aabf1da9da4c9bc94ee63ddb6f0, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_01
+    prefab: {fileID: 6037314690199155116, guid: f0ddfdd62fe3a954c8b0e2e513d60483, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_02
+    prefab: {fileID: 7720069476553598316, guid: af4d0c167e0bd3946bee1331a13deb8b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_03
+    prefab: {fileID: 6150541883098545727, guid: d29d42464a84ecf4baf8a9f8b8768973, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_04
+    prefab: {fileID: 3327732825784721055, guid: b691f46afdacc9b4f811586e4f8b58ca, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_05
+    prefab: {fileID: 829908746644538657, guid: d6021367db165da41a204fdf60f9227b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_06
+    prefab: {fileID: 3701071953276076078, guid: 2031a05bdc216f24abf62cc1db9e39be, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hat_07
+    prefab: {fileID: 5205288055630141696, guid: d1a37d146ebf6cb468cd91434a75a00f, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Helmet_01
+    prefab: {fileID: 1216838653545561675, guid: 598854eaf4bed8f419735a0e80fdc327, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Helmet_02
+    prefab: {fileID: 4925064485402647688, guid: 0259b4a6292921f418a1063e3a6cf1e2, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hood_01_Rigged
+    prefab: {fileID: 412873787232513870, guid: 34c564904eb23f74da0ca58fdf7b51a1, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hood_02_Rigged
+    prefab: {fileID: 1527315331975635143, guid: dcf7ce9177a697c45baf0f21c815a0a3, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hood_03_Rigged
+    prefab: {fileID: 7440581503988793826, guid: 86fded91389f4b144814faad72ad98ad, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Mask_01
+    prefab: {fileID: 3688214152695736027, guid: 6a3e2050526e22b4a8a639658e6bcead, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Mask_02
+    prefab: {fileID: 8083352833880630974, guid: 0118d2e500b1f604b8aa2c451a2470a2, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Rope_01
+    prefab: {fileID: 6789812638255954368, guid: 588e6a87d227c0548857b6fae99d786f, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Shawl_01_Rigged
+    prefab: {fileID: 693151367944933274, guid: 11dc5f1b589140c4d97775dfe0e8c30d, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Skull_01
+    prefab: {fileID: 5234001717779346885, guid: 4fe218b77a2e4804dab5ac8653cb3e1e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Straw_01
+    prefab: {fileID: 2346933383288315596, guid: 678f3bd2185a31d438da6fe2d3d97388, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Archer_Female_01
+    prefab: {fileID: 2838779097298698997, guid: 0229ae965368c3449ac2466cebe1583f, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Archer_Male_01
+    prefab: {fileID: 5869073421947262030, guid: fda39ba8f61246149bbade559e6dd7ec, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_BeastTamer_01
+    prefab: {fileID: 2682365252232809506, guid: 8730c81a2e891f24ca15c4674ad2dbb4, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Cook_01
+    prefab: {fileID: 4580174535055268353, guid: f7bc872436275224884dddba829e13c5, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_King_01
+    prefab: {fileID: 6562647983989586868, guid: 9bbf50e5e02d1e2469262fad063e8c72, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_King_02
+    prefab: {fileID: 7235436795295809703, guid: 16340292243b4184a92c2641d8682325, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Knight_01
+    prefab: {fileID: 9021308447595903820, guid: 89fb93d319f52a6448a5f77d75a30b8e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Prisoner_01
+    prefab: {fileID: 8129426852670950418, guid: fc33152d43d076f44b855576c7c11fa7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Prisoner_02
+    prefab: {fileID: 1218053419972783735, guid: 26f5e982d223af74daa5bfe4011d6f16, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Prisoner_03
+    prefab: {fileID: 1405100322721815490, guid: 3f198179b0d01454f9ab1b0404f8f657, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Ranger_01
+    prefab: {fileID: 7097635790006219205, guid: 092b4a7e289164b46a4d81c617d0b0e3, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Shaman_01
+    prefab: {fileID: 4418210032240382735, guid: b5f2bce7d55bde3429daba88414a8ac9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Troll_01
+    prefab: {fileID: 3733808366589169053, guid: 1d4c9650214c5de44bbbb96cb76e407e, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Warrior_Male_01
+    prefab: {fileID: 5065931336289498697, guid: 0a59082416d6783408dfbc27326fe595, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Wizard_01
+    prefab: {fileID: 4033023255228377343, guid: 4a50b50c99dc67d47ac4c057570a3fd8, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Bandana_01
+    prefab: {fileID: 4436112529655126201, guid: 0ebbe489b08468048a39e83e746f18c7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_01
+    prefab: {fileID: 8841186126510968277, guid: 69bf3f4bb77bd0045b9bb5cac316ea0a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_02
+    prefab: {fileID: 9153156447461018167, guid: b6785516fd755a142a715bb1f5b5079c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_03
+    prefab: {fileID: 7508153041720670837, guid: b03a7baadc1f4c741ae3597f3c521005, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_04
+    prefab: {fileID: 7421756799473267245, guid: dfee782779e367a449cb20f28d1a70a7, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_05
+    prefab: {fileID: 305675553606005670, guid: 0d47d0de10e42474ea619f7fc0f1dea6, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_06
+    prefab: {fileID: 2321996601213427216, guid: 6d0c97152a891de45ae8e133123995a4, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_07
+    prefab: {fileID: 2884391136056098817, guid: 9fddcaac174b64440a3cb4da04f30077, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_Attach_01
+    prefab: {fileID: 9065176293839323378, guid: 8f73e1cece36d8b4aa7b0721c7f15a21, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Beard_Attach_02
+    prefab: {fileID: 7646927475277190741, guid: 7c7ca5c0162d9c740a6edfd3f4024020, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Glasses_01
+    prefab: {fileID: 6271623011443721433, guid: 77e838a957c4fc94f92f93cf9019f7cd, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Grandma_Hat_01
+    prefab: {fileID: 7317259471676257707, guid: bb8d8ccf3e22edd4d9f7bb656e849e0a, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Afro_01
+    prefab: {fileID: 3045809221762651914, guid: 96ac53129deda7d43a138cea667abdbc, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Fancy_01
+    prefab: {fileID: 5081171197676843650, guid: 96f72f58522b8a540b9146bd749cd810, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Long_01
+    prefab: {fileID: 6849261980487605779, guid: 3c9379a7d4e2e6f46a714babc8be9431, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Mohawk_01
+    prefab: {fileID: 3226035674359240906, guid: 191ff9a78fe66df42b42ac208835347b, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Pigtails_01
+    prefab: {fileID: 8882147944628035836, guid: 556b2220aa93b934883477876c72c654, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Ponytail_01
+    prefab: {fileID: 5473572372014778947, guid: f21825bf7027d7d4b8e1a7af0b229ea9, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Ponytail_02
+    prefab: {fileID: 1400681282829711977, guid: a4811f773aea46a49986511ab7a30cdd, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Hair_Rows_01
+    prefab: {fileID: 4315757608088056994, guid: 487456125e60c7544b5b6f78bae009f6, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Santa_Hat_01
+    prefab: {fileID: 6776551487276750110, guid: 2261842cd331ec24e8549e9e2bdf36fa, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Attach_Werewolf_Tail_01
+    prefab: {fileID: 1243354459022819695, guid: 26b6232a26efc0740adf95a339be6ce0, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Werewolf_01
+    prefab: {fileID: 8871242990064353017, guid: b5df154b3d5a22f478ff8570ce0f747c, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: SM_Chr_Werewolf_Undead_01
+    prefab: {fileID: 2266813564770837442, guid: 297ca81408ca80f4ab04946c65c28426, type: 3}
+    animatorController: {fileID: 0}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: 
+  - modelId: Bear_01
+    prefab: {fileID: 160214, guid: a133baff71d4c114d84cf0d6a8cd3ad0, type: 3}
+    animatorController: {fileID: 9100000, guid: 83d4bf814f861164fa8bc38f89fbe7b0, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Bear_02
+    prefab: {fileID: 164786, guid: c2e110b0bab74dd478e1b99944be639a, type: 3}
+    animatorController: {fileID: 9100000, guid: 83d4bf814f861164fa8bc38f89fbe7b0, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Bear_03
+    prefab: {fileID: 152128, guid: 69af18a8b74909b4f840fc6812132c3f, type: 3}
+    animatorController: {fileID: 9100000, guid: 83d4bf814f861164fa8bc38f89fbe7b0, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Boar_01
+    prefab: {fileID: 118442, guid: 50c7be063541ba0449f4569d4a73eed3, type: 3}
+    animatorController: {fileID: 9100000, guid: 7b53e0f9f85e53341b9d461a43136f16, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Boar_02
+    prefab: {fileID: 196722, guid: e3be92a380574524cb16265f66a7006c, type: 3}
+    animatorController: {fileID: 9100000, guid: 7b53e0f9f85e53341b9d461a43136f16, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Boar_03
+    prefab: {fileID: 194370, guid: c7f60aaa46b6b1e4b8824e6ee6ad5c6d, type: 3}
+    animatorController: {fileID: 9100000, guid: 7b53e0f9f85e53341b9d461a43136f16, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Doe_01
+    prefab: {fileID: 165520, guid: 06aceaf909fec8f4081af49b1eea892e, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Doe_02
+    prefab: {fileID: 131568, guid: 2fdf2b8525a6fa54ba867925b16564e3, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Fox_01
+    prefab: {fileID: 127546, guid: e3245acddde40bf49aa555d6bdc14998, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Fox_02
+    prefab: {fileID: 110416, guid: d08ba223a91fb3440afcbed27fafa936, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Fox_03
+    prefab: {fileID: 142838, guid: 76edac3e13f09c3409f253f6a027ba0e, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Moose_Female_01
+    prefab: {fileID: 105740, guid: 378c147cf531db1459d26a88836b90fc, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Moose_Female_02
+    prefab: {fileID: 117544, guid: 7880b2f5e823d3b47b650c0e9b3d7c4d, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Moose_Male_01
+    prefab: {fileID: 148086, guid: 72d1e1ec46e639c47a81658b0d9e230e, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Moose_Male_02
+    prefab: {fileID: 140746, guid: 02eca77e7e6a2ec41ba4c68f20e26098, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Moose_Male_03
+    prefab: {fileID: 186202, guid: a7149f843ccd3ee43bc6efabcf45bf9a, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Rabbit_01
+    prefab: {fileID: 141534, guid: c8f2aa078bde6e84f908838f4017d51f, type: 3}
+    animatorController: {fileID: 9100000, guid: 63e60d8b33fe8d844bb478314126af5b, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Rabbit_02
+    prefab: {fileID: 186862, guid: 04e6cb1168be48340b01aaa4b607c56e, type: 3}
+    animatorController: {fileID: 9100000, guid: 63e60d8b33fe8d844bb478314126af5b, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Rabbit_03
+    prefab: {fileID: 107382, guid: 792b9bfd1a3336348ae5d7865f9f864c, type: 3}
+    animatorController: {fileID: 9100000, guid: 63e60d8b33fe8d844bb478314126af5b, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Raccoon_01
+    prefab: {fileID: 153970, guid: 36b2733b638c8ae4fa6cfcd6a0d261d9, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Raccoon_02
+    prefab: {fileID: 107966, guid: 8f4541f8616f80142bff2d325ac2ab9e, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Raccoon_03
+    prefab: {fileID: 174936, guid: d44900f9dfec659488e30dc3a663a4db, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Skunk_01
+    prefab: {fileID: 198518, guid: c6500396f5f0c1c499e820163d808c94, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Skunk_02
+    prefab: {fileID: 151314, guid: caa5f4dd707293d499d87532e0214397, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Skunk_03
+    prefab: {fileID: 116500, guid: 992cb76747ba90743bf54a9baee73e2d, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Stag_01
+    prefab: {fileID: 114920, guid: ff249e9534924c744bdfa6a3d2d1746c, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Stag_02
+    prefab: {fileID: 142896, guid: e2b54f18a442ae84cb37b05e649edfc0, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Stag_03
+    prefab: {fileID: 191882, guid: 79db012093ea9d14ba167aaf3f5e72f4, type: 3}
+    animatorController: {fileID: 9100000, guid: 76f55cbd3070de9459d9f9978299228c, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Wolf_01
+    prefab: {fileID: 156478, guid: 0944c7322f2d9ef4d9515645c1c1344d, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Wolf_02
+    prefab: {fileID: 166654, guid: e17c27b6671ade74abe71d916eb532c1, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f
+  - modelId: Wolf_03
+    prefab: {fileID: 189832, guid: 267eef0dfbd2add42a13b406ed61b925, type: 3}
+    animatorController: {fileID: 9100000, guid: 2c635c4a73fa65c4c9271526dd38e163, type: 2}
+    offset: {x: 0, y: 0, z: 0}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    speedParam: Speed_f

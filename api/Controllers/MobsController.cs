@@ -56,6 +56,7 @@ public class MobsController : ControllerBase
         m.DisplayName = input.DisplayName;
         m.MobLevel = input.MobLevel;
         m.PrefabAddress = input.PrefabAddress;
+        m.ModelId = input.ModelId;
         m.MaxHealth = input.MaxHealth;
         m.AttackDamage = input.AttackDamage;
         m.AttackInterval = input.AttackInterval;
@@ -127,6 +128,7 @@ public class MobsController : ControllerBase
     static void Normalize(Mob m)
     {
         m.PrefabAddress = Blank(m.PrefabAddress);
+        m.ModelId = Blank(m.ModelId);
         m.FactionId = Blank(m.FactionId);
         m.ConversationSetId = Blank(m.ConversationSetId);
         m.LootTableId = Blank(m.LootTableId);

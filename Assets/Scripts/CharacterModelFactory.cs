@@ -45,7 +45,8 @@ public static class CharacterModelFactory
     /// their transform is NetworkTransform-driven on clients).
     /// </summary>
     public static GameObject BuildFromPrefab(Transform parent, GameObject prefab,
-                                             RuntimeAnimatorController controller, bool driveLocomotion)
+                                             RuntimeAnimatorController controller, bool driveLocomotion,
+                                             string speedParam = null)
     {
         if (prefab == null) return null;
 
@@ -59,8 +60,12 @@ public static class CharacterModelFactory
             if (controller != null) anim.runtimeAnimatorController = controller;
             anim.applyRootMotion = false;
 
-            if (driveLocomotion && anim.GetComponent<PlayerAnimator>() == null)
-                anim.gameObject.AddComponent<PlayerAnimator>();
+            if (driveLocomotion)
+            {
+                var playerAnim = anim.GetComponent<PlayerAnimator>();
+                if (playerAnim == null) playerAnim = anim.gameObject.AddComponent<PlayerAnimator>();
+                playerAnim.SetSpeedParam(speedParam);
+            }
         }
 
         return instance;
