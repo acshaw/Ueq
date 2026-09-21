@@ -929,6 +929,24 @@ public class NetworkedPlayer : NetworkBehaviour
                        $"Year {WorldClock.Year}, {WorldClock.DayOfWeekName}, Day 1 of {WorldClock.MonthName}.");
     }
 
+    /// <summary>`/trigger-spawn &lt;placementId&gt;` — 8.5 (ET3), dev/testing entry point for a Triggered
+    /// SpawnPoint until a real quest/script system exists to call ServerTrigger() itself. Exercises the
+    /// exact same server-side code path a future real caller would use — no special authorization, same as
+    /// /set-time and /unstuck (this project has no in-game admin-gating concept yet).</summary>
+    [Command]
+    public void CmdTriggerSpawn(string placementId)
+    {
+        var sp = SpawnPoint.FindByPlacementId(placementId);
+        if (sp == null)
+        {
+            SendSystemMsg($"No spawn point found with placement id '{placementId}'.");
+            return;
+        }
+
+        sp.ServerTrigger();
+        SendSystemMsg($"Triggered spawn point '{placementId}'.");
+    }
+
     // Raycast down onto the ground + snap to the nearest navmesh point, given only X/Z — same pattern as
     // SpawnPoint.ResolveSpawnPosition. A single shared physics scene + a single global navmesh spans every
     // zone at its own world offset (3.0's zone architecture), so this resolves correctly regardless of

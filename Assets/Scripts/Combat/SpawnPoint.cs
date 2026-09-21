@@ -36,6 +36,24 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
     [Tooltip("Free-range roam spread. Kept well under the ~5000u zone spacing so mobs never wander into another zone.")]
     [SerializeField] float        freeRangeRadius = 400f;
 
+    [Header("Spawn Pool (optional)")]
+    [Tooltip("8.4: if set, this point shares exclusivity with every other SpawnPoint referencing the same " +
+             "pool — at most one member of the pool ever has a live spawn at a time (a boss/named room with " +
+             "2-3 possible spots, only one occupied). Leave empty for normal, fully independent spawning.")]
+    [SerializeField] SpawnPool pool;
+
+    public enum SpawnMode { Proximity, Triggered }
+
+    [Header("Trigger (optional)")]
+    [Tooltip("8.5: Proximity (default) spawns when a player enters activationRadius, unchanged behavior. " +
+             "Triggered never self-activates from proximity — it only spawns via an explicit ServerTrigger() " +
+             "call (e.g. /trigger-spawn for now, or a future quest/script system).")]
+    [SerializeField] SpawnMode spawnMode = SpawnMode.Proximity;
+    [Tooltip("8.5: only meaningful when Triggered. False (default) = one-shot — needs ServerTrigger() " +
+             "called again after its spawn dies. True = after the first trigger, this point behaves like a " +
+             "normal timed camp from then on (auto-respawns via the respawn timer).")]
+    [SerializeField] bool respawnAfterTrigger = false;
+
     [Header("Placement")]
     [Tooltip("Drop the spawn onto the terrain surface + navmesh so mobs sit on hills " +
              "instead of at the spawn point's raw Y. Disable for floating/aerial spawns.")]
@@ -51,12 +69,25 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
     public bool   HasPatrol       => patrolRoute != null && patrolRoute.HasPoints;
     public bool   HasWanderRegion => wanderRegion != null;
     public bool   FreeRange       => freeRange;
+    public bool   HasPool         => pool != null;
 
     bool            _active;
     bool            _respawnPending;
     readonly List<NetworkIdentity> _live = new();   // M2.7.2: a group can have multiple live mobs
     SpawnTimer      _respawnTimer;                   // resolved at spawn, used for the respawn delay
     SpawnTableEntry _lastRolledEntry;                 // 8.2 (NR2): which entry rolled, for its own respawn override
+
+    // 8.5 (ET3) — placementId → live instance, for ServerTrigger() callers (e.g. /trigger-spawn) that only
+    // have a placement id, not a scene reference. No such lookup existed before this item (ZoneManager's
+    // placement index is a load-time-only local, thrown away after materializing). Populated in Start(),
+    // not OnEnable/Awake — a materialized SpawnPoint's placementId isn't assigned until shortly after
+    // AddComponent (PlacementMaterializer.ApplyRows calls SetPlacementId right after creating it), and
+    // Start() runs a frame later, after that's already happened — guaranteeing a correct key for both
+    // scene-baked and materialized points.
+    static readonly Dictionary<string, SpawnPoint> _byPlacementId = new();
+
+    public static SpawnPoint FindByPlacementId(string id)
+        => !string.IsNullOrEmpty(id) && _byPlacementId.TryGetValue(id, out var sp) ? sp : null;
 
     // ── World Placement Sync (2.7.3, Stage A) ──────────────────────────────────
 
@@ -68,6 +99,7 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
     // ids; ResolveReferences (called after every placement in the zone is known) looks them up.
     string _pendingPatrolRoutePlacementId;
     string _pendingWanderRegionPlacementId;
+    string _pendingSpawnPoolPlacementId; // 8.4
 
     public JObject CapturePlacementData() => new()
     {
@@ -80,6 +112,9 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         ["freeRangeRadius"]         = freeRangeRadius,
         ["patrolRoutePlacementId"]  = patrolRoute != null ? patrolRoute.PlacementId : null,
         ["wanderRegionPlacementId"] = wanderRegion != null ? wanderRegion.PlacementId : null,
+        ["spawnPoolPlacementId"]    = pool != null ? pool.PlacementId : null, // 8.4
+        ["spawnMode"]               = spawnMode.ToString(),        // 8.5 (ET4)
+        ["respawnAfterTrigger"]     = respawnAfterTrigger,          // 8.5 (ET4)
     };
 
     // Config only — never touches position/rotation (WP5: the scene/row's position columns own that).
@@ -92,9 +127,14 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         navSampleRadius  = (float?)data["navSampleRadius"] ?? navSampleRadius;
         freeRange        = (bool?)data["freeRange"] ?? freeRange;
         freeRangeRadius  = (float?)data["freeRangeRadius"] ?? freeRangeRadius;
+        // 8.5 (ET4): rides the same JSON blob as everything above — no new marker type/schema needed.
+        if (data["spawnMode"] != null && System.Enum.TryParse<SpawnMode>((string)data["spawnMode"], out var m))
+            spawnMode = m;
+        respawnAfterTrigger = (bool?)data["respawnAfterTrigger"] ?? respawnAfterTrigger;
 
         _pendingPatrolRoutePlacementId  = (string)data["patrolRoutePlacementId"];
         _pendingWanderRegionPlacementId = (string)data["wanderRegionPlacementId"];
+        _pendingSpawnPoolPlacementId    = (string)data["spawnPoolPlacementId"]; // 8.4
     }
 
     // Two-pass resolution (WP3): called only for placements that actually had ApplyPlacementData run this
@@ -109,6 +149,14 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
             else
                 Debug.LogWarning($"[Placement] {name}: patrol route '{_pendingPatrolRoutePlacementId}' " +
                                  "not found among this zone's placements — no patrol will be applied.", this);
+        }
+        if (!string.IsNullOrEmpty(_pendingSpawnPoolPlacementId))
+        {
+            if (byPlacementId.TryGetValue(_pendingSpawnPoolPlacementId, out var go))
+                pool = go.GetComponent<SpawnPool>();
+            else
+                Debug.LogWarning($"[Placement] {name}: spawn pool '{_pendingSpawnPoolPlacementId}' " +
+                                 "not found among this zone's placements — spawning unconditionally.", this);
         }
         if (!string.IsNullOrEmpty(_pendingWanderRegionPlacementId))
         {
@@ -132,7 +180,18 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
 
     void Start()
     {
+        // 8.5 (ET3) — register for ServerTrigger() lookup by placement id. See the field's own doc comment
+        // for why this runs here rather than OnEnable/Awake.
+        if (!string.IsNullOrEmpty(placementId)) _byPlacementId[placementId] = this;
+
         InvokeRepeating(nameof(ActivationCheck), 0f, 5f);
+    }
+
+    void OnDestroy()
+    {
+        if (!string.IsNullOrEmpty(placementId) &&
+            _byPlacementId.TryGetValue(placementId, out var sp) && sp == this)
+            _byPlacementId.Remove(placementId);
     }
 
     // ── Activation ────────────────────────────────────────────────────────────
@@ -142,6 +201,17 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         if (!NetworkServer.active) return;
 
         _live.RemoveAll(x => x == null);   // prune any mob destroyed without firing OnDied
+
+        // 8.4 (SP2) — self-healing pool release: OnMemberDied is the normal release path, but a mob
+        // destroyed via something that skips Health.OnDied would otherwise leave the pool claimed forever
+        // (this point's own _live already self-heals via the prune above; the pool needs the same
+        // treatment). Release is idempotent — a harmless no-op if this point isn't the current holder.
+        if (_live.Count == 0) pool?.Release(this);
+
+        // 8.5 (ET1) — a Triggered point never self-activates from proximity; skip the poll entirely (no
+        // wasted Physics.OverlapSphere for a point that will never spawn this way). The pruning/pool-
+        // release above still runs — a Triggered point's own group can still die/despawn via other means.
+        if (spawnMode == SpawnMode.Triggered) return;
 
         bool hasPlayer = false;
         var cols = Physics.OverlapSphere(transform.position, activationRadius);
@@ -154,6 +224,19 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
 
         if (_active && _live.Count == 0 && !_respawnPending)
             DoSpawn();
+    }
+
+    // 8.5 (ET1) — the only way a Triggered point ever spawns (aside from its own auto-respawn afterward,
+    // if respawnAfterTrigger is set) — e.g. /trigger-spawn today, a future quest/script system's caller
+    // eventually. Runs the exact same DoSpawn() a proximity activation would have — full reuse of table/
+    // mobId resolution, group spawning, pool claiming, movement setup. Guards against double-spawning a
+    // point that already has a live group or is mid-respawn-delay, mirroring ActivationCheck's own guard
+    // (DoSpawn itself has no such guard — the caller is always responsible for it).
+    public void ServerTrigger()
+    {
+        if (!NetworkServer.active) return;
+        if (_live.Count > 0 || _respawnPending) return;
+        DoSpawn();
     }
 
     // ── Spawn ─────────────────────────────────────────────────────────────────
@@ -204,6 +287,14 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
                              $"(spawnTableId='{spawnTableId}', mobId='{mobId}', prefab missing/unregistered).", this);
             return;
         }
+
+        // 8.4 (SP2) — claim the pool only now that we're actually committed to spawning: everything above
+        // this point can fail/return without ever touching the pool, so claiming any earlier would let a
+        // point that rolls "nothing eligible right now" (TG3) or is misconfigured hold the pool doing
+        // nothing for up to 5s, blocking a different member that might be genuinely ready to spawn right
+        // now. Losing the race here is normal contention (another member already claimed it), not a
+        // warning-worthy condition.
+        if (pool != null && !pool.TryClaim(this)) return;
 
         bool jitter = groupSize > 1;
         for (int i = 0; i < groupSize; i++)
@@ -307,9 +398,20 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         _live.Remove(id);
         if (_live.Count > 0) return;   // wait for the rest of the group to die
 
-        if (_active)
+        // 8.4 (SP2) — free the pool as soon as the group is fully dead, before the respawn delay even
+        // starts, so a different pool member can claim it right away instead of waiting out this point's
+        // own timer.
+        pool?.Release(this);
+
+        // 8.5 (ET2): a Triggered point only auto-respawns if it opted in via respawnAfterTrigger —
+        // otherwise it's a genuine one-shot, waiting for another explicit ServerTrigger() call. _active is
+        // meaningless for a Triggered point (ActivationCheck never sets it — proximity is irrelevant), so
+        // it's excluded from this branch entirely rather than folded into the same condition.
+        bool shouldRespawn = spawnMode == SpawnMode.Triggered ? respawnAfterTrigger : _active;
+        if (shouldRespawn)
             StartCoroutine(RespawnAfterDelay());
-        // if not active: DoSpawn fires next time a player enters range
+        // Proximity, not active: DoSpawn fires next time a player enters range.
+        // Triggered, respawnAfterTrigger false: waits for another explicit ServerTrigger() call.
     }
 
     IEnumerator RespawnAfterDelay()
@@ -318,7 +420,12 @@ public class SpawnPoint : MonoBehaviour, IWorldPlacement, IReferencesOtherPlacem
         float delay = ResolveRespawnDelay();
         yield return new WaitForSeconds(delay);
         _respawnPending = false;
-        if (_active && _live.Count == 0) DoSpawn();
+
+        // 8.5 (ET2): mirrors OnMemberDied's own decision to start this coroutine in the first place —
+        // _active would incorrectly block a respawnAfterTrigger Triggered point forever, since it's never
+        // set true for that mode.
+        bool shouldRespawn = spawnMode == SpawnMode.Triggered ? respawnAfterTrigger : _active;
+        if (shouldRespawn && _live.Count == 0) DoSpawn();
     }
 
     // 8.2 (NR2): the rolled entry's own respawn override, if set, takes precedence over the table's

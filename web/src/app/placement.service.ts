@@ -23,7 +23,8 @@ export interface WorldPlacement {
 }
 
 /** SpawnPoint's `data` shape (mirrors SpawnPoint.CapturePlacementData in Unity) — the only marker type
- * with web-editable fields (WP7). PatrolRoute/WanderRegion data is shown read-only only. */
+ * with web-editable fields (WP7). PatrolRoute/WanderRegion data is shown read-only only. 8.5 adds the
+ * trigger mode fields — rides this same JSON blob, no schema/API change needed. */
 export interface SpawnPointPlacementData {
   spawnTableId: string;
   mobId: string;
@@ -34,12 +35,16 @@ export interface SpawnPointPlacementData {
   freeRangeRadius: number;
   patrolRoutePlacementId: string | null;
   wanderRegionPlacementId: string | null;
+  spawnPoolPlacementId: string | null; // 8.4 — should have been added here at the time, caught late
+  spawnMode: string;          // 8.5 — 'Proximity' | 'Triggered'
+  respawnAfterTrigger: boolean; // 8.5 — only meaningful when spawnMode is 'Triggered'
 }
 
 export function emptySpawnPointData(): SpawnPointPlacementData {
   return {
     spawnTableId: '', mobId: '', activationRadius: 50, snapToGround: true, navSampleRadius: 8,
     freeRange: false, freeRangeRadius: 400, patrolRoutePlacementId: null, wanderRegionPlacementId: null,
+    spawnPoolPlacementId: null, spawnMode: 'Proximity', respawnAfterTrigger: false,
   };
 }
 

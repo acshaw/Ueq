@@ -23,15 +23,21 @@ public static class PlacementMaterializer
         return byId;
     }
 
-    /// <summary>Splits rows into pass 1 (non-referencing marker types) and pass 2 (<c>SpawnPoint</c>, which
-    /// may reference a pass-1 placement) — must be applied pass 1 first, in full, before pass 2.</summary>
+    /// <summary>Splits rows into pass 1 (non-referencing marker types) and pass 2 (types that may reference
+    /// a pass-1 placement, e.g. <c>SpawnPoint</c>/<c>PopulationZone</c>) — must be applied pass 1 first, in
+    /// full, before pass 2. Routed via <see cref="IPlacementFactory.IsReferencer"/>, not a hardcoded
+    /// marker-type name (that was the original 2.7.3 shape — fixed during 8.6, which found it silently
+    /// broke the moment a second referencing type existed; see that flag's own doc comment).</summary>
     public static void SplitPasses(IEnumerable<WorldPlacementSnapshot> rows,
         out List<WorldPlacementSnapshot> pass1, out List<WorldPlacementSnapshot> pass2)
     {
         pass1 = new List<WorldPlacementSnapshot>();
         pass2 = new List<WorldPlacementSnapshot>();
         foreach (var row in rows)
-            (row.MarkerType == "SpawnPoint" ? pass2 : pass1).Add(row);
+        {
+            bool isReferencer = PlacementFactoryRegistry.Get(row.MarkerType)?.IsReferencer ?? false;
+            (isReferencer ? pass2 : pass1).Add(row);
+        }
     }
 
     /// <summary>For each row: refresh the matching scene object in place (config only — position/hierarchy

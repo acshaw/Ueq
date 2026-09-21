@@ -70,6 +70,7 @@ public class ChatUI : MonoBehaviour
         ("/set-time <0-23>",      "Testing: jump the day/night cycle to a specific hour"),
         ("/set-age <age> <year>", "Testing: advance the Age (resets day/week/month/year, keeps time of day)"),
         ("/time",                 "Show the real-world and in-game date/time"),
+        ("/trigger-spawn <id>",   "Testing: fire a Triggered spawn point's ServerTrigger() by placement id"),
         ("/invite <name>",        "Invite a player to your group (leader only)"),
         ("/accept",               "Accept a pending group invite"),
         ("/leave",                "Leave your group"),
@@ -268,6 +269,30 @@ public class ChatUI : MonoBehaviour
                                $"{WorldClock.Age}{WorldClock.OrdinalSuffix(WorldClock.Age)} Age";
             AppendLine($"<i>Real time: {realWorld}</i>");
             AppendLine($"<i>Game time: {gameTime}</i>");
+            return true;
+        }
+
+        // 8.5 (ET3) — /trigger-spawn <placementId>: debug entry point until a real quest/script system
+        // exists to call SpawnPoint.ServerTrigger() itself.
+        if (raw.Equals("/trigger-spawn", StringComparison.OrdinalIgnoreCase))
+        {
+            AppendLine("<i>[Usage: /trigger-spawn <placementId>]</i>");
+            return true;
+        }
+
+        if (raw.StartsWith("/trigger-spawn ", StringComparison.OrdinalIgnoreCase))
+        {
+            string arg = raw.Substring(15).Trim();
+            if (string.IsNullOrEmpty(arg))
+            {
+                AppendLine("<i>[Usage: /trigger-spawn <placementId>]</i>");
+            }
+            else
+            {
+                var local = LocalPlayer.Current;
+                if (local != null) local.CmdTriggerSpawn(arg);
+                else AppendLine("<i>[Not connected — start Host first]</i>");
+            }
             return true;
         }
 

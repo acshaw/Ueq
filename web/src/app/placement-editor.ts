@@ -85,8 +85,25 @@ import { ADMIN_STYLES } from './shared/admin-styles';
             }
             <p class="muted">
               Patrol route: {{ spawnData.patrolRoutePlacementId || 'none' }} · Wander region: {{ spawnData.wanderRegionPlacementId || 'none' }}
+              · Spawn pool: {{ spawnData.spawnPoolPlacementId || 'none' }}
               — set in Unity, not editable here.
             </p>
+          </section>
+
+          <section>
+            <h3>Trigger (8.5)</h3>
+            <label>Spawn mode
+              <select [(ngModel)]="spawnData.spawnMode" name="spawnMode">
+                <option value="Proximity">Proximity (spawns when a player enters range)</option>
+                <option value="Triggered">Triggered (only spawns via an explicit trigger call)</option>
+              </select>
+            </label>
+            @if (spawnData.spawnMode === 'Triggered') {
+              <label class="checkbox">
+                <input type="checkbox" [(ngModel)]="spawnData.respawnAfterTrigger" name="respawnAfterTrigger" />
+                Auto-respawn after the first trigger (otherwise one-shot — needs triggering again each time)
+              </label>
+            }
           </section>
         } @else {
           <section>
