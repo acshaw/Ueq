@@ -96,7 +96,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.05
   far clip plane: 4000
   field of view: 60
   orthographic: 0
@@ -293,13 +293,13 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
+  m_Height: 1.4
+  m_Radius: 0.25
   m_SlopeLimit: 40
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: -0.3, z: 0}
 --- !u!114 &3237039629859414056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -313,7 +313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
   sceneId: 0
-  _assetId: 0
+  _assetId: 2792675180
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
@@ -458,6 +458,8 @@ MonoBehaviour:
   maxPitch: 80
   sitCameraDrop: 0.85
   sitCameraLerp: 8
+  rmbClickMaxDuration: 0.3
+  rmbClickMaxDrag: 12
   reconciliationTolerance: 0.15
 --- !u!114 &7584801410044477905
 MonoBehaviour:
@@ -475,6 +477,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _weaponBaseDamage: 10
+  _weaponBonusDamage: 0
   _weaponDelay: 2
   _attackRange: 3
   _weaponCategory: 0

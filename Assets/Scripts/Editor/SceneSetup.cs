@@ -532,9 +532,9 @@ public static class SceneSetup
         Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
 
         var cc = player.AddComponent<CharacterController>();
-        cc.height = 2f;
-        cc.radius = 0.5f;
-        cc.center = Vector3.zero;
+        cc.height = 1.4f;
+        cc.radius = 0.25f;
+        cc.center = new Vector3(0f, -0.3f, 0f);
 
 #if MIRROR
         player.AddComponent<NetworkIdentity>();
@@ -604,8 +604,14 @@ public static class SceneSetup
 
         Camera mainCam = Camera.main;
         GameObject camObj = mainCam != null ? mainCam.gameObject : new GameObject("Main Camera");
-        if (camObj.GetComponent<Camera>() == null) camObj.AddComponent<Camera>();
+        var cam = camObj.GetComponent<Camera>();
+        if (cam == null) cam = camObj.AddComponent<Camera>();
         camObj.tag = "MainCamera";
+
+        // Default near clip (0.3) clips visible wall geometry at the edges of the view when standing
+        // close to a wall — most noticeable now that the player capsule is thin enough to stand right
+        // up against one (found 2026-09-22).
+        cam.nearClipPlane = 0.05f;
 
 #if MIRROR
         camObj.SetActive(false);

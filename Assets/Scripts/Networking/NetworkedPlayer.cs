@@ -387,11 +387,21 @@ public class NetworkedPlayer : NetworkBehaviour
         if (_cam == null) return;
 
         Ray ray = _cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-        Targetable hit = Physics.Raycast(ray, out RaycastHit info, 100f)
-            ? info.collider.GetComponentInParent<Targetable>()
-            : null;
+        if (!Physics.Raycast(ray, out RaycastHit info, 100f))
+        {
+            ApplyTarget(null);
+            return;
+        }
 
-        ApplyTarget(hit);
+        // Clicking a door is an interact, not a target-selection click — doesn't touch _currentTarget.
+        var door = info.collider.GetComponentInParent<Door>();
+        if (door != null)
+        {
+            CmdInteractDoor(door.GetComponent<NetworkIdentity>());
+            return;
+        }
+
+        ApplyTarget(info.collider.GetComponentInParent<Targetable>());
     }
 
     /// <summary>5.4 follow-up — players now carry Targetable too (a Cleric needs to be able to select a
@@ -432,6 +442,19 @@ public class NetworkedPlayer : NetworkBehaviour
     {
         var es = EventSystem.current;
         return es != null && es.IsPointerOverGameObject();
+    }
+
+    // ── World interaction (doors) ────────────────────────────────────────────
+
+    const float DoorInteractRange = 4f;
+
+    [Command]
+    public void CmdInteractDoor(NetworkIdentity doorId)
+    {
+        var door = doorId?.GetComponent<Door>();
+        if (door == null) return;
+        if (Vector3.Distance(transform.position, door.transform.position) > DoorInteractRange) return;
+        door.ServerToggle();
     }
 
     // ── Look ──────────────────────────────────────────────────────────────────
